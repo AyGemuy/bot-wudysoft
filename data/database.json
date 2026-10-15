@@ -1,0 +1,2959 @@
+{
+  "user": {
+    "6285881530884@s.whatsapp.net": {
+      "name": "6285881530884",
+      "ownerAcces": false,
+      "premium": {
+        "status": false,
+        "expiredAt": null
+      },
+      "limit": 20,
+      "level": 1,
+      "exp": 0,
+      "hp": 100,
+      "hpMax": 100,
+      "mana": 50,
+      "manaMax": 50,
+      "atk": 10,
+      "def": 5,
+      "money": 100000,
+      "mcoin": 0,
+      "equipped": {
+        "weapon": null,
+        "armor": null
+      },
+      "inventory": {
+        "ores": {
+          "coal": 0,
+          "stone": 0,
+          "iron": 0,
+          "gold": 0,
+          "diamond": 0,
+          "platinum": 0
+        },
+        "nature": {
+          "wood": 0,
+          "leather": 0,
+          "spice": 0,
+          "water_jug": 0,
+          "bait": 0
+        },
+        "fruit": {
+          "strawberry": 0,
+          "banana": 0,
+          "grape": 0,
+          "apple": 0,
+          "orange": 0
+        },
+        "vegetable": {
+          "carrot": 0,
+          "potato": 0,
+          "cabbage": 0,
+          "onion": 0,
+          "tomato": 0,
+          "corn": 0
+        },
+        "fish": {
+          "anchovy": 0,
+          "catfish": 0,
+          "carp": 0,
+          "tuna": 0,
+          "salmon": 0,
+          "swordfish": 0,
+          "pufferfish": 0,
+          "squid": 0,
+          "shrimp": 0,
+          "clownfish": 0
+        },
+        "food": {
+          "bread": 0,
+          "rice": 0,
+          "grilled_fish": 0,
+          "steak": 0,
+          "fruit_salad": 0,
+          "roast_chicken": 0
+        },
+        "drink": {
+          "water": 0,
+          "juice": 0,
+          "herbal_tea": 0,
+          "mana_potion": 0,
+          "elixir": 0
+        },
+        "tools": {
+          "pickaxe_iron": 0,
+          "pickaxe_diamond": 0,
+          "rod_wood": 0,
+          "rod_premium": 0
+        },
+        "weapon": {
+          "sword_stone": 0,
+          "sword_iron": 0,
+          "sword_diamond": 0,
+          "sword_light": 0,
+          "sword_dark": 0
+        },
+        "armor": {
+          "armor_leather": 0,
+          "armor_iron": 0,
+          "armor_crystal": 0
+        },
+        "crate": {
+          "common": 0,
+          "uncommon": 0,
+          "legendary": 0,
+          "mythic": 0,
+          "secret": 0
+        }
+      },
+      "cooldown": {
+        "daily": 0,
+        "adventure": 0,
+        "mine": 0,
+        "fish": 0,
+        "rest": 0
+      },
+      "createdAt": 1777992550908
+    },
+    "200279039422465@lid": {
+      "name": "Felix",
+      "ownerAcces": false,
+      "premium": {
+        "status": false,
+        "expiredAt": null
+      },
+      "limit": 20,
+      "level": 1,
+      "exp": 0,
+      "hp": 100,
+      "hpMax": 100,
+      "mana": 50,
+      "manaMax": 50,
+      "atk": 10,
+      "def": 5,
+      "money": 100000,
+      "mcoin": 0,
+      "equipped": {
+        "weapon": null,
+        "armor": null
+      },
+      "inventory": {
+        "ores": {
+          "coal": 0,
+          "stone": 0,
+          "iron": 0,
+          "gold": 0,
+          "diamond": 0,
+          "platinum": 0
+        },
+        "nature": {
+          "wood": 0,
+          "leather": 0,
+          "spice": 0,
+          "water_jug": 0,
+          "bait": 0
+        },
+        "fruit": {
+          "strawberry": 0,
+          "banana": 0,
+          "grape": 0,
+          "apple": 0,
+          "orange": 0
+        },
+        "vegetable": {
+          "carrot": 0,
+          "potato": 0,
+          "cabbage": 0,
+          "onion": 0,
+          "tomato": 0,
+          "corn": 0
+        },
+        "fish": {
+          "anchovy": 0,
+          "catfish": 0,
+          "carp": 0,
+          "tuna": 0,
+          "salmon": 0,
+          "swordfish": 0,
+          "pufferfish": 0,
+          "squid": 0,
+          "shrimp": 0,
+          "clownfish": 0
+        },
+        "food": {
+          "bread": 0,
+          "rice": 0,
+          "grilled_fish": 0,
+          "steak": 0,
+          "fruit_salad": 0,
+          "roast_chicken": 0
+        },
+        "drink": {
+          "water": 0,
+          "juice": 0,
+          "herbal_tea": 0,
+          "mana_potion": 0,
+          "elixir": 0
+        },
+        "tools": {
+          "pickaxe_iron": 0,
+          "pickaxe_diamond": 0,
+          "rod_wood": 0,
+          "rod_premium": 0
+        },
+        "weapon": {
+          "sword_stone": 0,
+          "sword_iron": 0,
+          "sword_diamond": 0,
+          "sword_light": 0,
+          "sword_dark": 0
+        },
+        "armor": {
+          "armor_leather": 0,
+          "armor_iron": 0,
+          "armor_crystal": 0
+        },
+        "crate": {
+          "common": 0,
+          "uncommon": 0,
+          "legendary": 0,
+          "mythic": 0,
+          "secret": 0
+        }
+      },
+      "cooldown": {
+        "daily": 0,
+        "adventure": 0,
+        "mine": 0,
+        "fish": 0,
+        "rest": 0
+      },
+      "createdAt": 1777992554035
+    },
+    "186784386425043@lid": {
+      "name": "ichsan",
+      "ownerAcces": false,
+      "premium": {
+        "status": false,
+        "expiredAt": null
+      },
+      "limit": 20,
+      "level": 1,
+      "exp": 0,
+      "hp": 100,
+      "hpMax": 100,
+      "mana": 50,
+      "manaMax": 50,
+      "atk": 10,
+      "def": 5,
+      "money": 100000,
+      "mcoin": 0,
+      "equipped": {
+        "weapon": null,
+        "armor": null
+      },
+      "inventory": {
+        "ores": {
+          "coal": 0,
+          "stone": 0,
+          "iron": 0,
+          "gold": 0,
+          "diamond": 0,
+          "platinum": 0
+        },
+        "nature": {
+          "wood": 0,
+          "leather": 0,
+          "spice": 0,
+          "water_jug": 0,
+          "bait": 0
+        },
+        "fruit": {
+          "strawberry": 0,
+          "banana": 0,
+          "grape": 0,
+          "apple": 0,
+          "orange": 0
+        },
+        "vegetable": {
+          "carrot": 0,
+          "potato": 0,
+          "cabbage": 0,
+          "onion": 0,
+          "tomato": 0,
+          "corn": 0
+        },
+        "fish": {
+          "anchovy": 0,
+          "catfish": 0,
+          "carp": 0,
+          "tuna": 0,
+          "salmon": 0,
+          "swordfish": 0,
+          "pufferfish": 0,
+          "squid": 0,
+          "shrimp": 0,
+          "clownfish": 0
+        },
+        "food": {
+          "bread": 0,
+          "rice": 0,
+          "grilled_fish": 0,
+          "steak": 0,
+          "fruit_salad": 0,
+          "roast_chicken": 0
+        },
+        "drink": {
+          "water": 0,
+          "juice": 0,
+          "herbal_tea": 0,
+          "mana_potion": 0,
+          "elixir": 0
+        },
+        "tools": {
+          "pickaxe_iron": 0,
+          "pickaxe_diamond": 0,
+          "rod_wood": 0,
+          "rod_premium": 0
+        },
+        "weapon": {
+          "sword_stone": 0,
+          "sword_iron": 0,
+          "sword_diamond": 0,
+          "sword_light": 0,
+          "sword_dark": 0
+        },
+        "armor": {
+          "armor_leather": 0,
+          "armor_iron": 0,
+          "armor_crystal": 0
+        },
+        "crate": {
+          "common": 0,
+          "uncommon": 0,
+          "legendary": 0,
+          "mythic": 0,
+          "secret": 0
+        }
+      },
+      "cooldown": {
+        "daily": 0,
+        "adventure": 0,
+        "mine": 0,
+        "fish": 0,
+        "rest": 0
+      },
+      "createdAt": 1777992559354
+    },
+    "26663895179450@lid": {
+      "name": "kalz",
+      "ownerAcces": false,
+      "premium": {
+        "status": false,
+        "expiredAt": null
+      },
+      "limit": 20,
+      "level": 1,
+      "exp": 0,
+      "hp": 100,
+      "hpMax": 100,
+      "mana": 50,
+      "manaMax": 50,
+      "atk": 10,
+      "def": 5,
+      "money": 100000,
+      "mcoin": 0,
+      "equipped": {
+        "weapon": null,
+        "armor": null
+      },
+      "inventory": {
+        "ores": {
+          "coal": 0,
+          "stone": 0,
+          "iron": 0,
+          "gold": 0,
+          "diamond": 0,
+          "platinum": 0
+        },
+        "nature": {
+          "wood": 0,
+          "leather": 0,
+          "spice": 0,
+          "water_jug": 0,
+          "bait": 0
+        },
+        "fruit": {
+          "strawberry": 0,
+          "banana": 0,
+          "grape": 0,
+          "apple": 0,
+          "orange": 0
+        },
+        "vegetable": {
+          "carrot": 0,
+          "potato": 0,
+          "cabbage": 0,
+          "onion": 0,
+          "tomato": 0,
+          "corn": 0
+        },
+        "fish": {
+          "anchovy": 0,
+          "catfish": 0,
+          "carp": 0,
+          "tuna": 0,
+          "salmon": 0,
+          "swordfish": 0,
+          "pufferfish": 0,
+          "squid": 0,
+          "shrimp": 0,
+          "clownfish": 0
+        },
+        "food": {
+          "bread": 0,
+          "rice": 0,
+          "grilled_fish": 0,
+          "steak": 0,
+          "fruit_salad": 0,
+          "roast_chicken": 0
+        },
+        "drink": {
+          "water": 0,
+          "juice": 0,
+          "herbal_tea": 0,
+          "mana_potion": 0,
+          "elixir": 0
+        },
+        "tools": {
+          "pickaxe_iron": 0,
+          "pickaxe_diamond": 0,
+          "rod_wood": 0,
+          "rod_premium": 0
+        },
+        "weapon": {
+          "sword_stone": 0,
+          "sword_iron": 0,
+          "sword_diamond": 0,
+          "sword_light": 0,
+          "sword_dark": 0
+        },
+        "armor": {
+          "armor_leather": 0,
+          "armor_iron": 0,
+          "armor_crystal": 0
+        },
+        "crate": {
+          "common": 0,
+          "uncommon": 0,
+          "legendary": 0,
+          "mythic": 0,
+          "secret": 0
+        }
+      },
+      "cooldown": {
+        "daily": 0,
+        "adventure": 0,
+        "mine": 0,
+        "fish": 0,
+        "rest": 0
+      },
+      "createdAt": 1777992571456
+    },
+    "156491847848107@lid": {
+      "name": "lucas",
+      "ownerAcces": false,
+      "premium": {
+        "status": false,
+        "expiredAt": null
+      },
+      "limit": 20,
+      "level": 1,
+      "exp": 0,
+      "hp": 100,
+      "hpMax": 100,
+      "mana": 50,
+      "manaMax": 50,
+      "atk": 10,
+      "def": 5,
+      "money": 100000,
+      "mcoin": 0,
+      "equipped": {
+        "weapon": null,
+        "armor": null
+      },
+      "inventory": {
+        "ores": {
+          "coal": 0,
+          "stone": 0,
+          "iron": 0,
+          "gold": 0,
+          "diamond": 0,
+          "platinum": 0
+        },
+        "nature": {
+          "wood": 0,
+          "leather": 0,
+          "spice": 0,
+          "water_jug": 0,
+          "bait": 0
+        },
+        "fruit": {
+          "strawberry": 0,
+          "banana": 0,
+          "grape": 0,
+          "apple": 0,
+          "orange": 0
+        },
+        "vegetable": {
+          "carrot": 0,
+          "potato": 0,
+          "cabbage": 0,
+          "onion": 0,
+          "tomato": 0,
+          "corn": 0
+        },
+        "fish": {
+          "anchovy": 0,
+          "catfish": 0,
+          "carp": 0,
+          "tuna": 0,
+          "salmon": 0,
+          "swordfish": 0,
+          "pufferfish": 0,
+          "squid": 0,
+          "shrimp": 0,
+          "clownfish": 0
+        },
+        "food": {
+          "bread": 0,
+          "rice": 0,
+          "grilled_fish": 0,
+          "steak": 0,
+          "fruit_salad": 0,
+          "roast_chicken": 0
+        },
+        "drink": {
+          "water": 0,
+          "juice": 0,
+          "herbal_tea": 0,
+          "mana_potion": 0,
+          "elixir": 0
+        },
+        "tools": {
+          "pickaxe_iron": 0,
+          "pickaxe_diamond": 0,
+          "rod_wood": 0,
+          "rod_premium": 0
+        },
+        "weapon": {
+          "sword_stone": 0,
+          "sword_iron": 0,
+          "sword_diamond": 0,
+          "sword_light": 0,
+          "sword_dark": 0
+        },
+        "armor": {
+          "armor_leather": 0,
+          "armor_iron": 0,
+          "armor_crystal": 0
+        },
+        "crate": {
+          "common": 0,
+          "uncommon": 0,
+          "legendary": 0,
+          "mythic": 0,
+          "secret": 0
+        }
+      },
+      "cooldown": {
+        "daily": 0,
+        "adventure": 0,
+        "mine": 0,
+        "fish": 0,
+        "rest": 0
+      },
+      "createdAt": 1777992579459
+    },
+    "158033858547877@lid": {
+      "name": "capana",
+      "ownerAcces": false,
+      "premium": {
+        "status": false,
+        "expiredAt": null
+      },
+      "limit": 20,
+      "level": 1,
+      "exp": 0,
+      "hp": 100,
+      "hpMax": 100,
+      "mana": 50,
+      "manaMax": 50,
+      "atk": 10,
+      "def": 5,
+      "money": 100000,
+      "mcoin": 0,
+      "equipped": {
+        "weapon": null,
+        "armor": null
+      },
+      "inventory": {
+        "ores": {
+          "coal": 0,
+          "stone": 0,
+          "iron": 0,
+          "gold": 0,
+          "diamond": 0,
+          "platinum": 0
+        },
+        "nature": {
+          "wood": 0,
+          "leather": 0,
+          "spice": 0,
+          "water_jug": 0,
+          "bait": 0
+        },
+        "fruit": {
+          "strawberry": 0,
+          "banana": 0,
+          "grape": 0,
+          "apple": 0,
+          "orange": 0
+        },
+        "vegetable": {
+          "carrot": 0,
+          "potato": 0,
+          "cabbage": 0,
+          "onion": 0,
+          "tomato": 0,
+          "corn": 0
+        },
+        "fish": {
+          "anchovy": 0,
+          "catfish": 0,
+          "carp": 0,
+          "tuna": 0,
+          "salmon": 0,
+          "swordfish": 0,
+          "pufferfish": 0,
+          "squid": 0,
+          "shrimp": 0,
+          "clownfish": 0
+        },
+        "food": {
+          "bread": 0,
+          "rice": 0,
+          "grilled_fish": 0,
+          "steak": 0,
+          "fruit_salad": 0,
+          "roast_chicken": 0
+        },
+        "drink": {
+          "water": 0,
+          "juice": 0,
+          "herbal_tea": 0,
+          "mana_potion": 0,
+          "elixir": 0
+        },
+        "tools": {
+          "pickaxe_iron": 0,
+          "pickaxe_diamond": 0,
+          "rod_wood": 0,
+          "rod_premium": 0
+        },
+        "weapon": {
+          "sword_stone": 0,
+          "sword_iron": 0,
+          "sword_diamond": 0,
+          "sword_light": 0,
+          "sword_dark": 0
+        },
+        "armor": {
+          "armor_leather": 0,
+          "armor_iron": 0,
+          "armor_crystal": 0
+        },
+        "crate": {
+          "common": 0,
+          "uncommon": 0,
+          "legendary": 0,
+          "mythic": 0,
+          "secret": 0
+        }
+      },
+      "cooldown": {
+        "daily": 0,
+        "adventure": 0,
+        "mine": 0,
+        "fish": 0,
+        "rest": 0
+      },
+      "createdAt": 1777992583422
+    },
+    "131972164763842@lid": {
+      "name": "zra",
+      "ownerAcces": false,
+      "premium": {
+        "status": false,
+        "expiredAt": null
+      },
+      "limit": 20,
+      "level": 1,
+      "exp": 0,
+      "hp": 100,
+      "hpMax": 100,
+      "mana": 50,
+      "manaMax": 50,
+      "atk": 10,
+      "def": 5,
+      "money": 100000,
+      "mcoin": 0,
+      "equipped": {
+        "weapon": null,
+        "armor": null
+      },
+      "inventory": {
+        "ores": {
+          "coal": 0,
+          "stone": 0,
+          "iron": 0,
+          "gold": 0,
+          "diamond": 0,
+          "platinum": 0
+        },
+        "nature": {
+          "wood": 0,
+          "leather": 0,
+          "spice": 0,
+          "water_jug": 0,
+          "bait": 0
+        },
+        "fruit": {
+          "strawberry": 0,
+          "banana": 0,
+          "grape": 0,
+          "apple": 0,
+          "orange": 0
+        },
+        "vegetable": {
+          "carrot": 0,
+          "potato": 0,
+          "cabbage": 0,
+          "onion": 0,
+          "tomato": 0,
+          "corn": 0
+        },
+        "fish": {
+          "anchovy": 0,
+          "catfish": 0,
+          "carp": 0,
+          "tuna": 0,
+          "salmon": 0,
+          "swordfish": 0,
+          "pufferfish": 0,
+          "squid": 0,
+          "shrimp": 0,
+          "clownfish": 0
+        },
+        "food": {
+          "bread": 0,
+          "rice": 0,
+          "grilled_fish": 0,
+          "steak": 0,
+          "fruit_salad": 0,
+          "roast_chicken": 0
+        },
+        "drink": {
+          "water": 0,
+          "juice": 0,
+          "herbal_tea": 0,
+          "mana_potion": 0,
+          "elixir": 0
+        },
+        "tools": {
+          "pickaxe_iron": 0,
+          "pickaxe_diamond": 0,
+          "rod_wood": 0,
+          "rod_premium": 0
+        },
+        "weapon": {
+          "sword_stone": 0,
+          "sword_iron": 0,
+          "sword_diamond": 0,
+          "sword_light": 0,
+          "sword_dark": 0
+        },
+        "armor": {
+          "armor_leather": 0,
+          "armor_iron": 0,
+          "armor_crystal": 0
+        },
+        "crate": {
+          "common": 0,
+          "uncommon": 0,
+          "legendary": 0,
+          "mythic": 0,
+          "secret": 0
+        }
+      },
+      "cooldown": {
+        "daily": 0,
+        "adventure": 0,
+        "mine": 0,
+        "fish": 0,
+        "rest": 0
+      },
+      "createdAt": 1777992592788
+    },
+    "173281076371694@lid": {
+      "name": "173281076371694",
+      "ownerAcces": false,
+      "premium": {
+        "status": false,
+        "expiredAt": null
+      },
+      "limit": 20,
+      "level": 1,
+      "exp": 0,
+      "hp": 100,
+      "hpMax": 100,
+      "mana": 50,
+      "manaMax": 50,
+      "atk": 10,
+      "def": 5,
+      "money": 100000,
+      "mcoin": 0,
+      "equipped": {
+        "weapon": null,
+        "armor": null
+      },
+      "inventory": {
+        "ores": {
+          "coal": 0,
+          "stone": 0,
+          "iron": 0,
+          "gold": 0,
+          "diamond": 0,
+          "platinum": 0
+        },
+        "nature": {
+          "wood": 0,
+          "leather": 0,
+          "spice": 0,
+          "water_jug": 0,
+          "bait": 0
+        },
+        "fruit": {
+          "strawberry": 0,
+          "banana": 0,
+          "grape": 0,
+          "apple": 0,
+          "orange": 0
+        },
+        "vegetable": {
+          "carrot": 0,
+          "potato": 0,
+          "cabbage": 0,
+          "onion": 0,
+          "tomato": 0,
+          "corn": 0
+        },
+        "fish": {
+          "anchovy": 0,
+          "catfish": 0,
+          "carp": 0,
+          "tuna": 0,
+          "salmon": 0,
+          "swordfish": 0,
+          "pufferfish": 0,
+          "squid": 0,
+          "shrimp": 0,
+          "clownfish": 0
+        },
+        "food": {
+          "bread": 0,
+          "rice": 0,
+          "grilled_fish": 0,
+          "steak": 0,
+          "fruit_salad": 0,
+          "roast_chicken": 0
+        },
+        "drink": {
+          "water": 0,
+          "juice": 0,
+          "herbal_tea": 0,
+          "mana_potion": 0,
+          "elixir": 0
+        },
+        "tools": {
+          "pickaxe_iron": 0,
+          "pickaxe_diamond": 0,
+          "rod_wood": 0,
+          "rod_premium": 0
+        },
+        "weapon": {
+          "sword_stone": 0,
+          "sword_iron": 0,
+          "sword_diamond": 0,
+          "sword_light": 0,
+          "sword_dark": 0
+        },
+        "armor": {
+          "armor_leather": 0,
+          "armor_iron": 0,
+          "armor_crystal": 0
+        },
+        "crate": {
+          "common": 0,
+          "uncommon": 0,
+          "legendary": 0,
+          "mythic": 0,
+          "secret": 0
+        }
+      },
+      "cooldown": {
+        "daily": 0,
+        "adventure": 0,
+        "mine": 0,
+        "fish": 0,
+        "rest": 0
+      },
+      "createdAt": 1777992593633
+    },
+    "182888934948974@lid": {
+      "name": "AGV",
+      "ownerAcces": false,
+      "premium": {
+        "status": false,
+        "expiredAt": null
+      },
+      "limit": 20,
+      "level": 1,
+      "exp": 0,
+      "hp": 100,
+      "hpMax": 100,
+      "mana": 50,
+      "manaMax": 50,
+      "atk": 10,
+      "def": 5,
+      "money": 100000,
+      "mcoin": 0,
+      "equipped": {
+        "weapon": null,
+        "armor": null
+      },
+      "inventory": {
+        "ores": {
+          "coal": 0,
+          "stone": 0,
+          "iron": 0,
+          "gold": 0,
+          "diamond": 0,
+          "platinum": 0
+        },
+        "nature": {
+          "wood": 0,
+          "leather": 0,
+          "spice": 0,
+          "water_jug": 0,
+          "bait": 0
+        },
+        "fruit": {
+          "strawberry": 0,
+          "banana": 0,
+          "grape": 0,
+          "apple": 0,
+          "orange": 0
+        },
+        "vegetable": {
+          "carrot": 0,
+          "potato": 0,
+          "cabbage": 0,
+          "onion": 0,
+          "tomato": 0,
+          "corn": 0
+        },
+        "fish": {
+          "anchovy": 0,
+          "catfish": 0,
+          "carp": 0,
+          "tuna": 0,
+          "salmon": 0,
+          "swordfish": 0,
+          "pufferfish": 0,
+          "squid": 0,
+          "shrimp": 0,
+          "clownfish": 0
+        },
+        "food": {
+          "bread": 0,
+          "rice": 0,
+          "grilled_fish": 0,
+          "steak": 0,
+          "fruit_salad": 0,
+          "roast_chicken": 0
+        },
+        "drink": {
+          "water": 0,
+          "juice": 0,
+          "herbal_tea": 0,
+          "mana_potion": 0,
+          "elixir": 0
+        },
+        "tools": {
+          "pickaxe_iron": 0,
+          "pickaxe_diamond": 0,
+          "rod_wood": 0,
+          "rod_premium": 0
+        },
+        "weapon": {
+          "sword_stone": 0,
+          "sword_iron": 0,
+          "sword_diamond": 0,
+          "sword_light": 0,
+          "sword_dark": 0
+        },
+        "armor": {
+          "armor_leather": 0,
+          "armor_iron": 0,
+          "armor_crystal": 0
+        },
+        "crate": {
+          "common": 0,
+          "uncommon": 0,
+          "legendary": 0,
+          "mythic": 0,
+          "secret": 0
+        }
+      },
+      "cooldown": {
+        "daily": 0,
+        "adventure": 0,
+        "mine": 0,
+        "fish": 0,
+        "rest": 0
+      },
+      "createdAt": 1777992598019
+    },
+    "268177774755850@lid": {
+      "name": "🌊📍🅿️🅰️",
+      "ownerAcces": false,
+      "premium": {
+        "status": false,
+        "expiredAt": null
+      },
+      "limit": 20,
+      "level": 1,
+      "exp": 0,
+      "hp": 100,
+      "hpMax": 100,
+      "mana": 50,
+      "manaMax": 50,
+      "atk": 10,
+      "def": 5,
+      "money": 100000,
+      "mcoin": 0,
+      "equipped": {
+        "weapon": null,
+        "armor": null
+      },
+      "inventory": {
+        "ores": {
+          "coal": 0,
+          "stone": 0,
+          "iron": 0,
+          "gold": 0,
+          "diamond": 0,
+          "platinum": 0
+        },
+        "nature": {
+          "wood": 0,
+          "leather": 0,
+          "spice": 0,
+          "water_jug": 0,
+          "bait": 0
+        },
+        "fruit": {
+          "strawberry": 0,
+          "banana": 0,
+          "grape": 0,
+          "apple": 0,
+          "orange": 0
+        },
+        "vegetable": {
+          "carrot": 0,
+          "potato": 0,
+          "cabbage": 0,
+          "onion": 0,
+          "tomato": 0,
+          "corn": 0
+        },
+        "fish": {
+          "anchovy": 0,
+          "catfish": 0,
+          "carp": 0,
+          "tuna": 0,
+          "salmon": 0,
+          "swordfish": 0,
+          "pufferfish": 0,
+          "squid": 0,
+          "shrimp": 0,
+          "clownfish": 0
+        },
+        "food": {
+          "bread": 0,
+          "rice": 0,
+          "grilled_fish": 0,
+          "steak": 0,
+          "fruit_salad": 0,
+          "roast_chicken": 0
+        },
+        "drink": {
+          "water": 0,
+          "juice": 0,
+          "herbal_tea": 0,
+          "mana_potion": 0,
+          "elixir": 0
+        },
+        "tools": {
+          "pickaxe_iron": 0,
+          "pickaxe_diamond": 0,
+          "rod_wood": 0,
+          "rod_premium": 0
+        },
+        "weapon": {
+          "sword_stone": 0,
+          "sword_iron": 0,
+          "sword_diamond": 0,
+          "sword_light": 0,
+          "sword_dark": 0
+        },
+        "armor": {
+          "armor_leather": 0,
+          "armor_iron": 0,
+          "armor_crystal": 0
+        },
+        "crate": {
+          "common": 0,
+          "uncommon": 0,
+          "legendary": 0,
+          "mythic": 0,
+          "secret": 0
+        }
+      },
+      "cooldown": {
+        "daily": 0,
+        "adventure": 0,
+        "mine": 0,
+        "fish": 0,
+        "rest": 0
+      },
+      "createdAt": 1777992601972
+    },
+    "73689492131919@lid": {
+      "name": "73689492131919",
+      "ownerAcces": false,
+      "premium": {
+        "status": false,
+        "expiredAt": null
+      },
+      "limit": 11,
+      "level": 1,
+      "exp": 0,
+      "hp": 100,
+      "hpMax": 100,
+      "mana": 50,
+      "manaMax": 50,
+      "atk": 10,
+      "def": 5,
+      "money": 100000,
+      "mcoin": 0,
+      "equipped": {
+        "weapon": null,
+        "armor": null
+      },
+      "inventory": {
+        "ores": {
+          "coal": 0,
+          "stone": 0,
+          "iron": 0,
+          "gold": 0,
+          "diamond": 0,
+          "platinum": 0
+        },
+        "nature": {
+          "wood": 0,
+          "leather": 0,
+          "spice": 0,
+          "water_jug": 0,
+          "bait": 0
+        },
+        "fruit": {
+          "strawberry": 0,
+          "banana": 0,
+          "grape": 0,
+          "apple": 0,
+          "orange": 0
+        },
+        "vegetable": {
+          "carrot": 0,
+          "potato": 0,
+          "cabbage": 0,
+          "onion": 0,
+          "tomato": 0,
+          "corn": 0
+        },
+        "fish": {
+          "anchovy": 0,
+          "catfish": 0,
+          "carp": 0,
+          "tuna": 0,
+          "salmon": 0,
+          "swordfish": 0,
+          "pufferfish": 0,
+          "squid": 0,
+          "shrimp": 0,
+          "clownfish": 0
+        },
+        "food": {
+          "bread": 0,
+          "rice": 0,
+          "grilled_fish": 0,
+          "steak": 0,
+          "fruit_salad": 0,
+          "roast_chicken": 0
+        },
+        "drink": {
+          "water": 0,
+          "juice": 0,
+          "herbal_tea": 0,
+          "mana_potion": 0,
+          "elixir": 0
+        },
+        "tools": {
+          "pickaxe_iron": 0,
+          "pickaxe_diamond": 0,
+          "rod_wood": 0,
+          "rod_premium": 0
+        },
+        "weapon": {
+          "sword_stone": 0,
+          "sword_iron": 0,
+          "sword_diamond": 0,
+          "sword_light": 0,
+          "sword_dark": 0
+        },
+        "armor": {
+          "armor_leather": 0,
+          "armor_iron": 0,
+          "armor_crystal": 0
+        },
+        "crate": {
+          "common": 0,
+          "uncommon": 0,
+          "legendary": 0,
+          "mythic": 0,
+          "secret": 0
+        }
+      },
+      "cooldown": {
+        "daily": 0,
+        "adventure": 0,
+        "mine": 0,
+        "fish": 0,
+        "rest": 0
+      },
+      "createdAt": 1777992619825
+    },
+    "230146460135560@lid": {
+      "name": "Jaseb? Den Delight Aja",
+      "ownerAcces": false,
+      "premium": {
+        "status": false,
+        "expiredAt": null
+      },
+      "limit": 20,
+      "level": 1,
+      "exp": 0,
+      "hp": 100,
+      "hpMax": 100,
+      "mana": 50,
+      "manaMax": 50,
+      "atk": 10,
+      "def": 5,
+      "money": 100000,
+      "mcoin": 0,
+      "equipped": {
+        "weapon": null,
+        "armor": null
+      },
+      "inventory": {
+        "ores": {
+          "coal": 0,
+          "stone": 0,
+          "iron": 0,
+          "gold": 0,
+          "diamond": 0,
+          "platinum": 0
+        },
+        "nature": {
+          "wood": 0,
+          "leather": 0,
+          "spice": 0,
+          "water_jug": 0,
+          "bait": 0
+        },
+        "fruit": {
+          "strawberry": 0,
+          "banana": 0,
+          "grape": 0,
+          "apple": 0,
+          "orange": 0
+        },
+        "vegetable": {
+          "carrot": 0,
+          "potato": 0,
+          "cabbage": 0,
+          "onion": 0,
+          "tomato": 0,
+          "corn": 0
+        },
+        "fish": {
+          "anchovy": 0,
+          "catfish": 0,
+          "carp": 0,
+          "tuna": 0,
+          "salmon": 0,
+          "swordfish": 0,
+          "pufferfish": 0,
+          "squid": 0,
+          "shrimp": 0,
+          "clownfish": 0
+        },
+        "food": {
+          "bread": 0,
+          "rice": 0,
+          "grilled_fish": 0,
+          "steak": 0,
+          "fruit_salad": 0,
+          "roast_chicken": 0
+        },
+        "drink": {
+          "water": 0,
+          "juice": 0,
+          "herbal_tea": 0,
+          "mana_potion": 0,
+          "elixir": 0
+        },
+        "tools": {
+          "pickaxe_iron": 0,
+          "pickaxe_diamond": 0,
+          "rod_wood": 0,
+          "rod_premium": 0
+        },
+        "weapon": {
+          "sword_stone": 0,
+          "sword_iron": 0,
+          "sword_diamond": 0,
+          "sword_light": 0,
+          "sword_dark": 0
+        },
+        "armor": {
+          "armor_leather": 0,
+          "armor_iron": 0,
+          "armor_crystal": 0
+        },
+        "crate": {
+          "common": 0,
+          "uncommon": 0,
+          "legendary": 0,
+          "mythic": 0,
+          "secret": 0
+        }
+      },
+      "cooldown": {
+        "daily": 0,
+        "adventure": 0,
+        "mine": 0,
+        "fish": 0,
+        "rest": 0
+      },
+      "createdAt": 1777992653174
+    },
+    "270463066497066@lid": {
+      "name": "𝅄─ ୭୧ 𝓑ɑׁׅᑲ𝐲 𝐂𝘂ƚҽ'𝒔",
+      "ownerAcces": false,
+      "premium": {
+        "status": false,
+        "expiredAt": null
+      },
+      "limit": 20,
+      "level": 1,
+      "exp": 0,
+      "hp": 100,
+      "hpMax": 100,
+      "mana": 50,
+      "manaMax": 50,
+      "atk": 10,
+      "def": 5,
+      "money": 100000,
+      "mcoin": 0,
+      "equipped": {
+        "weapon": null,
+        "armor": null
+      },
+      "inventory": {
+        "ores": {
+          "coal": 0,
+          "stone": 0,
+          "iron": 0,
+          "gold": 0,
+          "diamond": 0,
+          "platinum": 0
+        },
+        "nature": {
+          "wood": 0,
+          "leather": 0,
+          "spice": 0,
+          "water_jug": 0,
+          "bait": 0
+        },
+        "fruit": {
+          "strawberry": 0,
+          "banana": 0,
+          "grape": 0,
+          "apple": 0,
+          "orange": 0
+        },
+        "vegetable": {
+          "carrot": 0,
+          "potato": 0,
+          "cabbage": 0,
+          "onion": 0,
+          "tomato": 0,
+          "corn": 0
+        },
+        "fish": {
+          "anchovy": 0,
+          "catfish": 0,
+          "carp": 0,
+          "tuna": 0,
+          "salmon": 0,
+          "swordfish": 0,
+          "pufferfish": 0,
+          "squid": 0,
+          "shrimp": 0,
+          "clownfish": 0
+        },
+        "food": {
+          "bread": 0,
+          "rice": 0,
+          "grilled_fish": 0,
+          "steak": 0,
+          "fruit_salad": 0,
+          "roast_chicken": 0
+        },
+        "drink": {
+          "water": 0,
+          "juice": 0,
+          "herbal_tea": 0,
+          "mana_potion": 0,
+          "elixir": 0
+        },
+        "tools": {
+          "pickaxe_iron": 0,
+          "pickaxe_diamond": 0,
+          "rod_wood": 0,
+          "rod_premium": 0
+        },
+        "weapon": {
+          "sword_stone": 0,
+          "sword_iron": 0,
+          "sword_diamond": 0,
+          "sword_light": 0,
+          "sword_dark": 0
+        },
+        "armor": {
+          "armor_leather": 0,
+          "armor_iron": 0,
+          "armor_crystal": 0
+        },
+        "crate": {
+          "common": 0,
+          "uncommon": 0,
+          "legendary": 0,
+          "mythic": 0,
+          "secret": 0
+        }
+      },
+      "cooldown": {
+        "daily": 0,
+        "adventure": 0,
+        "mine": 0,
+        "fish": 0,
+        "rest": 0
+      },
+      "createdAt": 1777992661422
+    },
+    "115015315148856@lid": {
+      "name": "Kanzx",
+      "ownerAcces": false,
+      "premium": {
+        "status": false,
+        "expiredAt": null
+      },
+      "limit": 20,
+      "level": 1,
+      "exp": 0,
+      "hp": 100,
+      "hpMax": 100,
+      "mana": 50,
+      "manaMax": 50,
+      "atk": 10,
+      "def": 5,
+      "money": 100000,
+      "mcoin": 0,
+      "equipped": {
+        "weapon": null,
+        "armor": null
+      },
+      "inventory": {
+        "ores": {
+          "coal": 0,
+          "stone": 0,
+          "iron": 0,
+          "gold": 0,
+          "diamond": 0,
+          "platinum": 0
+        },
+        "nature": {
+          "wood": 0,
+          "leather": 0,
+          "spice": 0,
+          "water_jug": 0,
+          "bait": 0
+        },
+        "fruit": {
+          "strawberry": 0,
+          "banana": 0,
+          "grape": 0,
+          "apple": 0,
+          "orange": 0
+        },
+        "vegetable": {
+          "carrot": 0,
+          "potato": 0,
+          "cabbage": 0,
+          "onion": 0,
+          "tomato": 0,
+          "corn": 0
+        },
+        "fish": {
+          "anchovy": 0,
+          "catfish": 0,
+          "carp": 0,
+          "tuna": 0,
+          "salmon": 0,
+          "swordfish": 0,
+          "pufferfish": 0,
+          "squid": 0,
+          "shrimp": 0,
+          "clownfish": 0
+        },
+        "food": {
+          "bread": 0,
+          "rice": 0,
+          "grilled_fish": 0,
+          "steak": 0,
+          "fruit_salad": 0,
+          "roast_chicken": 0
+        },
+        "drink": {
+          "water": 0,
+          "juice": 0,
+          "herbal_tea": 0,
+          "mana_potion": 0,
+          "elixir": 0
+        },
+        "tools": {
+          "pickaxe_iron": 0,
+          "pickaxe_diamond": 0,
+          "rod_wood": 0,
+          "rod_premium": 0
+        },
+        "weapon": {
+          "sword_stone": 0,
+          "sword_iron": 0,
+          "sword_diamond": 0,
+          "sword_light": 0,
+          "sword_dark": 0
+        },
+        "armor": {
+          "armor_leather": 0,
+          "armor_iron": 0,
+          "armor_crystal": 0
+        },
+        "crate": {
+          "common": 0,
+          "uncommon": 0,
+          "legendary": 0,
+          "mythic": 0,
+          "secret": 0
+        }
+      },
+      "cooldown": {
+        "daily": 0,
+        "adventure": 0,
+        "mine": 0,
+        "fish": 0,
+        "rest": 0
+      },
+      "createdAt": 1777992663231
+    },
+    "169943953879069@lid": {
+      "name": "169943953879069",
+      "ownerAcces": false,
+      "premium": {
+        "status": false,
+        "expiredAt": null
+      },
+      "limit": 20,
+      "level": 1,
+      "exp": 0,
+      "hp": 100,
+      "hpMax": 100,
+      "mana": 50,
+      "manaMax": 50,
+      "atk": 10,
+      "def": 5,
+      "money": 100000,
+      "mcoin": 0,
+      "equipped": {
+        "weapon": null,
+        "armor": null
+      },
+      "inventory": {
+        "ores": {
+          "coal": 0,
+          "stone": 0,
+          "iron": 0,
+          "gold": 0,
+          "diamond": 0,
+          "platinum": 0
+        },
+        "nature": {
+          "wood": 0,
+          "leather": 0,
+          "spice": 0,
+          "water_jug": 0,
+          "bait": 0
+        },
+        "fruit": {
+          "strawberry": 0,
+          "banana": 0,
+          "grape": 0,
+          "apple": 0,
+          "orange": 0
+        },
+        "vegetable": {
+          "carrot": 0,
+          "potato": 0,
+          "cabbage": 0,
+          "onion": 0,
+          "tomato": 0,
+          "corn": 0
+        },
+        "fish": {
+          "anchovy": 0,
+          "catfish": 0,
+          "carp": 0,
+          "tuna": 0,
+          "salmon": 0,
+          "swordfish": 0,
+          "pufferfish": 0,
+          "squid": 0,
+          "shrimp": 0,
+          "clownfish": 0
+        },
+        "food": {
+          "bread": 0,
+          "rice": 0,
+          "grilled_fish": 0,
+          "steak": 0,
+          "fruit_salad": 0,
+          "roast_chicken": 0
+        },
+        "drink": {
+          "water": 0,
+          "juice": 0,
+          "herbal_tea": 0,
+          "mana_potion": 0,
+          "elixir": 0
+        },
+        "tools": {
+          "pickaxe_iron": 0,
+          "pickaxe_diamond": 0,
+          "rod_wood": 0,
+          "rod_premium": 0
+        },
+        "weapon": {
+          "sword_stone": 0,
+          "sword_iron": 0,
+          "sword_diamond": 0,
+          "sword_light": 0,
+          "sword_dark": 0
+        },
+        "armor": {
+          "armor_leather": 0,
+          "armor_iron": 0,
+          "armor_crystal": 0
+        },
+        "crate": {
+          "common": 0,
+          "uncommon": 0,
+          "legendary": 0,
+          "mythic": 0,
+          "secret": 0
+        }
+      },
+      "cooldown": {
+        "daily": 0,
+        "adventure": 0,
+        "mine": 0,
+        "fish": 0,
+        "rest": 0
+      },
+      "createdAt": 1777992684730
+    },
+    "31882213359639@lid": {
+      "name": "nmr cadangan ripky",
+      "ownerAcces": false,
+      "premium": {
+        "status": false,
+        "expiredAt": null
+      },
+      "limit": 20,
+      "level": 1,
+      "exp": 0,
+      "hp": 100,
+      "hpMax": 100,
+      "mana": 50,
+      "manaMax": 50,
+      "atk": 10,
+      "def": 5,
+      "money": 100000,
+      "mcoin": 0,
+      "equipped": {
+        "weapon": null,
+        "armor": null
+      },
+      "inventory": {
+        "ores": {
+          "coal": 0,
+          "stone": 0,
+          "iron": 0,
+          "gold": 0,
+          "diamond": 0,
+          "platinum": 0
+        },
+        "nature": {
+          "wood": 0,
+          "leather": 0,
+          "spice": 0,
+          "water_jug": 0,
+          "bait": 0
+        },
+        "fruit": {
+          "strawberry": 0,
+          "banana": 0,
+          "grape": 0,
+          "apple": 0,
+          "orange": 0
+        },
+        "vegetable": {
+          "carrot": 0,
+          "potato": 0,
+          "cabbage": 0,
+          "onion": 0,
+          "tomato": 0,
+          "corn": 0
+        },
+        "fish": {
+          "anchovy": 0,
+          "catfish": 0,
+          "carp": 0,
+          "tuna": 0,
+          "salmon": 0,
+          "swordfish": 0,
+          "pufferfish": 0,
+          "squid": 0,
+          "shrimp": 0,
+          "clownfish": 0
+        },
+        "food": {
+          "bread": 0,
+          "rice": 0,
+          "grilled_fish": 0,
+          "steak": 0,
+          "fruit_salad": 0,
+          "roast_chicken": 0
+        },
+        "drink": {
+          "water": 0,
+          "juice": 0,
+          "herbal_tea": 0,
+          "mana_potion": 0,
+          "elixir": 0
+        },
+        "tools": {
+          "pickaxe_iron": 0,
+          "pickaxe_diamond": 0,
+          "rod_wood": 0,
+          "rod_premium": 0
+        },
+        "weapon": {
+          "sword_stone": 0,
+          "sword_iron": 0,
+          "sword_diamond": 0,
+          "sword_light": 0,
+          "sword_dark": 0
+        },
+        "armor": {
+          "armor_leather": 0,
+          "armor_iron": 0,
+          "armor_crystal": 0
+        },
+        "crate": {
+          "common": 0,
+          "uncommon": 0,
+          "legendary": 0,
+          "mythic": 0,
+          "secret": 0
+        }
+      },
+      "cooldown": {
+        "daily": 0,
+        "adventure": 0,
+        "mine": 0,
+        "fish": 0,
+        "rest": 0
+      },
+      "createdAt": 1777992785661
+    },
+    "205274354843733@lid": {
+      "name": "Donquixote D Fierlyy",
+      "ownerAcces": false,
+      "premium": {
+        "status": false,
+        "expiredAt": null
+      },
+      "limit": 20,
+      "level": 1,
+      "exp": 0,
+      "hp": 100,
+      "hpMax": 100,
+      "mana": 50,
+      "manaMax": 50,
+      "atk": 10,
+      "def": 5,
+      "money": 100000,
+      "mcoin": 0,
+      "equipped": {
+        "weapon": null,
+        "armor": null
+      },
+      "inventory": {
+        "ores": {
+          "coal": 0,
+          "stone": 0,
+          "iron": 0,
+          "gold": 0,
+          "diamond": 0,
+          "platinum": 0
+        },
+        "nature": {
+          "wood": 0,
+          "leather": 0,
+          "spice": 0,
+          "water_jug": 0,
+          "bait": 0
+        },
+        "fruit": {
+          "strawberry": 0,
+          "banana": 0,
+          "grape": 0,
+          "apple": 0,
+          "orange": 0
+        },
+        "vegetable": {
+          "carrot": 0,
+          "potato": 0,
+          "cabbage": 0,
+          "onion": 0,
+          "tomato": 0,
+          "corn": 0
+        },
+        "fish": {
+          "anchovy": 0,
+          "catfish": 0,
+          "carp": 0,
+          "tuna": 0,
+          "salmon": 0,
+          "swordfish": 0,
+          "pufferfish": 0,
+          "squid": 0,
+          "shrimp": 0,
+          "clownfish": 0
+        },
+        "food": {
+          "bread": 0,
+          "rice": 0,
+          "grilled_fish": 0,
+          "steak": 0,
+          "fruit_salad": 0,
+          "roast_chicken": 0
+        },
+        "drink": {
+          "water": 0,
+          "juice": 0,
+          "herbal_tea": 0,
+          "mana_potion": 0,
+          "elixir": 0
+        },
+        "tools": {
+          "pickaxe_iron": 0,
+          "pickaxe_diamond": 0,
+          "rod_wood": 0,
+          "rod_premium": 0
+        },
+        "weapon": {
+          "sword_stone": 0,
+          "sword_iron": 0,
+          "sword_diamond": 0,
+          "sword_light": 0,
+          "sword_dark": 0
+        },
+        "armor": {
+          "armor_leather": 0,
+          "armor_iron": 0,
+          "armor_crystal": 0
+        },
+        "crate": {
+          "common": 0,
+          "uncommon": 0,
+          "legendary": 0,
+          "mythic": 0,
+          "secret": 0
+        }
+      },
+      "cooldown": {
+        "daily": 0,
+        "adventure": 0,
+        "mine": 0,
+        "fish": 0,
+        "rest": 0
+      },
+      "createdAt": 1777992787910
+    },
+    "89499015094350@lid": {
+      "name": "mahasiswa `hukum.ㅤ'justitia,ㅤruat—coelum.ㅤ:jefran",
+      "ownerAcces": false,
+      "premium": {
+        "status": false,
+        "expiredAt": null
+      },
+      "limit": 20,
+      "level": 1,
+      "exp": 0,
+      "hp": 100,
+      "hpMax": 100,
+      "mana": 50,
+      "manaMax": 50,
+      "atk": 10,
+      "def": 5,
+      "money": 100000,
+      "mcoin": 0,
+      "equipped": {
+        "weapon": null,
+        "armor": null
+      },
+      "inventory": {
+        "ores": {
+          "coal": 0,
+          "stone": 0,
+          "iron": 0,
+          "gold": 0,
+          "diamond": 0,
+          "platinum": 0
+        },
+        "nature": {
+          "wood": 0,
+          "leather": 0,
+          "spice": 0,
+          "water_jug": 0,
+          "bait": 0
+        },
+        "fruit": {
+          "strawberry": 0,
+          "banana": 0,
+          "grape": 0,
+          "apple": 0,
+          "orange": 0
+        },
+        "vegetable": {
+          "carrot": 0,
+          "potato": 0,
+          "cabbage": 0,
+          "onion": 0,
+          "tomato": 0,
+          "corn": 0
+        },
+        "fish": {
+          "anchovy": 0,
+          "catfish": 0,
+          "carp": 0,
+          "tuna": 0,
+          "salmon": 0,
+          "swordfish": 0,
+          "pufferfish": 0,
+          "squid": 0,
+          "shrimp": 0,
+          "clownfish": 0
+        },
+        "food": {
+          "bread": 0,
+          "rice": 0,
+          "grilled_fish": 0,
+          "steak": 0,
+          "fruit_salad": 0,
+          "roast_chicken": 0
+        },
+        "drink": {
+          "water": 0,
+          "juice": 0,
+          "herbal_tea": 0,
+          "mana_potion": 0,
+          "elixir": 0
+        },
+        "tools": {
+          "pickaxe_iron": 0,
+          "pickaxe_diamond": 0,
+          "rod_wood": 0,
+          "rod_premium": 0
+        },
+        "weapon": {
+          "sword_stone": 0,
+          "sword_iron": 0,
+          "sword_diamond": 0,
+          "sword_light": 0,
+          "sword_dark": 0
+        },
+        "armor": {
+          "armor_leather": 0,
+          "armor_iron": 0,
+          "armor_crystal": 0
+        },
+        "crate": {
+          "common": 0,
+          "uncommon": 0,
+          "legendary": 0,
+          "mythic": 0,
+          "secret": 0
+        }
+      },
+      "cooldown": {
+        "daily": 0,
+        "adventure": 0,
+        "mine": 0,
+        "fish": 0,
+        "rest": 0
+      },
+      "createdAt": 1777992794513
+    },
+    "59859630342334@lid": {
+      "name": "59859630342334",
+      "ownerAcces": false,
+      "premium": {
+        "status": false,
+        "expiredAt": null
+      },
+      "limit": 20,
+      "level": 1,
+      "exp": 0,
+      "hp": 100,
+      "hpMax": 100,
+      "mana": 50,
+      "manaMax": 50,
+      "atk": 10,
+      "def": 5,
+      "money": 100000,
+      "mcoin": 0,
+      "equipped": {
+        "weapon": null,
+        "armor": null
+      },
+      "inventory": {
+        "ores": {
+          "coal": 0,
+          "stone": 0,
+          "iron": 0,
+          "gold": 0,
+          "diamond": 0,
+          "platinum": 0
+        },
+        "nature": {
+          "wood": 0,
+          "leather": 0,
+          "spice": 0,
+          "water_jug": 0,
+          "bait": 0
+        },
+        "fruit": {
+          "strawberry": 0,
+          "banana": 0,
+          "grape": 0,
+          "apple": 0,
+          "orange": 0
+        },
+        "vegetable": {
+          "carrot": 0,
+          "potato": 0,
+          "cabbage": 0,
+          "onion": 0,
+          "tomato": 0,
+          "corn": 0
+        },
+        "fish": {
+          "anchovy": 0,
+          "catfish": 0,
+          "carp": 0,
+          "tuna": 0,
+          "salmon": 0,
+          "swordfish": 0,
+          "pufferfish": 0,
+          "squid": 0,
+          "shrimp": 0,
+          "clownfish": 0
+        },
+        "food": {
+          "bread": 0,
+          "rice": 0,
+          "grilled_fish": 0,
+          "steak": 0,
+          "fruit_salad": 0,
+          "roast_chicken": 0
+        },
+        "drink": {
+          "water": 0,
+          "juice": 0,
+          "herbal_tea": 0,
+          "mana_potion": 0,
+          "elixir": 0
+        },
+        "tools": {
+          "pickaxe_iron": 0,
+          "pickaxe_diamond": 0,
+          "rod_wood": 0,
+          "rod_premium": 0
+        },
+        "weapon": {
+          "sword_stone": 0,
+          "sword_iron": 0,
+          "sword_diamond": 0,
+          "sword_light": 0,
+          "sword_dark": 0
+        },
+        "armor": {
+          "armor_leather": 0,
+          "armor_iron": 0,
+          "armor_crystal": 0
+        },
+        "crate": {
+          "common": 0,
+          "uncommon": 0,
+          "legendary": 0,
+          "mythic": 0,
+          "secret": 0
+        }
+      },
+      "cooldown": {
+        "daily": 0,
+        "adventure": 0,
+        "mine": 0,
+        "fish": 0,
+        "rest": 0
+      },
+      "createdAt": 1777992796190
+    },
+    "66757364551684@lid": {
+      "name": "#",
+      "ownerAcces": false,
+      "premium": {
+        "status": false,
+        "expiredAt": null
+      },
+      "limit": 20,
+      "level": 1,
+      "exp": 0,
+      "hp": 100,
+      "hpMax": 100,
+      "mana": 50,
+      "manaMax": 50,
+      "atk": 10,
+      "def": 5,
+      "money": 100000,
+      "mcoin": 0,
+      "equipped": {
+        "weapon": null,
+        "armor": null
+      },
+      "inventory": {
+        "ores": {
+          "coal": 0,
+          "stone": 0,
+          "iron": 0,
+          "gold": 0,
+          "diamond": 0,
+          "platinum": 0
+        },
+        "nature": {
+          "wood": 0,
+          "leather": 0,
+          "spice": 0,
+          "water_jug": 0,
+          "bait": 0
+        },
+        "fruit": {
+          "strawberry": 0,
+          "banana": 0,
+          "grape": 0,
+          "apple": 0,
+          "orange": 0
+        },
+        "vegetable": {
+          "carrot": 0,
+          "potato": 0,
+          "cabbage": 0,
+          "onion": 0,
+          "tomato": 0,
+          "corn": 0
+        },
+        "fish": {
+          "anchovy": 0,
+          "catfish": 0,
+          "carp": 0,
+          "tuna": 0,
+          "salmon": 0,
+          "swordfish": 0,
+          "pufferfish": 0,
+          "squid": 0,
+          "shrimp": 0,
+          "clownfish": 0
+        },
+        "food": {
+          "bread": 0,
+          "rice": 0,
+          "grilled_fish": 0,
+          "steak": 0,
+          "fruit_salad": 0,
+          "roast_chicken": 0
+        },
+        "drink": {
+          "water": 0,
+          "juice": 0,
+          "herbal_tea": 0,
+          "mana_potion": 0,
+          "elixir": 0
+        },
+        "tools": {
+          "pickaxe_iron": 0,
+          "pickaxe_diamond": 0,
+          "rod_wood": 0,
+          "rod_premium": 0
+        },
+        "weapon": {
+          "sword_stone": 0,
+          "sword_iron": 0,
+          "sword_diamond": 0,
+          "sword_light": 0,
+          "sword_dark": 0
+        },
+        "armor": {
+          "armor_leather": 0,
+          "armor_iron": 0,
+          "armor_crystal": 0
+        },
+        "crate": {
+          "common": 0,
+          "uncommon": 0,
+          "legendary": 0,
+          "mythic": 0,
+          "secret": 0
+        }
+      },
+      "cooldown": {
+        "daily": 0,
+        "adventure": 0,
+        "mine": 0,
+        "fish": 0,
+        "rest": 0
+      },
+      "createdAt": 1777992800954
+    },
+    "215947499540588@lid": {
+      "name": "agus",
+      "ownerAcces": false,
+      "premium": {
+        "status": false,
+        "expiredAt": null
+      },
+      "limit": 20,
+      "level": 1,
+      "exp": 0,
+      "hp": 100,
+      "hpMax": 100,
+      "mana": 50,
+      "manaMax": 50,
+      "atk": 10,
+      "def": 5,
+      "money": 100000,
+      "mcoin": 0,
+      "equipped": {
+        "weapon": null,
+        "armor": null
+      },
+      "inventory": {
+        "ores": {
+          "coal": 0,
+          "stone": 0,
+          "iron": 0,
+          "gold": 0,
+          "diamond": 0,
+          "platinum": 0
+        },
+        "nature": {
+          "wood": 0,
+          "leather": 0,
+          "spice": 0,
+          "water_jug": 0,
+          "bait": 0
+        },
+        "fruit": {
+          "strawberry": 0,
+          "banana": 0,
+          "grape": 0,
+          "apple": 0,
+          "orange": 0
+        },
+        "vegetable": {
+          "carrot": 0,
+          "potato": 0,
+          "cabbage": 0,
+          "onion": 0,
+          "tomato": 0,
+          "corn": 0
+        },
+        "fish": {
+          "anchovy": 0,
+          "catfish": 0,
+          "carp": 0,
+          "tuna": 0,
+          "salmon": 0,
+          "swordfish": 0,
+          "pufferfish": 0,
+          "squid": 0,
+          "shrimp": 0,
+          "clownfish": 0
+        },
+        "food": {
+          "bread": 0,
+          "rice": 0,
+          "grilled_fish": 0,
+          "steak": 0,
+          "fruit_salad": 0,
+          "roast_chicken": 0
+        },
+        "drink": {
+          "water": 0,
+          "juice": 0,
+          "herbal_tea": 0,
+          "mana_potion": 0,
+          "elixir": 0
+        },
+        "tools": {
+          "pickaxe_iron": 0,
+          "pickaxe_diamond": 0,
+          "rod_wood": 0,
+          "rod_premium": 0
+        },
+        "weapon": {
+          "sword_stone": 0,
+          "sword_iron": 0,
+          "sword_diamond": 0,
+          "sword_light": 0,
+          "sword_dark": 0
+        },
+        "armor": {
+          "armor_leather": 0,
+          "armor_iron": 0,
+          "armor_crystal": 0
+        },
+        "crate": {
+          "common": 0,
+          "uncommon": 0,
+          "legendary": 0,
+          "mythic": 0,
+          "secret": 0
+        }
+      },
+      "cooldown": {
+        "daily": 0,
+        "adventure": 0,
+        "mine": 0,
+        "fish": 0,
+        "rest": 0
+      },
+      "createdAt": 1777992880766
+    },
+    "235601035042951@lid": {
+      "name": "235601035042951",
+      "ownerAcces": false,
+      "premium": {
+        "status": false,
+        "expiredAt": null
+      },
+      "limit": 20,
+      "level": 1,
+      "exp": 0,
+      "hp": 100,
+      "hpMax": 100,
+      "mana": 50,
+      "manaMax": 50,
+      "atk": 10,
+      "def": 5,
+      "money": 100000,
+      "mcoin": 0,
+      "equipped": {
+        "weapon": null,
+        "armor": null
+      },
+      "inventory": {
+        "ores": {
+          "coal": 0,
+          "stone": 0,
+          "iron": 0,
+          "gold": 0,
+          "diamond": 0,
+          "platinum": 0
+        },
+        "nature": {
+          "wood": 0,
+          "leather": 0,
+          "spice": 0,
+          "water_jug": 0,
+          "bait": 0
+        },
+        "fruit": {
+          "strawberry": 0,
+          "banana": 0,
+          "grape": 0,
+          "apple": 0,
+          "orange": 0
+        },
+        "vegetable": {
+          "carrot": 0,
+          "potato": 0,
+          "cabbage": 0,
+          "onion": 0,
+          "tomato": 0,
+          "corn": 0
+        },
+        "fish": {
+          "anchovy": 0,
+          "catfish": 0,
+          "carp": 0,
+          "tuna": 0,
+          "salmon": 0,
+          "swordfish": 0,
+          "pufferfish": 0,
+          "squid": 0,
+          "shrimp": 0,
+          "clownfish": 0
+        },
+        "food": {
+          "bread": 0,
+          "rice": 0,
+          "grilled_fish": 0,
+          "steak": 0,
+          "fruit_salad": 0,
+          "roast_chicken": 0
+        },
+        "drink": {
+          "water": 0,
+          "juice": 0,
+          "herbal_tea": 0,
+          "mana_potion": 0,
+          "elixir": 0
+        },
+        "tools": {
+          "pickaxe_iron": 0,
+          "pickaxe_diamond": 0,
+          "rod_wood": 0,
+          "rod_premium": 0
+        },
+        "weapon": {
+          "sword_stone": 0,
+          "sword_iron": 0,
+          "sword_diamond": 0,
+          "sword_light": 0,
+          "sword_dark": 0
+        },
+        "armor": {
+          "armor_leather": 0,
+          "armor_iron": 0,
+          "armor_crystal": 0
+        },
+        "crate": {
+          "common": 0,
+          "uncommon": 0,
+          "legendary": 0,
+          "mythic": 0,
+          "secret": 0
+        }
+      },
+      "cooldown": {
+        "daily": 0,
+        "adventure": 0,
+        "mine": 0,
+        "fish": 0,
+        "rest": 0
+      },
+      "createdAt": 1777992888609
+    },
+    "273898872516773@lid": {
+      "name": "kot",
+      "ownerAcces": false,
+      "premium": {
+        "status": false,
+        "expiredAt": null
+      },
+      "limit": 20,
+      "level": 1,
+      "exp": 0,
+      "hp": 100,
+      "hpMax": 100,
+      "mana": 50,
+      "manaMax": 50,
+      "atk": 10,
+      "def": 5,
+      "money": 100000,
+      "mcoin": 0,
+      "equipped": {
+        "weapon": null,
+        "armor": null
+      },
+      "inventory": {
+        "ores": {
+          "coal": 0,
+          "stone": 0,
+          "iron": 0,
+          "gold": 0,
+          "diamond": 0,
+          "platinum": 0
+        },
+        "nature": {
+          "wood": 0,
+          "leather": 0,
+          "spice": 0,
+          "water_jug": 0,
+          "bait": 0
+        },
+        "fruit": {
+          "strawberry": 0,
+          "banana": 0,
+          "grape": 0,
+          "apple": 0,
+          "orange": 0
+        },
+        "vegetable": {
+          "carrot": 0,
+          "potato": 0,
+          "cabbage": 0,
+          "onion": 0,
+          "tomato": 0,
+          "corn": 0
+        },
+        "fish": {
+          "anchovy": 0,
+          "catfish": 0,
+          "carp": 0,
+          "tuna": 0,
+          "salmon": 0,
+          "swordfish": 0,
+          "pufferfish": 0,
+          "squid": 0,
+          "shrimp": 0,
+          "clownfish": 0
+        },
+        "food": {
+          "bread": 0,
+          "rice": 0,
+          "grilled_fish": 0,
+          "steak": 0,
+          "fruit_salad": 0,
+          "roast_chicken": 0
+        },
+        "drink": {
+          "water": 0,
+          "juice": 0,
+          "herbal_tea": 0,
+          "mana_potion": 0,
+          "elixir": 0
+        },
+        "tools": {
+          "pickaxe_iron": 0,
+          "pickaxe_diamond": 0,
+          "rod_wood": 0,
+          "rod_premium": 0
+        },
+        "weapon": {
+          "sword_stone": 0,
+          "sword_iron": 0,
+          "sword_diamond": 0,
+          "sword_light": 0,
+          "sword_dark": 0
+        },
+        "armor": {
+          "armor_leather": 0,
+          "armor_iron": 0,
+          "armor_crystal": 0
+        },
+        "crate": {
+          "common": 0,
+          "uncommon": 0,
+          "legendary": 0,
+          "mythic": 0,
+          "secret": 0
+        }
+      },
+      "cooldown": {
+        "daily": 0,
+        "adventure": 0,
+        "mine": 0,
+        "fish": 0,
+        "rest": 0
+      },
+      "createdAt": 1777992890208
+    },
+    "271773333491832@lid": {
+      "name": "271773333491832",
+      "ownerAcces": false,
+      "premium": {
+        "status": false,
+        "expiredAt": null
+      },
+      "limit": 20,
+      "level": 1,
+      "exp": 0,
+      "hp": 100,
+      "hpMax": 100,
+      "mana": 50,
+      "manaMax": 50,
+      "atk": 10,
+      "def": 5,
+      "money": 100000,
+      "mcoin": 0,
+      "equipped": {
+        "weapon": null,
+        "armor": null
+      },
+      "inventory": {
+        "ores": {
+          "coal": 0,
+          "stone": 0,
+          "iron": 0,
+          "gold": 0,
+          "diamond": 0,
+          "platinum": 0
+        },
+        "nature": {
+          "wood": 0,
+          "leather": 0,
+          "spice": 0,
+          "water_jug": 0,
+          "bait": 0
+        },
+        "fruit": {
+          "strawberry": 0,
+          "banana": 0,
+          "grape": 0,
+          "apple": 0,
+          "orange": 0
+        },
+        "vegetable": {
+          "carrot": 0,
+          "potato": 0,
+          "cabbage": 0,
+          "onion": 0,
+          "tomato": 0,
+          "corn": 0
+        },
+        "fish": {
+          "anchovy": 0,
+          "catfish": 0,
+          "carp": 0,
+          "tuna": 0,
+          "salmon": 0,
+          "swordfish": 0,
+          "pufferfish": 0,
+          "squid": 0,
+          "shrimp": 0,
+          "clownfish": 0
+        },
+        "food": {
+          "bread": 0,
+          "rice": 0,
+          "grilled_fish": 0,
+          "steak": 0,
+          "fruit_salad": 0,
+          "roast_chicken": 0
+        },
+        "drink": {
+          "water": 0,
+          "juice": 0,
+          "herbal_tea": 0,
+          "mana_potion": 0,
+          "elixir": 0
+        },
+        "tools": {
+          "pickaxe_iron": 0,
+          "pickaxe_diamond": 0,
+          "rod_wood": 0,
+          "rod_premium": 0
+        },
+        "weapon": {
+          "sword_stone": 0,
+          "sword_iron": 0,
+          "sword_diamond": 0,
+          "sword_light": 0,
+          "sword_dark": 0
+        },
+        "armor": {
+          "armor_leather": 0,
+          "armor_iron": 0,
+          "armor_crystal": 0
+        },
+        "crate": {
+          "common": 0,
+          "uncommon": 0,
+          "legendary": 0,
+          "mythic": 0,
+          "secret": 0
+        }
+      },
+      "cooldown": {
+        "daily": 0,
+        "adventure": 0,
+        "mine": 0,
+        "fish": 0,
+        "rest": 0
+      },
+      "createdAt": 1777992891491
+    },
+    "272232894980110@lid": {
+      "name": "caaa",
+      "ownerAcces": false,
+      "premium": {
+        "status": false,
+        "expiredAt": null
+      },
+      "limit": 20,
+      "level": 1,
+      "exp": 0,
+      "hp": 100,
+      "hpMax": 100,
+      "mana": 50,
+      "manaMax": 50,
+      "atk": 10,
+      "def": 5,
+      "money": 100000,
+      "mcoin": 0,
+      "equipped": {
+        "weapon": null,
+        "armor": null
+      },
+      "inventory": {
+        "ores": {
+          "coal": 0,
+          "stone": 0,
+          "iron": 0,
+          "gold": 0,
+          "diamond": 0,
+          "platinum": 0
+        },
+        "nature": {
+          "wood": 0,
+          "leather": 0,
+          "spice": 0,
+          "water_jug": 0,
+          "bait": 0
+        },
+        "fruit": {
+          "strawberry": 0,
+          "banana": 0,
+          "grape": 0,
+          "apple": 0,
+          "orange": 0
+        },
+        "vegetable": {
+          "carrot": 0,
+          "potato": 0,
+          "cabbage": 0,
+          "onion": 0,
+          "tomato": 0,
+          "corn": 0
+        },
+        "fish": {
+          "anchovy": 0,
+          "catfish": 0,
+          "carp": 0,
+          "tuna": 0,
+          "salmon": 0,
+          "swordfish": 0,
+          "pufferfish": 0,
+          "squid": 0,
+          "shrimp": 0,
+          "clownfish": 0
+        },
+        "food": {
+          "bread": 0,
+          "rice": 0,
+          "grilled_fish": 0,
+          "steak": 0,
+          "fruit_salad": 0,
+          "roast_chicken": 0
+        },
+        "drink": {
+          "water": 0,
+          "juice": 0,
+          "herbal_tea": 0,
+          "mana_potion": 0,
+          "elixir": 0
+        },
+        "tools": {
+          "pickaxe_iron": 0,
+          "pickaxe_diamond": 0,
+          "rod_wood": 0,
+          "rod_premium": 0
+        },
+        "weapon": {
+          "sword_stone": 0,
+          "sword_iron": 0,
+          "sword_diamond": 0,
+          "sword_light": 0,
+          "sword_dark": 0
+        },
+        "armor": {
+          "armor_leather": 0,
+          "armor_iron": 0,
+          "armor_crystal": 0
+        },
+        "crate": {
+          "common": 0,
+          "uncommon": 0,
+          "legendary": 0,
+          "mythic": 0,
+          "secret": 0
+        }
+      },
+      "cooldown": {
+        "daily": 0,
+        "adventure": 0,
+        "mine": 0,
+        "fish": 0,
+        "rest": 0
+      },
+      "createdAt": 1777992896281
+    }
+  },
+  "group": {
+    "120363407167302791@g.us": {
+      "from": "120363407167302791@g.us",
+      "config": {},
+      "bans": false,
+      "welcome": false,
+      "antilink": false
+    },
+    "120363408509005049@g.us": {
+      "from": "120363408509005049@g.us",
+      "config": {},
+      "bans": false,
+      "welcome": false,
+      "antilink": false
+    },
+    "120363406510090586@g.us": {
+      "from": "120363406510090586@g.us",
+      "config": {},
+      "bans": false,
+      "welcome": false,
+      "antilink": false
+    },
+    "120363406262344978@g.us": {
+      "from": "120363406262344978@g.us",
+      "config": {},
+      "bans": false,
+      "welcome": false,
+      "antilink": false
+    },
+    "120363407795723861@g.us": {
+      "from": "120363407795723861@g.us",
+      "config": {},
+      "bans": false,
+      "welcome": false,
+      "antilink": false
+    },
+    "120363407459970448@g.us": {
+      "from": "120363407459970448@g.us",
+      "config": {},
+      "bans": false,
+      "welcome": false,
+      "antilink": false
+    },
+    "120363422041457787@g.us": {
+      "from": "120363422041457787@g.us",
+      "config": {},
+      "bans": false,
+      "welcome": false,
+      "antilink": false
+    },
+    "120363281913950837@g.us": {
+      "from": "120363281913950837@g.us",
+      "config": {},
+      "bans": false,
+      "welcome": false,
+      "antilink": false
+    },
+    "120363408264358677@g.us": {
+      "from": "120363408264358677@g.us",
+      "config": {},
+      "bans": false,
+      "welcome": false,
+      "antilink": false
+    },
+    "120363400667921762@g.us": {
+      "from": "120363400667921762@g.us",
+      "config": {},
+      "bans": false,
+      "welcome": false,
+      "antilink": false
+    },
+    "120363046159526107@g.us": {
+      "from": "120363046159526107@g.us",
+      "config": {},
+      "bans": false,
+      "welcome": false,
+      "antilink": false
+    }
+  },
+  "cmd": {}
+}
