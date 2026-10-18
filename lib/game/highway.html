@@ -1,0 +1,976 @@
+<!doctype html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <title>Highway Bot — Balap Jalanan</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    :root {
+      --bg: #0b141a;
+      --bg2: #111b21;
+      --panel: #202c33;
+      --green: #00a884;
+      --green-d: #005c4b;
+      --green-l: #06cf9c;
+      --tx: #e9edef;
+      --tx2: #8696a0;
+      --line: #2a3942;
+      --red: #f15c6d;
+      --amber: #ffb74d
+    }
+
+    body,
+    html {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      overscroll-behavior: none;
+      touch-action: none
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--tx);
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      position: fixed;
+      inset: 0
+    }
+
+    button {
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+      background: 0 0;
+      color: inherit;
+      touch-action: manipulation
+    }
+
+    .stage {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      isolation: isolate;
+      touch-action: none
+    }
+
+    canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      z-index: 1;
+      touch-action: none
+    }
+
+    .top {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 10;
+      padding: 20px 30px 70px;
+      display: flex;
+      align-items: center;
+      gap: 26px;
+      background: linear-gradient(180deg, rgba(11, 20, 26, .94) 0, rgba(11, 20, 26, .6) 55%, transparent 100%);
+      pointer-events: none
+    }
+
+    .top>* {
+      pointer-events: auto
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      pointer-events: none
+    }
+
+    .brand-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--green-l), var(--green));
+      display: grid;
+      place-items: center;
+      font-size: 21px;
+      box-shadow: 0 6px 20px rgba(0, 168, 132, .35)
+    }
+
+    .brand-name {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -.2px
+    }
+
+    .brand-sub {
+      font-size: 11px;
+      color: var(--tx2);
+      font-weight: 500;
+      margin-top: 1px
+    }
+
+    .hud {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      font-size: 12.5px;
+      color: var(--tx2);
+      font-weight: 600;
+      margin-left: auto;
+      margin-right: auto;
+      letter-spacing: .03em;
+      text-transform: uppercase;
+      pointer-events: none
+    }
+
+    .hud b {
+      color: var(--tx);
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      font-size: 16px;
+      letter-spacing: -.3px;
+      margin-left: 5px;
+      text-transform: none
+    }
+
+    .hud b.green {
+      color: var(--green-l)
+    }
+
+    .hud b.amber {
+      color: var(--amber)
+    }
+
+    .hud b.red {
+      color: var(--red)
+    }
+
+    .hud-lives {
+      font-size: 15px;
+      letter-spacing: 2px;
+      line-height: 1
+    }
+
+    .wallet {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--tx2);
+      pointer-events: none
+    }
+
+    .wallet b {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--tx);
+      letter-spacing: -.6px;
+      font-variant-numeric: tabular-nums;
+      text-transform: none
+    }
+
+    .wallet b::before {
+      content: '';
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green-l);
+      margin-right: 10px;
+      vertical-align: middle;
+      box-shadow: 0 0 0 3px rgba(6, 207, 156, .18);
+      animation: pulse 2.4s ease-in-out infinite
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        box-shadow: 0 0 0 3px rgba(6, 207, 156, .18)
+      }
+
+      50% {
+        box-shadow: 0 0 0 8px rgba(6, 207, 156, .04)
+      }
+    }
+
+    .history {
+      position: absolute;
+      right: 28px;
+      top: 118px;
+      bottom: 200px;
+      width: 230px;
+      z-index: 9;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      overflow: hidden;
+      padding-top: 26px;
+      pointer-events: none;
+      -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 26px, #000 calc(100% - 44px), transparent 100%);
+      mask-image: linear-gradient(180deg, transparent 0, #000 26px, #000 calc(100% - 44px), transparent 100%)
+    }
+
+    .hist-item {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 9px 8px;
+      border-radius: 8px;
+      animation: histIn .35s cubic-bezier(.34, 1.4, .64, 1)
+    }
+
+    @keyframes histIn {
+      from {
+        opacity: 0;
+        transform: translateX(14px)
+      }
+
+      to {
+        opacity: 1;
+        transform: none
+      }
+    }
+
+    .hist-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex: 0 0 7px;
+      background: var(--green-l);
+      box-shadow: 0 0 10px rgba(6, 207, 156, .7)
+    }
+
+    .hist-dot.lose {
+      background: var(--red);
+      box-shadow: 0 0 10px rgba(241, 92, 109, .6)
+    }
+
+    .hist-dot.draw {
+      background: var(--tx2);
+      box-shadow: none
+    }
+
+    .hist-main {
+      flex: 1;
+      min-width: 0
+    }
+
+    .hist-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--tx);
+      letter-spacing: -.1px
+    }
+
+    .hist-top span:first-child {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap
+    }
+
+    .hist-sub {
+      font-size: 10.5px;
+      color: var(--tx2);
+      margin-top: 2px;
+      font-weight: 500
+    }
+
+    .hist-top .amt-win {
+      color: var(--green-l)
+    }
+
+    .hist-top .amt-lose {
+      color: var(--red)
+    }
+
+    .hist-top .amt-draw {
+      color: var(--tx2)
+    }
+
+    .center {
+      position: absolute;
+      inset: 0;
+      z-index: 8;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle at 50% 45%, rgba(11, 20, 26, .68) 0, rgba(11, 20, 26, .94) 75%);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
+      pointer-events: none;
+      text-align: center;
+      padding: 24px;
+      animation: centerIn .35s ease
+    }
+
+    .center[hidden] {
+      display: none
+    }
+
+    @keyframes centerIn {
+      from {
+        opacity: 0
+      }
+
+      to {
+        opacity: 1
+      }
+    }
+
+    .center-inner {
+      max-width: 540px;
+      animation: centerPop .5s cubic-bezier(.34, 1.56, .64, 1)
+    }
+
+    @keyframes centerPop {
+      from {
+        opacity: 0;
+        transform: scale(.9) translateY(14px)
+      }
+
+      to {
+        opacity: 1;
+        transform: none
+      }
+    }
+
+    .center-icon {
+      font-size: 70px;
+      line-height: 1;
+      margin-bottom: 18px;
+      filter: drop-shadow(0 12px 34px rgba(6, 207, 156, .35))
+    }
+
+    .center-title {
+      font-size: 34px;
+      font-weight: 800;
+      letter-spacing: -.8px;
+      margin-bottom: 14px;
+      color: var(--tx)
+    }
+
+    .center-title.win {
+      color: var(--green-l);
+      text-shadow: 0 0 50px rgba(6, 207, 156, .45)
+    }
+
+    .center-title.lose {
+      color: var(--red);
+      text-shadow: 0 0 50px rgba(241, 92, 109, .35)
+    }
+
+    .center-text {
+      font-size: 15px;
+      color: var(--tx2);
+      line-height: 1.75;
+      font-weight: 400
+    }
+
+    .center-text b {
+      color: var(--tx);
+      font-weight: 700
+    }
+
+    .bottom {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 10;
+      padding: 70px 30px 26px;
+      background: linear-gradient(0deg, rgba(11, 20, 26, .96) 0, rgba(11, 20, 26, .7) 55%, transparent 100%);
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 32px;
+      pointer-events: none;
+      transition: opacity .3s ease
+    }
+
+    .bottom>* {
+      pointer-events: auto
+    }
+
+    .bet-area {
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+      min-width: 0
+    }
+
+    .group-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: var(--tx2)
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      max-width: 680px
+    }
+
+    .chip {
+      border: 1px solid var(--line);
+      background: rgba(32, 44, 51, .72);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      color: var(--tx);
+      padding: 10px 18px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: -.1px;
+      transition: .15s ease
+    }
+
+    .chip:hover {
+      background: rgba(42, 57, 66, .95);
+      border-color: #3a4a52;
+      transform: translateY(-1px)
+    }
+
+    .chip:active {
+      transform: translateY(0)
+    }
+
+    .chip.active {
+      background: var(--green);
+      color: #0b141a;
+      border-color: var(--green);
+      box-shadow: 0 0 24px rgba(0, 168, 132, .55)
+    }
+
+    .action {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: flex-end;
+      flex: 0 0 auto
+    }
+
+    .action-info {
+      display: flex;
+      gap: 24px;
+      font-size: 11.5px;
+      color: var(--tx2);
+      font-weight: 600;
+      letter-spacing: .02em
+    }
+
+    .action-info>div {
+      display: flex;
+      align-items: baseline;
+      gap: 6px
+    }
+
+    .action-info b {
+      color: var(--tx);
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      font-size: 14px;
+      letter-spacing: -.2px
+    }
+
+    .action-info b.green {
+      color: var(--green-l)
+    }
+
+    .play-btn {
+      background: var(--green);
+      color: #0b141a;
+      font-size: 13.5px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      padding: 17px 42px;
+      border-radius: 14px;
+      transition: .18s ease;
+      box-shadow: 0 10px 34px rgba(0, 168, 132, .45);
+      min-width: 240px
+    }
+
+    .play-btn:hover:not(:disabled) {
+      background: var(--green-l);
+      box-shadow: 0 14px 44px rgba(6, 207, 156, .55);
+      transform: translateY(-2px)
+    }
+
+    .play-btn:active:not(:disabled) {
+      transform: translateY(0);
+      box-shadow: 0 6px 20px rgba(0, 168, 132, .4)
+    }
+
+    .play-btn:disabled {
+      background: #2a3942;
+      color: var(--tx2);
+      box-shadow: none;
+      cursor: not-allowed
+    }
+
+    .play-btn.reset {
+      background: var(--red);
+      color: #fff;
+      box-shadow: 0 10px 34px rgba(241, 92, 109, .42)
+    }
+
+    .play-btn.reset:hover {
+      background: #ff6b7c;
+      box-shadow: 0 14px 44px rgba(241, 92, 109, .55)
+    }
+
+    .play-btn.retry {
+      background: var(--amber);
+      color: #0b141a;
+      box-shadow: 0 10px 34px rgba(255, 183, 77, .4)
+    }
+
+    .play-btn.retry:hover {
+      background: #ffc77a;
+      box-shadow: 0 14px 44px rgba(255, 183, 77, .55)
+    }
+
+    .mobile-hint {
+      position: absolute;
+      bottom: 130px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 12px;
+      color: var(--tx2);
+      z-index: 6;
+      pointer-events: none;
+      opacity: .65;
+      transition: opacity .3s
+    }
+
+    @media (max-width:820px) {
+      .top {
+        padding: 14px 18px 50px;
+        gap: 14px;
+        flex-wrap: wrap
+      }
+
+      .brand-sub {
+        display: none
+      }
+
+      .hud {
+        order: 3;
+        flex: 1 1 100%;
+        margin: 0;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 11px
+      }
+
+      .hud b {
+        font-size: 13px
+      }
+
+      .wallet b {
+        font-size: 18px
+      }
+
+      .wallet {
+        font-size: 9.5px
+      }
+
+      .history {
+        display: none
+      }
+
+      .bottom {
+        padding: 50px 18px 20px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 16px
+      }
+
+      .action {
+        align-items: stretch;
+        width: 100%
+      }
+
+      .action-info {
+        justify-content: space-between;
+        width: 100%
+      }
+
+      .play-btn {
+        width: 100%;
+        min-width: 0
+      }
+
+      .center-title {
+        font-size: 26px
+      }
+
+      .center-icon {
+        font-size: 56px
+      }
+
+      .center-text {
+        font-size: 14px
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="stage"><canvas id="game"></canvas>
+    <div class="top">
+      <div class="brand">
+        <div class="brand-icon">🛣️</div>
+        <div>
+          <div class="brand-name">Highway Bot</div>
+          <div class="brand-sub">Balap jalanan</div>
+        </div>
+      </div>
+      <div class="hud"><span class="hud-lives" id="lives">❤️❤️❤️</span> <span>Jarak <b class="amber" id="distance">0m</b></span> <span>Koin <b class="green" id="coinsDisplay">0</b></span> <span>Bayar <b class="green" id="payout">Rp 0</b></span></div>
+      <div class="wallet"><span>Saldo</span> <b id="balance">Rp 100.000</b></div>
+    </div>
+    <div class="history" id="history"></div>
+    <div class="center" id="center">
+      <div class="center-inner">
+        <div class="center-icon">🛣️</div>
+        <div class="center-title">Siap Balapan?</div>
+        <div class="center-text">Pilih nominal taruhan di bawah, lalu tekan <b>MULAI BALAP</b>.<br>Hindari mobil, kumpulkan koin sebanyak mungkin dalam 30 detik.<br><span style="opacity:.7">Kontrol: geser / panah kiri-kanan.</span></div>
+      </div>
+    </div>
+    <div class="bottom" id="bottomBar">
+      <div class="bet-area">
+        <div class="group-title">Nominal Taruhan</div>
+        <div class="chips" id="amtChips"><button class="chip" data-amt="1000">1rb</button> <button class="chip" data-amt="5000">5rb</button> <button class="chip" data-amt="10000">10rb</button> <button class="chip" data-amt="25000">25rb</button> <button class="chip" data-amt="50000">50rb</button> <button class="chip" data-amt="all">ALL IN</button></div>
+      </div>
+      <div class="action">
+        <div class="action-info">
+          <div>Taruhan <b id="betLabel">Rp 1.000</b></div>
+          <div>Target <b class="green" id="winLabel">+Rp 3.500</b></div>
+        </div><button class="play-btn" id="playBtn">MULAI BALAP</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    const canvas = document.getElementById("game"),
+      ctx = canvas.getContext("2d"),
+      balanceEl = document.getElementById("balance"),
+      historyEl = document.getElementById("history"),
+      centerEl = document.getElementById("center"),
+      playBtn = document.getElementById("playBtn"),
+      betLabel = document.getElementById("betLabel"),
+      winLabel = document.getElementById("winLabel"),
+      livesEl = document.getElementById("lives"),
+      distanceEl = document.getElementById("distance"),
+      coinsEl = document.getElementById("coinsDisplay"),
+      payoutEl = document.getElementById("payout"),
+      state = { saldo: 1e5, menang: 0, kalah: 0 },
+      game = { phase: "idle", bet: 1e3, lives: 3, distance: 0, coins: 0, timeLeft: 30, speed: 8, scrollY: 0, scrollY2: 0, cars: [], coinsList: [], particles: [], floaties: [], spawnTimer: 0, coinTimer: 0, difficulty: 1, shake: 0, flash: 0, flashColor: "rgba(6,207,156,.4)", player: { x: 0, vx: 0, w: 60, h: 100, targetX: 0, followPointer: !1, invincible: 0 } },
+      LANES = 4,
+      TARGET_SCORE = 2e3,
+      MULTIPLIER = 3.5,
+      PLAYER_COLOR = "#06cf9c",
+      ENEMY_COLORS = ["#f15c6d", "#ffb74d", "#7986cb", "#ba68c8", "#4db6ac"],
+      rp = e => "Rp " + Math.round(e).toLocaleString("id-ID"),
+      clamp = (e, t, a) => Math.max(t, Math.min(a, e)),
+      rand = (e, t) => e + Math.random() * (t - e),
+      nowTime = () => { const e = new Date; return String(e.getHours()).padStart(2, "0") + "." + String(e.getMinutes()).padStart(2, "0") };
+    let W = 0,
+      H = 0;
+    const roadLeft = () => .14 * W,
+      roadRight = () => .86 * W,
+      roadWidth = () => roadRight() - roadLeft(),
+      laneWidth = () => roadWidth() / 4,
+      laneCenter = e => roadLeft() + laneWidth() * (e + .5);
+
+    function resize() {
+      const e = Math.min(window.devicePixelRatio || 1, 2);
+      W = window.innerWidth, H = window.innerHeight, canvas.width = Math.floor(W * e), canvas.height = Math.floor(H * e), canvas.style.width = W + "px", canvas.style.height = H + "px", ctx.setTransform(e, 0, 0, e, 0, 0);
+      const t = game.player.w;
+      game.player.w = Math.max(46, Math.min(72, .58 * laneWidth())), game.player.h = 1.7 * game.player.w, t > 0 && game.player.x > 0 ? game.player.x = clamp(game.player.x, roadLeft() + game.player.w / 2, roadRight() - game.player.w / 2) : game.player.x = laneCenter(1), draw()
+    }
+    window.addEventListener("resize", resize), window.addEventListener("orientationchange", () => setTimeout(resize, 200));
+    let animToken = 0,
+      shownSaldo = state.saldo;
+
+    function setSaldo(e) {
+      const t = shownSaldo;
+      state.saldo = Math.max(0, Math.round(e)), shownSaldo = state.saldo;
+      const a = ++animToken,
+        n = performance.now();
+      requestAnimationFrame(function e(o) {
+        if (a !== animToken) return;
+        const l = Math.min((o - n) / 420, 1),
+          i = 1 - Math.pow(1 - l, 3);
+        balanceEl.textContent = rp(t + (state.saldo - t) * i), l < 1 ? requestAnimationFrame(e) : balanceEl.textContent = rp(state.saldo)
+      }), updateComposer()
+    }
+
+    function spawnParticles(e, t, a, n = 14, o = 1) {
+      for (let l = 0; l < n; l++) {
+        const n = Math.random() * Math.PI * 2,
+          l = (1.5 + 4 * Math.random()) * o;
+        game.particles.push({ x: e, y: t, vx: Math.cos(n) * l, vy: Math.sin(n) * l - 1, life: 1, size: 2 + 3.5 * Math.random(), color: a })
+      }
+    }
+
+    function spawnFloatText(e, t, a, n) { game.floaties.push({ x: e, y: t, text: a, color: n, life: 1 }) }
+
+    function updateParticles(e) {
+      for (let t = game.particles.length - 1; t >= 0; t--) {
+        const a = game.particles[t];
+        a.x += a.vx * e, a.y += a.vy * e, a.vy += .24 * e, a.vx *= .985, a.life -= .028 * e, a.life <= 0 && game.particles.splice(t, 1)
+      }
+      for (let t = game.floaties.length - 1; t >= 0; t--) {
+        const a = game.floaties[t];
+        a.y -= .9 * e, a.life -= .02 * e, a.life <= 0 && game.floaties.splice(t, 1)
+      }
+    }
+
+    function spawnCar() {
+      const e = Math.floor(4 * Math.random());
+      for (const t of game.cars)
+        if (t.lane === e && t.y < 220) return;
+      const t = Math.max(46, Math.min(72, .58 * laneWidth()));
+      game.cars.push({ lane: e, x: laneCenter(e), y: 2 * -t, w: t, h: 1.7 * t, color: ENEMY_COLORS[Math.floor(Math.random() * ENEMY_COLORS.length)], speedMult: rand(.55, .85) })
+    }
+
+    function spawnCoin() {
+      const e = Math.floor(4 * Math.random());
+      for (const t of game.cars)
+        if (t.lane === e && t.y < 250 && t.y > -250) return;
+      game.coinsList.push({ lane: e, x: laneCenter(e), y: -30, r: Math.max(11, Math.min(16, .14 * laneWidth())), phase: Math.random() * Math.PI * 2 })
+    }
+
+    function updatePlayer(e) {
+      const t = game.player;
+      let a = 0;
+      if (keys.left && (a -= 1), keys.right && (a += 1), 0 !== a) t.followPointer = !1, t.vx = .7 * a * laneWidth();
+      else if (t.followPointer) {
+        const e = t.targetX - t.x;
+        t.vx = .28 * e
+      } else t.vx *= .75, Math.abs(t.vx) < .05 && (t.vx = 0);
+      t.x += t.vx * e;
+      const n = roadLeft() + t.w / 2,
+        o = roadRight() - t.w / 2;
+      t.x < n && (t.x = n, t.vx = 0), t.x > o && (t.x = o, t.vx = 0), t.invincible > 0 && (t.invincible = Math.max(0, t.invincible - e / 60))
+    }
+
+    function updateWorld(e) {
+      const t = e / 60;
+      game.speed = 8 + Math.min(7, game.distance / 180);
+      const a = game.speed * e;
+      if (game.distance += game.speed * e * .05, game.scrollY = (game.scrollY + a) % 120, game.scrollY2 = (game.scrollY2 + .85 * a) % 160, game.spawnTimer -= t, game.spawnTimer <= 0) {
+        spawnCar();
+        const e = .9 - Math.min(.45, game.distance / 1200);
+        game.spawnTimer = Math.max(.32, e + rand(-.15, .35))
+      }
+      game.coinTimer -= t, game.coinTimer <= 0 && (spawnCoin(), Math.random() < .35 && spawnCoin(), game.coinTimer = rand(.55, 1.3));
+      for (let e = game.cars.length - 1; e >= 0; e--) {
+        const t = game.cars[e];
+        t.y += a * t.speedMult, t.y - t.h > H + 40 && game.cars.splice(e, 1)
+      }
+      for (let t = game.coinsList.length - 1; t >= 0; t--) {
+        const n = game.coinsList[t];
+        n.y += a, n.phase += .08 * e, n.y > H + 40 && game.coinsList.splice(t, 1)
+      }
+      if (game.timeLeft -= t, game.timeLeft <= 0) return game.timeLeft = 0, void endGame();
+      checkCollisions()
+    }
+
+    function checkCollisions() {
+      const e = game.player,
+        t = e.x,
+        a = H - 190,
+        n = .82 * e.w,
+        o = .85 * e.h;
+      if (e.invincible <= 0)
+        for (let e = game.cars.length - 1; e >= 0; e--) {
+          const l = game.cars[e],
+            i = .82 * l.w,
+            r = .85 * l.h;
+          if (Math.abs(t - l.x) < (n + i) / 2 && Math.abs(a - l.y) < (o + r) / 2) return game.cars.splice(e, 1), void crash()
+        }
+      for (let n = game.coinsList.length - 1; n >= 0; n--) {
+        const o = game.coinsList[n];
+        Math.hypot(t - o.x, a - o.y) < .55 * e.w + o.r && (game.coinsList.splice(n, 1), game.coins++, coinsEl.textContent = game.coins, spawnParticles(o.x, o.y, "#ffb74d", 10, .8), spawnFloatText(o.x, o.y, "+1", "#ffb74d"), game.flash = .15, game.flashColor = "rgba(255,183,77,.35)", updatePayout())
+      }
+    }
+
+    function crash() {
+      const e = game.player;
+      e.invincible = 1.6, game.lives--, game.shake = 16, game.flash = .55, game.flashColor = "rgba(241,92,109,.55)", spawnParticles(e.x, H - 190, "#f15c6d", 28, 1.6), spawnParticles(e.x, H - 190, "#ffb74d", 12, 1.2), spawnFloatText(e.x, H - 240, "CRASH!", "#f15c6d"), updateLives(), game.lives <= 0 && endGame()
+    }
+
+    function updateLives() { livesEl.textContent = "❤️".repeat(Math.max(0, game.lives)) + "🖤".repeat(Math.max(0, 3 - game.lives)) }
+
+    function updatePayout() {
+      const e = Math.floor(game.distance) + 50 * game.coins,
+        t = clamp(e / 2e3, 0, 1);
+      game.payout = Math.round(game.bet * (1 + 2.5 * t)), payoutEl.textContent = rp(game.payout)
+    }
+
+    function updateHUD() { distanceEl.textContent = Math.floor(game.distance) + "m", coinsEl.textContent = game.coins, updateLives() }
+
+    function startGame() { state.saldo < 100 || game.bet < 100 || game.bet > state.saldo || (setSaldo(state.saldo - game.bet), game.phase = "playing", game.lives = 3, game.distance = 0, game.coins = 0, game.timeLeft = 30, game.speed = 8, game.scrollY = 0, game.scrollY2 = 0, game.cars = [], game.coinsList = [], game.particles = [], game.floaties = [], game.spawnTimer = .6, game.coinTimer = .8, game.difficulty = 1, game.shake = 0, game.flash = 0, game.payout = 0, game.player.x = laneCenter(1), game.player.vx = 0, game.player.targetX = game.player.x, game.player.followPointer = !1, game.player.invincible = 0, updateHUD(), payoutEl.textContent = rp(0), hideCenter(), updateComposer(), spawnCar()) }
+
+    function endGame() {
+      if ("playing" !== game.phase) return;
+      game.phase = "over", updatePayout();
+      const e = game.payout;
+      setSaldo(state.saldo + e);
+      const t = e - game.bet;
+      t > 0 ? state.menang++ : t < 0 && state.kalah++, addHistory(Math.floor(game.distance), game.coins, t, e), updateComposer(), showResult(t, e)
+    }
+
+    function forfeit() { "playing" === game.phase && endGame() }
+    let lastTime = performance.now();
+
+    function update(e) {
+      if ("playing" === game.phase) {
+        if (updateWorld(e), "playing" !== game.phase) return;
+        updatePlayer(e), updateHUD()
+      }
+      game.shake > 0 && (game.shake = Math.max(0, game.shake - .7 * e)), game.flash > 0 && (game.flash = Math.max(0, game.flash - .035 * e)), updateParticles(e)
+    }
+
+    function loop(e) {
+      const t = Math.min(2.5, (e - lastTime) / 16.667);
+      lastTime = e, update(t), draw(), requestAnimationFrame(loop)
+    }
+
+    function rr(e, t, a, n, o) { ctx.beginPath(), "function" == typeof ctx.roundRect ? ctx.roundRect(e, t, a, n, o) : (o = Math.min(o, a / 2, n / 2), ctx.moveTo(e + o, t), ctx.lineTo(e + a - o, t), ctx.quadraticCurveTo(e + a, t, e + a, t + o), ctx.lineTo(e + a, t + n - o), ctx.quadraticCurveTo(e + a, t + n, e + a - o, t + n), ctx.lineTo(e + o, t + n), ctx.quadraticCurveTo(e, t + n, e, t + n - o), ctx.lineTo(e, t + o), ctx.quadraticCurveTo(e, t, e + o, t), ctx.closePath()) }
+
+    function drawCar(e, t, a, n, o, l) {
+      ctx.save(), ctx.translate(e, t), ctx.fillStyle = "rgba(0,0,0,.5)", rr(-a / 2 + 3, -n / 2 + 5, a, n, 10), ctx.fill(), ctx.fillStyle = o, rr(-a / 2, -n / 2, a, n, 10), ctx.fill();
+      const i = ctx.createLinearGradient(-a / 2, 0, a / 2, 0);
+      i.addColorStop(0, "rgba(0,0,0,.28)"), i.addColorStop(.5, "rgba(255,255,255,.18)"), i.addColorStop(1, "rgba(0,0,0,.28)"), ctx.fillStyle = i, rr(-a / 2, -n / 2, a, n, 10), ctx.fill(), ctx.fillStyle = "rgba(11,20,26,.85)", rr(.34 * -a, .3 * -n, .68 * a, .26 * n, 4), ctx.fill(), rr(.32 * -a, .06 * n, .64 * a, .2 * n, 4), ctx.fill(), ctx.fillStyle = "rgba(255,255,255,.08)", rr(.2 * -a, .02 * -n, .4 * a, .06 * n, 2), ctx.fill(), ctx.fillStyle = o, ctx.fillRect(-a / 2 - 3, .15 * -n, 3, 6), ctx.fillRect(a / 2, .15 * -n, 3, 6), l ? (ctx.fillStyle = "rgba(255,235,160,.95)", ctx.fillRect(.36 * -a, -n / 2 + 2, 5, 3), ctx.fillRect(.36 * a - 5, -n / 2 + 2, 5, 3), ctx.fillStyle = "rgba(241,92,109,.9)", ctx.fillRect(.36 * -a, n / 2 - 5, 5, 3), ctx.fillRect(.36 * a - 5, n / 2 - 5, 5, 3)) : (ctx.fillStyle = "rgba(255,235,160,.9)", ctx.fillRect(.36 * -a, n / 2 - 5, 5, 3), ctx.fillRect(.36 * a - 5, n / 2 - 5, 5, 3), ctx.fillStyle = "rgba(241,92,109,.85)", ctx.fillRect(.36 * -a, -n / 2 + 2, 5, 3), ctx.fillRect(.36 * a - 5, -n / 2 + 2, 5, 3)), ctx.restore()
+    }
+
+    function drawCoin(e, t, a, n) {
+      const o = .85 + .15 * Math.sin(n);
+      ctx.save(), ctx.translate(e, t), ctx.scale(o, 1), ctx.shadowColor = "rgba(255,183,77,.85)", ctx.shadowBlur = 22;
+      const l = ctx.createRadialGradient(.3 * -a, .3 * -a, .15 * a, 0, 0, a);
+      l.addColorStop(0, "#ffe082"), l.addColorStop(.6, "#ffb74d"), l.addColorStop(1, "#e08c1e"), ctx.fillStyle = l, ctx.beginPath(), ctx.arc(0, 0, a, 0, 2 * Math.PI), ctx.fill(), ctx.shadowBlur = 0, ctx.strokeStyle = "rgba(255,255,255,.6)", ctx.lineWidth = 1.5, ctx.beginPath(), ctx.arc(0, 0, .65 * a, 0, 2 * Math.PI), ctx.stroke(), ctx.fillStyle = "rgba(255,255,255,.9)", ctx.beginPath(), ctx.arc(0, 0, .2 * a, 0, 2 * Math.PI), ctx.fill(), ctx.restore()
+    }
+
+    function draw() {
+      ctx.save(), game.shake > 0 && ctx.translate(rand(-game.shake, game.shake), rand(-game.shake, game.shake)), ctx.clearRect(-20, -20, W + 40, H + 40);
+      const e = ctx.createLinearGradient(0, 0, 0, H);
+      e.addColorStop(0, "#0d1a21"), e.addColorStop(1, "#060d12"), ctx.fillStyle = e, ctx.fillRect(-20, -20, W + 40, H + 40), ctx.strokeStyle = "rgba(6,207,156,.06)", ctx.lineWidth = 1;
+      for (let e = 0; e < 40; e++) {
+        const t = (80 * e + .5 * game.scrollY) % (H + 100) - 50;
+        ctx.beginPath(), ctx.moveTo(0, t), ctx.lineTo(roadLeft() - 20, t + 40), ctx.moveTo(W, t + 20), ctx.lineTo(roadRight() + 20, t + 60), ctx.stroke()
+      }
+      const t = ctx.createLinearGradient(roadLeft(), 0, roadRight(), 0);
+      t.addColorStop(0, "#151f26"), t.addColorStop(.5, "#1a262e"), t.addColorStop(1, "#151f26"), ctx.fillStyle = t, ctx.fillRect(roadLeft(), -20, roadWidth(), H + 40), ctx.strokeStyle = "rgba(255,255,255,.55)", ctx.lineWidth = 2, ctx.beginPath(), ctx.moveTo(roadLeft() + 3, -20), ctx.lineTo(roadLeft() + 3, H + 20), ctx.moveTo(roadRight() - 3, -20), ctx.lineTo(roadRight() - 3, H + 20), ctx.stroke(), ctx.lineWidth = 8;
+      for (let e = 0; e < 30; e++) {
+        const t = (60 * e + 1.4 * game.scrollY) % (H + 60) - 30;
+        ctx.strokeStyle = e % 2 == 0 ? "rgba(241,92,109,.35)" : "rgba(255,255,255,.2)", ctx.beginPath(), ctx.moveTo(roadLeft() - 8, t), ctx.lineTo(roadLeft() - 8, t + 30), ctx.moveTo(roadRight() + 8, t), ctx.lineTo(roadRight() + 8, t + 30), ctx.stroke()
+      }
+      ctx.strokeStyle = "rgba(255,255,255,.28)", ctx.lineWidth = 3, ctx.setLineDash([28, 22]), ctx.lineDashOffset = 1.4 * -game.scrollY;
+      for (let e = 1; e < 4; e++) {
+        const t = roadLeft() + laneWidth() * e;
+        ctx.beginPath(), ctx.moveTo(t, -20), ctx.lineTo(t, H + 20), ctx.stroke()
+      }
+      ctx.setLineDash([]), ctx.strokeStyle = "rgba(6,207,156,.14)", ctx.lineWidth = 2;
+      for (let e = 0; e < 18; e++) {
+        const t = roadLeft() + (137 * e + 30) % roadWidth(),
+          a = (173 * e + game.scrollY2) % (H + 200) - 100;
+        ctx.beginPath(), ctx.moveTo(t, a), ctx.lineTo(t, a + 60 + 4 * game.speed), ctx.stroke()
+      }
+      for (const e of game.coinsList) drawCoin(e.x, e.y, e.r, e.phase);
+      for (const e of game.cars) drawCar(e.x, e.y, e.w, e.h, e.color, !1);
+      const a = game.player,
+        n = a.x,
+        o = H - 190;
+      a.invincible > 0 && Math.floor(12 * a.invincible) % 2 == 0 ? (ctx.save(), ctx.globalAlpha = .4, drawCar(n, o, a.w, a.h, "#06cf9c", !0), ctx.restore()) : (ctx.save(), ctx.shadowColor = "rgba(6,207,156,.7)", ctx.shadowBlur = 32, ctx.fillStyle = "#06cf9c", rr(n - a.w / 2, o - a.h / 2, a.w, a.h, 10), ctx.fill(), ctx.restore(), drawCar(n, o, a.w, a.h, "#06cf9c", !0));
+      for (const e of game.particles) ctx.globalAlpha = Math.max(0, e.life), ctx.fillStyle = e.color, ctx.beginPath(), ctx.arc(e.x, e.y, e.size * e.life, 0, 2 * Math.PI), ctx.fill();
+      ctx.globalAlpha = 1;
+      for (const e of game.floaties) ctx.globalAlpha = Math.max(0, e.life), ctx.font = '800 22px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', ctx.fillStyle = e.color, ctx.textAlign = "center", ctx.shadowColor = e.color, ctx.shadowBlur = 16, ctx.fillText(e.text, e.x, e.y), ctx.shadowBlur = 0;
+      if (ctx.globalAlpha = 1, game.flash > 0 && (ctx.fillStyle = game.flashColor.replace(/[\d.]+\)$/, .55 * game.flash + ")"), ctx.fillRect(-20, -20, W + 40, H + 40)), ctx.restore(), "playing" === game.phase && game.timeLeft <= 5) {
+        const e = .4 + .4 * Math.sin(.012 * performance.now());
+        ctx.save(), ctx.font = '800 120px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', ctx.fillStyle = `rgba(241,92,109,${e})`, ctx.textAlign = "center", ctx.textBaseline = "middle", ctx.shadowColor = "rgba(241,92,109,.9)", ctx.shadowBlur = 40, ctx.fillText(Math.ceil(game.timeLeft), W / 2, H / 2 - 40), ctx.restore()
+      }
+      if ("playing" === game.phase) {
+        const e = clamp(game.timeLeft / 30, 0, 1),
+          t = .5 * W,
+          a = (W - t) / 2,
+          n = 88;
+        ctx.save(), ctx.fillStyle = "rgba(255,255,255,.08)", rr(a, n, t, 4, 2), ctx.fill();
+        const o = ctx.createLinearGradient(a, 0, a + t, 0);
+        o.addColorStop(0, "#f15c6d"), o.addColorStop(.5, "#ffb74d"), o.addColorStop(1, "#06cf9c"), ctx.fillStyle = o, rr(a, n, t * e, 4, 2), ctx.fill(), ctx.restore()
+      }
+    }
+    const keys = { left: !1, right: !1 };
+    window.addEventListener("keydown", e => { "ArrowLeft" !== e.key && "a" !== e.key && "A" !== e.key || (keys.left = !0, e.preventDefault()), "ArrowRight" !== e.key && "d" !== e.key && "D" !== e.key || (keys.right = !0, e.preventDefault()), ["ArrowUp", "ArrowDown"].includes(e.key) && e.preventDefault() }, { passive: !1 }), window.addEventListener("keyup", e => { "ArrowLeft" !== e.key && "a" !== e.key && "A" !== e.key || (keys.left = !1), "ArrowRight" !== e.key && "d" !== e.key && "D" !== e.key || (keys.right = !1) });
+    let dragging = !1;
+
+    function movePlayerTo(e) {
+      const t = game.player;
+      t.targetX = clamp(e, roadLeft() + t.w / 2, roadRight() - t.w / 2), t.followPointer = !0
+    }
+
+    function hideCenter() { centerEl.hidden = !0 }
+
+    function showResult(e, t) {
+      let a, n, o, l;
+      e > 0 ? (a = "🎉", n = `Menang +${rp(e)}`, o = "win", l = `Jarak <b>${Math.floor(game.distance)}m</b> · Koin <b>${game.coins}</b><br>\n            Pembayaran <b>${rp(t)}</b> telah ditambahkan ke saldo.`) : e < 0 ? (a = "😔", n = `Kalah −${rp(Math.abs(e))}`, o = "lose", l = `Jarak <b>${Math.floor(game.distance)}m</b> · Koin <b>${game.coins}</b><br>\n            Pembayaran <b>${rp(t)}</b> tidak menutup taruhan.`) : (a = "🤝", n = "Impas", o = "", l = `Jarak <b>${Math.floor(game.distance)}m</b> · Koin <b>${game.coins}</b><br>\n            Pembayaran <b>${rp(t)}</b> sama dengan taruhanmu.`), centerEl.innerHTML = `\n    <div class="center-inner">\n      <div class="center-icon">${a}</div>\n      <div class="center-title ${o}">${n}</div>\n      <div class="center-text">${l}</div>\n    </div>`, centerEl.hidden = !1
+    }
+
+    function showIdle() { centerEl.innerHTML = '\n    <div class="center-inner">\n      <div class="center-icon">🛣️</div>\n      <div class="center-title">Siap Balapan?</div>\n      <div class="center-text">\n        Pilih nominal taruhan di bawah, lalu tekan <b>MULAI BALAP</b>.<br>\n        Hindari mobil, kumpulkan koin sebanyak mungkin dalam 30 detik.<br>\n        <span style="opacity:.7">Kontrol: geser / panah kiri-kanan.</span>\n      </div>\n    </div>', centerEl.hidden = !1 }
+
+    function addHistory(e, t, a, n) {
+      const o = document.createElement("div");
+      o.className = "hist-item";
+      const l = a > 0 ? "" : a < 0 ? "lose" : "draw",
+        i = a > 0 ? "amt-win" : a < 0 ? "amt-lose" : "amt-draw",
+        r = a > 0 ? "+" : a < 0 ? "−" : "",
+        s = Math.abs(a);
+      for (o.innerHTML = `\n    <span class="hist-dot ${l}"></span>\n    <div class="hist-main">\n      <div class="hist-top">\n        <span>${e}m · ${t} koin</span>\n        <span class="${i}">${r}${rp(s)}</span>\n      </div>\n      <div class="hist-sub">Bayar ${rp(n)} · ${nowTime()}</div>\n    </div>`, historyEl.prepend(o); historyEl.children.length > 9;) historyEl.removeChild(historyEl.lastChild)
+    }
+
+    function updateComposer() {
+      document.querySelectorAll("#amtChips .chip").forEach(e => {
+        const t = e.dataset.amt,
+          a = "all" === t ? game.bet === state.saldo && state.saldo >= 100 : Number(t) === game.bet;
+        e.classList.toggle("active", a)
+      }), betLabel.textContent = rp(game.bet), winLabel.textContent = "+" + rp(2.5 * game.bet), "idle" === game.phase || "over" === game.phase ? state.saldo < 100 ? (playBtn.textContent = "MULAI ULANG", playBtn.classList.add("reset"), playBtn.classList.remove("retry"), playBtn.dataset.mode = "reset", playBtn.disabled = !1) : (playBtn.textContent = "over" === game.phase ? "BALAP LAGI" : "MULAI BALAP", playBtn.classList.remove("reset"), playBtn.classList.remove("retry"), playBtn.dataset.mode = "start", playBtn.disabled = game.bet < 100 || game.bet > state.saldo) : (playBtn.textContent = "BATALKAN", playBtn.classList.add("retry"), playBtn.classList.remove("reset"), playBtn.dataset.mode = "forfeit", playBtn.disabled = !1);
+      const e = document.querySelector(".bet-area");
+      e.style.opacity = "playing" === game.phase ? "0" : "1", e.style.pointerEvents = "playing" === game.phase ? "none" : "auto"
+    }
+
+    function resetGame() { state.saldo = 1e5, state.menang = 0, state.kalah = 0, shownSaldo = 1e5, balanceEl.textContent = rp(1e5), historyEl.innerHTML = "", game.phase = "idle", game.cars = [], game.coinsList = [], game.particles = [], game.floaties = [], game.lives = 3, game.distance = 0, game.coins = 0, game.timeLeft = 30, game.player.x = laneCenter(1), game.player.invincible = 0, updateHUD(), payoutEl.textContent = rp(0), updateComposer(), showIdle() } window.addEventListener("pointerdown", e => { if (!e.target.closest("button") && "playing" === game.phase) { dragging = !0; try { canvas.setPointerCapture(e.pointerId) } catch (e) {} movePlayerTo(e.clientX), e.preventDefault() } }, { passive: !1 }), window.addEventListener("pointermove", e => { dragging && "playing" === game.phase && (movePlayerTo(e.clientX), e.preventDefault()) }, { passive: !1 }), window.addEventListener("pointerup", e => { if (dragging) { dragging = !1; try { canvas.releasePointerCapture(e.pointerId) } catch (e) {} } }, { passive: !0 }), window.addEventListener("pointercancel", () => { dragging = !1 }, { passive: !0 }), canvas.addEventListener("contextmenu", e => e.preventDefault()), document.addEventListener("gesturestart", e => e.preventDefault()), document.addEventListener("dblclick", e => e.preventDefault(), { passive: !1 }), document.addEventListener("touchmove", e => { e.target.closest("button") || e.preventDefault() }, { passive: !1 }), playBtn.addEventListener("click", e => { e.stopPropagation(); const t = playBtn.dataset.mode; "reset" !== t ? "start" !== t ? "forfeit" !== t || forfeit() : startGame() : resetGame() }), document.getElementById("amtChips").addEventListener("click", e => {
+      const t = e.target.closest(".chip");
+      if (!t) return;
+      if ("idle" !== game.phase && "over" !== game.phase) return;
+      const a = t.dataset.amt;
+      game.bet = "all" === a ? Math.max(100, state.saldo) : Math.min(Number(a), state.saldo), updateComposer()
+    }), resize(), game.player.x = laneCenter(1), updateHUD(), payoutEl.textContent = rp(0), updateComposer(), showIdle(), requestAnimationFrame(loop)
+  </script>
+</body>
+
+</html>

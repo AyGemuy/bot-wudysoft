@@ -1,0 +1,1078 @@
+<!doctype html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <title>Dino Bot — Lari Tanpa Henti</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    :root {
+      --bg: #0b141a;
+      --bg2: #111b21;
+      --panel: #202c33;
+      --green: #00a884;
+      --green-d: #005c4b;
+      --green-l: #06cf9c;
+      --tx: #e9edef;
+      --tx2: #8696a0;
+      --line: #2a3942;
+      --red: #f15c6d;
+      --amber: #ffb74d
+    }
+
+    body,
+    html {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      overscroll-behavior: none;
+      touch-action: none
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--tx);
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      position: fixed;
+      inset: 0
+    }
+
+    button {
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+      background: 0 0;
+      color: inherit;
+      touch-action: manipulation
+    }
+
+    .stage {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      isolation: isolate;
+      touch-action: none
+    }
+
+    canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      z-index: 1;
+      touch-action: none
+    }
+
+    .top {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 10;
+      padding: 20px 30px 70px;
+      display: flex;
+      align-items: center;
+      gap: 26px;
+      background: linear-gradient(180deg, rgba(11, 20, 26, .94) 0, rgba(11, 20, 26, .6) 55%, transparent 100%);
+      pointer-events: none
+    }
+
+    .top>* {
+      pointer-events: auto
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      pointer-events: none
+    }
+
+    .brand-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--green-l), var(--green));
+      display: grid;
+      place-items: center;
+      font-size: 21px;
+      box-shadow: 0 6px 20px rgba(0, 168, 132, .35)
+    }
+
+    .brand-name {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -.2px
+    }
+
+    .brand-sub {
+      font-size: 11px;
+      color: var(--tx2);
+      font-weight: 500;
+      margin-top: 1px
+    }
+
+    .hud {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      font-size: 12.5px;
+      color: var(--tx2);
+      font-weight: 600;
+      margin-left: auto;
+      margin-right: auto;
+      letter-spacing: .03em;
+      text-transform: uppercase;
+      pointer-events: none
+    }
+
+    .hud b {
+      color: var(--tx);
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      font-size: 16px;
+      letter-spacing: -.3px;
+      margin-left: 5px;
+      text-transform: none
+    }
+
+    .hud b.green {
+      color: var(--green-l)
+    }
+
+    .hud b.amber {
+      color: var(--amber)
+    }
+
+    .hud b.red {
+      color: var(--red)
+    }
+
+    .hud-lives {
+      font-size: 15px;
+      letter-spacing: 2px;
+      line-height: 1
+    }
+
+    .wallet {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--tx2);
+      pointer-events: none
+    }
+
+    .wallet b {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--tx);
+      letter-spacing: -.6px;
+      font-variant-numeric: tabular-nums;
+      text-transform: none
+    }
+
+    .wallet b::before {
+      content: '';
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green-l);
+      margin-right: 10px;
+      vertical-align: middle;
+      box-shadow: 0 0 0 3px rgba(6, 207, 156, .18);
+      animation: pulse 2.4s ease-in-out infinite
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        box-shadow: 0 0 0 3px rgba(6, 207, 156, .18)
+      }
+
+      50% {
+        box-shadow: 0 0 0 8px rgba(6, 207, 156, .04)
+      }
+    }
+
+    .history {
+      position: absolute;
+      right: 28px;
+      top: 118px;
+      bottom: 200px;
+      width: 230px;
+      z-index: 9;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      overflow: hidden;
+      padding-top: 26px;
+      pointer-events: none;
+      -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 26px, #000 calc(100% - 44px), transparent 100%);
+      mask-image: linear-gradient(180deg, transparent 0, #000 26px, #000 calc(100% - 44px), transparent 100%)
+    }
+
+    .hist-item {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 9px 8px;
+      border-radius: 8px;
+      animation: histIn .35s cubic-bezier(.34, 1.4, .64, 1)
+    }
+
+    @keyframes histIn {
+      from {
+        opacity: 0;
+        transform: translateX(14px)
+      }
+
+      to {
+        opacity: 1;
+        transform: none
+      }
+    }
+
+    .hist-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex: 0 0 7px;
+      background: var(--green-l);
+      box-shadow: 0 0 10px rgba(6, 207, 156, .7)
+    }
+
+    .hist-dot.lose {
+      background: var(--red);
+      box-shadow: 0 0 10px rgba(241, 92, 109, .6)
+    }
+
+    .hist-dot.draw {
+      background: var(--tx2);
+      box-shadow: none
+    }
+
+    .hist-main {
+      flex: 1;
+      min-width: 0
+    }
+
+    .hist-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--tx);
+      letter-spacing: -.1px
+    }
+
+    .hist-top span:first-child {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap
+    }
+
+    .hist-sub {
+      font-size: 10.5px;
+      color: var(--tx2);
+      margin-top: 2px;
+      font-weight: 500
+    }
+
+    .hist-top .amt-win {
+      color: var(--green-l)
+    }
+
+    .hist-top .amt-lose {
+      color: var(--red)
+    }
+
+    .hist-top .amt-draw {
+      color: var(--tx2)
+    }
+
+    .center {
+      position: absolute;
+      inset: 0;
+      z-index: 8;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle at 50% 45%, rgba(11, 20, 26, .68) 0, rgba(11, 20, 26, .94) 75%);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
+      pointer-events: none;
+      text-align: center;
+      padding: 24px;
+      animation: centerIn .35s ease
+    }
+
+    .center[hidden] {
+      display: none
+    }
+
+    @keyframes centerIn {
+      from {
+        opacity: 0
+      }
+
+      to {
+        opacity: 1
+      }
+    }
+
+    .center-inner {
+      max-width: 540px;
+      animation: centerPop .5s cubic-bezier(.34, 1.56, .64, 1)
+    }
+
+    @keyframes centerPop {
+      from {
+        opacity: 0;
+        transform: scale(.9) translateY(14px)
+      }
+
+      to {
+        opacity: 1;
+        transform: none
+      }
+    }
+
+    .center-icon {
+      font-size: 70px;
+      line-height: 1;
+      margin-bottom: 18px;
+      filter: drop-shadow(0 12px 34px rgba(6, 207, 156, .35))
+    }
+
+    .center-title {
+      font-size: 34px;
+      font-weight: 800;
+      letter-spacing: -.8px;
+      margin-bottom: 14px;
+      color: var(--tx)
+    }
+
+    .center-title.win {
+      color: var(--green-l);
+      text-shadow: 0 0 50px rgba(6, 207, 156, .45)
+    }
+
+    .center-title.lose {
+      color: var(--red);
+      text-shadow: 0 0 50px rgba(241, 92, 109, .35)
+    }
+
+    .center-text {
+      font-size: 15px;
+      color: var(--tx2);
+      line-height: 1.75;
+      font-weight: 400
+    }
+
+    .center-text b {
+      color: var(--tx);
+      font-weight: 700
+    }
+
+    .bottom {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 10;
+      padding: 70px 30px 26px;
+      background: linear-gradient(0deg, rgba(11, 20, 26, .96) 0, rgba(11, 20, 26, .7) 55%, transparent 100%);
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 32px;
+      pointer-events: none;
+      transition: opacity .35s ease
+    }
+
+    .bottom>* {
+      pointer-events: auto
+    }
+
+    .bet-area {
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+      min-width: 0
+    }
+
+    .group-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: var(--tx2)
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      max-width: 680px
+    }
+
+    .chip {
+      border: 1px solid var(--line);
+      background: rgba(32, 44, 51, .72);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      color: var(--tx);
+      padding: 10px 18px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: -.1px;
+      transition: .15s ease
+    }
+
+    .chip:hover {
+      background: rgba(42, 57, 66, .95);
+      border-color: #3a4a52;
+      transform: translateY(-1px)
+    }
+
+    .chip:active {
+      transform: translateY(0)
+    }
+
+    .chip.active {
+      background: var(--green);
+      color: #0b141a;
+      border-color: var(--green);
+      box-shadow: 0 0 24px rgba(0, 168, 132, .55)
+    }
+
+    .action {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: flex-end;
+      flex: 0 0 auto
+    }
+
+    .action-info {
+      display: flex;
+      gap: 24px;
+      font-size: 11.5px;
+      color: var(--tx2);
+      font-weight: 600;
+      letter-spacing: .02em
+    }
+
+    .action-info>div {
+      display: flex;
+      align-items: baseline;
+      gap: 6px
+    }
+
+    .action-info b {
+      color: var(--tx);
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      font-size: 14px;
+      letter-spacing: -.2px
+    }
+
+    .action-info b.green {
+      color: var(--green-l)
+    }
+
+    .play-btn {
+      background: var(--green);
+      color: #0b141a;
+      font-size: 13.5px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      padding: 17px 42px;
+      border-radius: 14px;
+      transition: .18s ease;
+      box-shadow: 0 10px 34px rgba(0, 168, 132, .45);
+      min-width: 240px
+    }
+
+    .play-btn:hover:not(:disabled) {
+      background: var(--green-l);
+      box-shadow: 0 14px 44px rgba(6, 207, 156, .55);
+      transform: translateY(-2px)
+    }
+
+    .play-btn:active:not(:disabled) {
+      transform: translateY(0);
+      box-shadow: 0 6px 20px rgba(0, 168, 132, .4)
+    }
+
+    .play-btn:disabled {
+      background: #2a3942;
+      color: var(--tx2);
+      box-shadow: none;
+      cursor: not-allowed
+    }
+
+    .play-btn.reset {
+      background: var(--red);
+      color: #fff;
+      box-shadow: 0 10px 34px rgba(241, 92, 109, .42)
+    }
+
+    .play-btn.reset:hover {
+      background: #ff6b7c;
+      box-shadow: 0 14px 44px rgba(241, 92, 109, .55)
+    }
+
+    .jump-hint {
+      position: absolute;
+      bottom: 120px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 7;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--tx2);
+      padding: 8px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: rgba(32, 44, 51, .7);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .35s
+    }
+
+    .jump-hint.show {
+      opacity: .7
+    }
+
+    @media (max-width:820px) {
+      .top {
+        padding: 14px 18px 50px;
+        gap: 14px;
+        flex-wrap: wrap
+      }
+
+      .brand-sub {
+        display: none
+      }
+
+      .hud {
+        order: 3;
+        flex: 1 1 100%;
+        margin: 0;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 11px
+      }
+
+      .hud b {
+        font-size: 13px
+      }
+
+      .wallet b {
+        font-size: 18px
+      }
+
+      .wallet {
+        font-size: 9.5px
+      }
+
+      .history {
+        display: none
+      }
+
+      .bottom {
+        padding: 50px 18px 20px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 16px
+      }
+
+      .action {
+        align-items: stretch;
+        width: 100%
+      }
+
+      .action-info {
+        justify-content: space-between;
+        width: 100%
+      }
+
+      .play-btn {
+        width: 100%;
+        min-width: 0
+      }
+
+      .center-title {
+        font-size: 26px
+      }
+
+      .center-icon {
+        font-size: 56px
+      }
+
+      .center-text {
+        font-size: 14px
+      }
+
+      .jump-hint {
+        bottom: 200px
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="stage"><canvas id="game"></canvas>
+    <div class="top">
+      <div class="brand">
+        <div class="brand-icon">🦖</div>
+        <div>
+          <div class="brand-name">Dino Bot</div>
+          <div class="brand-sub">Lari tanpa henti</div>
+        </div>
+      </div>
+      <div class="hud"><span class="hud-lives" id="lives">❤️❤️❤️</span> <span>Jarak <b class="amber" id="distance">0m</b></span> <span>Koin <b class="green" id="coinsDisplay">0</b></span> <span>Bayar <b class="green" id="payout">Rp 0</b></span></div>
+      <div class="wallet"><span>Saldo</span> <b id="balance">Rp 100.000</b></div>
+    </div>
+    <div class="history" id="history"></div>
+    <div class="center" id="center">
+      <div class="center-inner">
+        <div class="center-icon">🦖</div>
+        <div class="center-title">Siap Berlari?</div>
+        <div class="center-text">Pilih nominal taruhan di bawah, lalu tekan <b>MULAI LARI</b>.<br>Lompati rintangan, kumpulkan koin, bertahan 30 detik.<br><span style="opacity:.7">Kontrol: tap / klik / spasi untuk melompat.</span></div>
+      </div>
+    </div>
+    <div class="jump-hint" id="jumpHint">Tap · Klik · Spasi untuk melompat</div>
+    <div class="bottom" id="bottomBar">
+      <div class="bet-area">
+        <div class="group-title">Nominal Taruhan</div>
+        <div class="chips" id="amtChips"><button class="chip" data-amt="1000">1rb</button> <button class="chip" data-amt="5000">5rb</button> <button class="chip" data-amt="10000">10rb</button> <button class="chip" data-amt="25000">25rb</button> <button class="chip" data-amt="50000">50rb</button> <button class="chip" data-amt="all">ALL IN</button></div>
+      </div>
+      <div class="action">
+        <div class="action-info">
+          <div>Taruhan <b id="betLabel">Rp 1.000</b></div>
+          <div>Target <b class="green" id="winLabel">+Rp 3.500</b></div>
+        </div><button class="play-btn" id="playBtn">MULAI LARI</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    const canvas = document.getElementById("game"),
+      ctx = canvas.getContext("2d"),
+      balanceEl = document.getElementById("balance"),
+      historyEl = document.getElementById("history"),
+      centerEl = document.getElementById("center"),
+      playBtn = document.getElementById("playBtn"),
+      betLabel = document.getElementById("betLabel"),
+      winLabel = document.getElementById("winLabel"),
+      livesEl = document.getElementById("lives"),
+      distanceEl = document.getElementById("distance"),
+      coinsEl = document.getElementById("coinsDisplay"),
+      payoutEl = document.getElementById("payout"),
+      bottomBar = document.getElementById("bottomBar"),
+      jumpHint = document.getElementById("jumpHint"),
+      state = { saldo: 1e5, menang: 0, kalah: 0 },
+      game = { phase: "idle", bet: 1e3, lives: 3, distance: 0, coins: 0, timeLeft: 30, speed: 6.5, groundOffset: 0, groundOffset2: 0, player: { bottomY: 0, vy: 0, onGround: !0, legPhase: 0, runCycle: 0, invincible: 0, squash: 0, w: 66, h: 76 }, obstacles: [], coinsList: [], particles: [], floaties: [], dust: [], clouds: [], hills: [], spawnTimer: 0, coinTimer: 0, shake: 0, flash: 0, flashColor: "rgba(6,207,156,.35)", payout: 0 },
+      TARGET_SCORE = 900,
+      MULTIPLIER = 3.5,
+      rp = t => "Rp " + Math.round(t).toLocaleString("id-ID"),
+      clamp = (t, e, a) => Math.max(e, Math.min(a, t)),
+      rand = (t, e) => t + Math.random() * (e - t),
+      nowTime = () => { const t = new Date; return String(t.getHours()).padStart(2, "0") + "." + String(t.getMinutes()).padStart(2, "0") };
+    let audioCtx = null,
+      masterGain = null;
+
+    function initAudio() {
+      if (audioCtx) return;
+      const t = window.AudioContext || window.webkitAudioContext;
+      t && (audioCtx = new t, masterGain = audioCtx.createGain(), masterGain.gain.value = .35, masterGain.connect(audioCtx.destination))
+    }
+
+    function sfxJump() {
+      if (!audioCtx) return;
+      const t = audioCtx.currentTime,
+        e = audioCtx.createOscillator();
+      e.type = "triangle", e.frequency.setValueAtTime(420, t), e.frequency.exponentialRampToValueAtTime(760, t + .09);
+      const a = audioCtx.createGain();
+      a.gain.setValueAtTime(1e-4, t), a.gain.exponentialRampToValueAtTime(.22, t + .008), a.gain.exponentialRampToValueAtTime(1e-4, t + .14), e.connect(a), a.connect(masterGain), e.start(t), e.stop(t + .16)
+    }
+
+    function sfxCoin() {
+      if (!audioCtx) return;
+      const t = audioCtx.currentTime;
+      [880, 1320].forEach((e, a) => {
+        const n = audioCtx.createOscillator();
+        n.type = "sine", n.frequency.value = e;
+        const o = audioCtx.createGain(),
+          l = t + .05 * a;
+        o.gain.setValueAtTime(1e-4, l), o.gain.exponentialRampToValueAtTime(.16, l + .008), o.gain.exponentialRampToValueAtTime(1e-4, l + .13), n.connect(o), o.connect(masterGain), n.start(l), n.stop(l + .15)
+      })
+    }
+
+    function sfxCrash() {
+      if (!audioCtx) return;
+      const t = audioCtx.currentTime,
+        e = audioCtx.createOscillator();
+      e.type = "sawtooth", e.frequency.setValueAtTime(180, t), e.frequency.exponentialRampToValueAtTime(45, t + .32);
+      const a = audioCtx.createBiquadFilter();
+      a.type = "lowpass", a.frequency.value = 900;
+      const n = audioCtx.createGain();
+      n.gain.setValueAtTime(1e-4, t), n.gain.exponentialRampToValueAtTime(.28, t + .01), n.gain.exponentialRampToValueAtTime(1e-4, t + .36), e.connect(a), a.connect(n), n.connect(masterGain), e.start(t), e.stop(t + .4)
+    }
+    let W = 0,
+      H = 0,
+      groundY = 0;
+
+    function resize() {
+      const t = Math.min(window.devicePixelRatio || 1, 2);
+      W = window.innerWidth, H = window.innerHeight, canvas.width = Math.floor(W * t), canvas.height = Math.floor(H * t), canvas.style.width = W + "px", canvas.style.height = H + "px", ctx.setTransform(t, 0, 0, t, 0, 0), groundY = H - Math.max(220, .26 * H);
+      const e = clamp(W / 1200, .72, 1.1);
+      game.player.w = Math.round(66 * e), game.player.h = Math.round(76 * e), "idle" !== game.phase && "over" !== game.phase || (game.player.bottomY = groundY), buildHills(), buildClouds(), draw()
+    }
+
+    function buildHills() { game.hills = []; for (let t = 0; t < 6; t++) game.hills.push({ x: t / 6 * W * 1.4 - 100, w: rand(200, 380), h: rand(60, 130), speed: rand(.18, .28) }) }
+
+    function buildClouds() { game.clouds = []; for (let t = 0; t < 5; t++) game.clouds.push({ x: rand(0, W), y: rand(70, .55 * groundY), w: rand(70, 130), h: rand(14, 22), speed: rand(.15, .35), alpha: rand(.05, .12) }) } window.addEventListener("resize", resize), window.addEventListener("orientationchange", () => setTimeout(resize, 200));
+    let animToken = 0,
+      shownSaldo = state.saldo;
+
+    function setSaldo(t) {
+      const e = shownSaldo;
+      state.saldo = Math.max(0, Math.round(t)), shownSaldo = state.saldo;
+      const a = ++animToken,
+        n = performance.now();
+      requestAnimationFrame(function t(o) {
+        if (a !== animToken) return;
+        const l = Math.min((o - n) / 420, 1),
+          i = 1 - Math.pow(1 - l, 3);
+        balanceEl.textContent = rp(e + (state.saldo - e) * i), l < 1 ? requestAnimationFrame(t) : balanceEl.textContent = rp(state.saldo)
+      }), updateComposer()
+    }
+
+    function spawnParticles(t, e, a, n = 12, o = 1) {
+      for (let l = 0; l < n; l++) {
+        const n = Math.random() * Math.PI * 2,
+          l = (1.4 + 4 * Math.random()) * o;
+        game.particles.push({ x: t, y: e, vx: Math.cos(n) * l, vy: Math.sin(n) * l - 1.4, life: 1, size: 2 + 3.5 * Math.random(), color: a })
+      }
+    }
+
+    function spawnFloatText(t, e, a, n) { game.floaties.push({ x: t, y: e, text: a, color: n, life: 1 }) }
+
+    function spawnDust(t, e, a = -1) { game.dust.push({ x: t, y: e, vx: a * rand(1.5, 3.5), vy: -rand(.6, 2.2), life: 1, size: rand(3, 7) }) }
+
+    function updateParticles(t) {
+      for (let e = game.particles.length - 1; e >= 0; e--) {
+        const a = game.particles[e];
+        a.x += a.vx * t, a.y += a.vy * t, a.vy += .24 * t, a.vx *= .985, a.life -= .028 * t, a.life <= 0 && game.particles.splice(e, 1)
+      }
+      for (let e = game.floaties.length - 1; e >= 0; e--) {
+        const a = game.floaties[e];
+        a.y -= 1.1 * t, a.life -= .022 * t, a.life <= 0 && game.floaties.splice(e, 1)
+      }
+      for (let e = game.dust.length - 1; e >= 0; e--) {
+        const a = game.dust[e];
+        a.x += a.vx * t, a.y += a.vy * t, a.vy += .16 * t, a.vx *= .94, a.life -= .04 * t, a.life <= 0 && game.dust.splice(e, 1)
+      }
+    }
+
+    function spawnObstacle() {
+      let t = !0;
+      for (const e of game.obstacles)
+        if (e.x > W - 520) { t = !1; break } const e = Math.random();
+      let a, n, o, l;
+      a = e < .18 && t && game.distance > 120 ? "bird" : e < .55 ? "cactus_small" : e < .82 ? "cactus_large" : "rock", "cactus_small" === a ? (n = clamp(.026 * W, 22, 34), o = clamp(.075 * H, 42, 62), l = groundY - o) : "cactus_large" === a ? (n = clamp(.034 * W, 30, 46), o = clamp(.11 * H, 62, 92), l = groundY - o) : "rock" === a ? (n = clamp(.042 * W, 38, 62), o = clamp(.055 * H, 32, 48), l = groundY - o) : "bird" === a && (n = clamp(.038 * W, 34, 52), o = clamp(.045 * H, 26, 38), l = groundY - o - clamp(.1 * H, 70, 120)), game.obstacles.push({ type: a, x: W + 40, y: l, w: n, h: o, wingPhase: 0, bob: Math.random() * Math.PI * 2 })
+    }
+
+    function spawnCoin() {
+      let t;
+      t = Math.random() < .55 ? groundY - clamp(.055 * H, 32, 50) : groundY - clamp(.16 * H, 100, 170), game.coinsList.push({ x: W + 30, y: t, r: clamp(.011 * W, 11, 16), phase: Math.random() * Math.PI * 2 })
+    }
+
+    function doJump() { if ("playing" !== game.phase) return; const t = game.player; if (t.onGround) { t.vy = -16, t.onGround = !1, t.squash = -.28, initAudio(), audioCtx && "suspended" === audioCtx.state && audioCtx.resume(), sfxJump(); for (let e = 0; e < 6; e++) spawnDust(t.x || .16 * W, groundY, -1) } }
+
+    function updatePlayer(t) {
+      const e = game.player;
+      if (!e.onGround && (e.vy += 1 * t, e.bottomY += e.vy * t, e.bottomY >= groundY)) { e.bottomY = groundY, e.vy = 0, e.onGround = !0, e.squash = .32; for (let t = 0; t < 5; t++) spawnDust(.16 * W, groundY, -1) } e.squash < 0 && (e.squash = Math.min(0, e.squash + .05 * t)), e.squash > 0 && (e.squash = Math.max(0, e.squash - .05 * t));
+      const a = game.speed / 6.5;
+      e.legPhase += .32 * t * a, e.legPhase > 2 * Math.PI && (e.legPhase -= 2 * Math.PI), e.invincible > 0 && (e.invincible = Math.max(0, e.invincible - t / 60))
+    }
+
+    function updateWorld(t) {
+      const e = t / 60,
+        a = 30 - game.timeLeft;
+      game.speed = 6.5 + Math.min(8, .28 * a);
+      const n = game.speed * t;
+      game.distance += game.speed * t * .055, game.groundOffset = (game.groundOffset + n) % 34, game.groundOffset2 = (game.groundOffset2 + .55 * n) % 90;
+      for (const e of game.clouds) e.x -= e.speed * t, e.x + e.w < -20 && (e.x = W + rand(20, 200), e.y = rand(70, .55 * groundY), e.w = rand(70, 130), e.h = rand(14, 22), e.alpha = rand(.05, .12));
+      for (const e of game.hills) e.x -= e.speed * t * (game.speed / 6.5), e.x + e.w < -50 && (e.x = W + rand(40, 260), e.w = rand(200, 380), e.h = rand(60, 130));
+      if (game.spawnTimer -= e, game.spawnTimer <= 0) {
+        spawnObstacle();
+        const t = clamp(.95 - .042 * (game.speed - 6.5), .68, 1.05);
+        game.spawnTimer = t + rand(-.08, .22)
+      }
+      game.coinTimer -= e, game.coinTimer <= 0 && (spawnCoin(), Math.random() < .3 && spawnCoin(), game.coinTimer = rand(.7, 1.6));
+      for (let e = game.obstacles.length - 1; e >= 0; e--) {
+        const a = game.obstacles[e];
+        a.x -= n, "bird" === a.type && (a.wingPhase += .28 * t, a.bob += .06 * t), a.x + a.w < -40 && game.obstacles.splice(e, 1)
+      }
+      for (let e = game.coinsList.length - 1; e >= 0; e--) {
+        const a = game.coinsList[e];
+        a.x -= n, a.phase += .09 * t, a.x + a.r < -40 && game.coinsList.splice(e, 1)
+      }
+      if (game.timeLeft -= e, game.timeLeft <= 0) return game.timeLeft = 0, void endGame();
+      checkCollisions()
+    }
+
+    function checkCollisions() {
+      const t = game.player,
+        e = .16 * W,
+        a = t.bottomY - t.h,
+        n = t.bottomY,
+        o = e - .3 * t.w,
+        l = a + .12 * t.h,
+        i = .6 * t.w,
+        c = .86 * t.h;
+      if (t.invincible <= 0)
+        for (let t = game.obstacles.length - 1; t >= 0; t--) {
+          const e = game.obstacles[t],
+            a = e.x + .14 * e.w,
+            n = e.y + .1 * e.h,
+            s = .72 * e.w,
+            r = .84 * e.h;
+          if (o < a + s && o + i > a && l < n + r && l + c > n) return game.obstacles.splice(t, 1), void crash()
+        }
+      for (let o = game.coinsList.length - 1; o >= 0; o--) {
+        const l = game.coinsList[o],
+          i = e,
+          c = (a + n) / 2;
+        Math.hypot(i - l.x, c - l.y) < .5 * t.w + l.r && (game.coinsList.splice(o, 1), game.coins++, coinsEl.textContent = game.coins, spawnParticles(l.x, l.y, "#ffb74d", 10, .85), spawnFloatText(l.x, l.y - 10, "+1", "#ffb74d"), game.flash = .14, game.flashColor = "rgba(255,183,77,.32)", sfxCoin(), updatePayout())
+      }
+    }
+
+    function crash() {
+      const t = game.player;
+      t.invincible = 1.5, game.lives--, game.shake = 16, game.flash = .55, game.flashColor = "rgba(241,92,109,.55)";
+      const e = .16 * W,
+        a = t.bottomY - t.h / 2;
+      spawnParticles(e, a, "#f15c6d", 26, 1.6), spawnParticles(e, a, "#ffb74d", 10, 1.1), spawnFloatText(e, a - 40, "CRASH!", "#f15c6d"), sfxCrash(), updateLives(), game.lives <= 0 && endGame()
+    }
+
+    function updateLives() { livesEl.textContent = "❤️".repeat(Math.max(0, game.lives)) + "🖤".repeat(Math.max(0, 3 - game.lives)) }
+
+    function updatePayout() {
+      const t = Math.floor(game.distance) + 30 * game.coins,
+        e = clamp(t / 900, 0, 1);
+      game.payout = Math.round(game.bet * (1 + 2.5 * e)), payoutEl.textContent = rp(game.payout)
+    }
+
+    function updateHUD() { distanceEl.textContent = Math.floor(game.distance) + "m", coinsEl.textContent = game.coins, updateLives() }
+
+    function startGame() {
+      if (state.saldo < 100) return;
+      if (game.bet < 100 || game.bet > state.saldo) return;
+      setSaldo(state.saldo - game.bet), game.phase = "playing", game.lives = 3, game.distance = 0, game.coins = 0, game.timeLeft = 30, game.speed = 6.5, game.groundOffset = 0, game.groundOffset2 = 0, game.obstacles = [], game.coinsList = [], game.particles = [], game.floaties = [], game.dust = [], game.spawnTimer = 1, game.coinTimer = 1.2, game.shake = 0, game.flash = 0, game.payout = 0;
+      const t = game.player;
+      t.bottomY = groundY, t.vy = 0, t.onGround = !0, t.invincible = 0, t.squash = 0, t.legPhase = 0, updateHUD(), payoutEl.textContent = rp(0), hideCenter(), updateComposer(), jumpHint.classList.add("show"), setTimeout(() => jumpHint.classList.remove("show"), 3e3)
+    }
+
+    function endGame() {
+      if ("playing" !== game.phase) return;
+      game.phase = "over", updatePayout();
+      const t = game.payout;
+      setSaldo(state.saldo + t);
+      const e = t - game.bet;
+      e > 0 ? state.menang++ : e < 0 && state.kalah++, addHistory(Math.floor(game.distance), game.coins, e, t), updateComposer(), showResult(e, t), jumpHint.classList.remove("show")
+    }
+
+    function forfeit() { "playing" === game.phase && endGame() }
+
+    function drawDino(t, e, a, n, o, l, i, c) {
+      const s = a * (1 - .55 * i),
+        r = n * (1 + .55 * i),
+        d = t - s / 2,
+        m = e - r,
+        x = .52 * r,
+        g = m + .3 * r,
+        u = "#06cf9c",
+        p = "#008069",
+        h = "#0b141a";
+      ctx.save(), l && (ctx.fillStyle = "rgba(0,0,0,.22)", ctx.beginPath(), ctx.ellipse(t, groundY + 3, .45 * s, 5, 0, 0, 2 * Math.PI), ctx.fill()), ctx.fillStyle = u, ctx.beginPath(), ctx.moveTo(d + .1 * s, g + .1 * x), ctx.lineTo(d - .24 * s, g + .42 * x), ctx.lineTo(d + .1 * s, g + .94 * x), ctx.closePath(), ctx.fill(), ctx.fillStyle = u, rr(d + .06 * s, g, .72 * s, x, 8), ctx.fill(), ctx.fillStyle = "rgba(255,255,255,.14)", rr(d + .14 * s, g + .15 * x, .42 * s, .26 * x, 5), ctx.fill();
+      const f = .56 * s,
+        y = .42 * r,
+        b = d + .36 * s,
+        w = m + .02 * r;
+      ctx.fillStyle = u, rr(d + .42 * s, g - .05 * r, .28 * s, .34 * r, 5), ctx.fill(), rr(b, w, f, y, 8), ctx.fill(), rr(b + .62 * f, w + .42 * y, .42 * f, .42 * y, 5), ctx.fill(), c ? (ctx.strokeStyle = h, ctx.lineWidth = Math.max(1.5, .028 * s), ctx.beginPath(), ctx.moveTo(b + .56 * f, w + .36 * y), ctx.lineTo(b + .8 * f, w + .36 * y), ctx.stroke()) : (ctx.fillStyle = h, ctx.beginPath(), ctx.arc(b + .68 * f, w + .36 * y, Math.max(2, .045 * s), 0, 2 * Math.PI), ctx.fill(), ctx.fillStyle = "rgba(255,255,255,.7)", ctx.beginPath(), ctx.arc(b + .71 * f, w + .3 * y, Math.max(.8, .016 * s), 0, 2 * Math.PI), ctx.fill()), ctx.fillStyle = p;
+      for (let t = 0; t < 3; t++) {
+        const e = d + s * (.2 + .16 * t),
+          a = g;
+        ctx.beginPath(), ctx.moveTo(e, a + 2), ctx.lineTo(e + .06 * s, a - .055 * r), ctx.lineTo(e + .12 * s, a + 2), ctx.closePath(), ctx.fill()
+      }
+      if (ctx.fillStyle = u, l) rr(d + .22 * s, e - .2 * r, .16 * s, .2 * r, 4), ctx.fill(), rr(d + .48 * s, e - .16 * r, .16 * s, .16 * r, 4), ctx.fill();
+      else {
+        const t = Math.sin(o),
+          a = .24 * r + t * r * .05,
+          n = .24 * r - t * r * .05;
+        rr(d + .22 * s, e - a, .15 * s, a, 4), ctx.fill(), rr(d + .48 * s, e - n, .15 * s, n, 4), ctx.fill(), ctx.fillStyle = p, rr(d + .18 * s, e - 5, .22 * s, 5, 2), ctx.fill(), rr(d + .44 * s, e - 5, .22 * s, 5, 2), ctx.fill()
+      }
+      ctx.fillStyle = u, rr(d + .66 * s, g + .3 * x, .18 * s, .14 * r, 4), ctx.fill(), ctx.restore()
+    }
+
+    function drawCactus(t, e) {
+      const { x: a, y: n, w: o, h: l } = t, i = "#f15c6d";
+      ctx.fillStyle = i, rr(a + .3 * o, n, .4 * o, l, 6), ctx.fill(), ctx.fillStyle = "#ff8a9a", rr(a + .36 * o, n + 4, .1 * o, l - 8, 4), ctx.fill();
+      const c = n + l * (e ? .28 : .32),
+        s = n + l * (e ? .5 : .56);
+      ctx.fillStyle = i, rr(a, c, .32 * o, .24 * o, 5), ctx.fill(), rr(a, c - .16 * l, .2 * o, .28 * l, 5), ctx.fill(), rr(a + .68 * o, s, .32 * o, .24 * o, 5), ctx.fill(), rr(a + .8 * o, s - .2 * l, .2 * o, .32 * l, 5), ctx.fill(), ctx.fillStyle = "#c5002f", rr(a + .28 * o, n + l - 4, .44 * o, 4, 2), ctx.fill()
+    }
+
+    function drawRock(t) {
+      const { x: e, y: a, w: n, h: o } = t;
+      ctx.fillStyle = "#7986cb", ctx.beginPath(), ctx.moveTo(e + .1 * n, a + o), ctx.lineTo(e, a + .62 * o), ctx.lineTo(e + .22 * n, a + .1 * o), ctx.lineTo(e + .55 * n, a), ctx.lineTo(e + .88 * n, a + .2 * o), ctx.lineTo(e + n, a + .7 * o), ctx.lineTo(e + .9 * n, a + o), ctx.closePath(), ctx.fill(), ctx.fillStyle = "#a4aede", ctx.beginPath(), ctx.moveTo(e + .3 * n, a + .16 * o), ctx.lineTo(e + .54 * n, a + .08 * o), ctx.lineTo(e + .42 * n, a + .42 * o), ctx.closePath(), ctx.fill(), ctx.fillStyle = "#4a5685", ctx.beginPath(), ctx.moveTo(e + .6 * n, a + .5 * o), ctx.lineTo(e + .95 * n, a + .6 * o), ctx.lineTo(e + .92 * n, a + .92 * o), ctx.lineTo(e + .7 * n, a + .85 * o), ctx.closePath(), ctx.fill()
+    }
+
+    function drawBird(t) {
+      const { x: e, y: a, w: n, h: o } = t, l = "#e08c1e", i = 3 * Math.sin(t.bob);
+      ctx.save(), ctx.translate(e + n / 2, a + o / 2 + i);
+      const c = .7 * Math.sin(t.wingPhase);
+      ctx.fillStyle = l, ctx.beginPath(), ctx.moveTo(.1 * -n, 0), ctx.lineTo(.52 * -n, .55 * -o * c - .2 * o), ctx.lineTo(.3 * -n, .1 * o), ctx.closePath(), ctx.fill(), ctx.beginPath(), ctx.moveTo(.1 * n, 0), ctx.lineTo(.52 * n, .55 * -o * c - .2 * o), ctx.lineTo(.3 * n, .1 * o), ctx.closePath(), ctx.fill(), ctx.fillStyle = "#ffb74d", ctx.beginPath(), ctx.ellipse(0, 0, .3 * n, .32 * o, 0, 0, 2 * Math.PI), ctx.fill(), ctx.beginPath(), ctx.arc(.24 * n, .1 * -o, .2 * o, 0, 2 * Math.PI), ctx.fill(), ctx.fillStyle = l, ctx.beginPath(), ctx.moveTo(.4 * n, .1 * -o), ctx.lineTo(.56 * n, .04 * -o), ctx.lineTo(.4 * n, 0), ctx.closePath(), ctx.fill(), ctx.fillStyle = "#0b141a", ctx.beginPath(), ctx.arc(.26 * n, .14 * -o, Math.max(1.4, .055 * o), 0, 2 * Math.PI), ctx.fill(), ctx.restore()
+    }
+
+    function drawCoin(t, e, a, n) {
+      const o = .72 + .28 * Math.abs(Math.sin(n));
+      ctx.save(), ctx.translate(t, e), ctx.shadowColor = "rgba(255,183,77,.85)", ctx.shadowBlur = 20, ctx.scale(o, 1);
+      const l = ctx.createRadialGradient(.3 * -a, .3 * -a, .1 * a, 0, 0, a);
+      l.addColorStop(0, "#ffe082"), l.addColorStop(.6, "#ffb74d"), l.addColorStop(1, "#e08c1e"), ctx.fillStyle = l, ctx.beginPath(), ctx.arc(0, 0, a, 0, 2 * Math.PI), ctx.fill(), ctx.shadowBlur = 0, ctx.strokeStyle = "rgba(255,255,255,.6)", ctx.lineWidth = 1.5, ctx.beginPath(), ctx.arc(0, 0, .65 * a, 0, 2 * Math.PI), ctx.stroke(), ctx.fillStyle = "rgba(255,255,255,.85)", ctx.beginPath(), ctx.arc(0, 0, .2 * a, 0, 2 * Math.PI), ctx.fill(), ctx.restore()
+    }
+
+    function rr(t, e, a, n, o) { ctx.beginPath(), "function" == typeof ctx.roundRect ? ctx.roundRect(t, e, a, n, o) : (o = Math.min(o, a / 2, n / 2), ctx.moveTo(t + o, e), ctx.lineTo(t + a - o, e), ctx.quadraticCurveTo(t + a, e, t + a, e + o), ctx.lineTo(t + a, e + n - o), ctx.quadraticCurveTo(t + a, e + n, t + a - o, e + n), ctx.lineTo(t + o, e + n), ctx.quadraticCurveTo(t, e + n, t, e + n - o), ctx.lineTo(t, e + o), ctx.quadraticCurveTo(t, e, t + o, e), ctx.closePath()) }
+
+    function draw() {
+      ctx.save(), game.shake > 0 && ctx.translate(rand(-game.shake, game.shake), rand(-game.shake, game.shake)), ctx.clearRect(-20, -20, W + 40, H + 40);
+      const t = ctx.createLinearGradient(0, 0, 0, H);
+      t.addColorStop(0, "#0d1a21"), t.addColorStop(.55, "#0b141a"), t.addColorStop(1, "#060d12"), ctx.fillStyle = t, ctx.fillRect(-20, -20, W + 40, H + 40);
+      const e = ctx.createRadialGradient(.5 * W, .35 * groundY, 0, .5 * W, .35 * groundY, .9 * W);
+      e.addColorStop(0, "rgba(6,207,156,.055)"), e.addColorStop(1, "rgba(6,207,156,0)"), ctx.fillStyle = e, ctx.fillRect(-20, -20, W + 40, groundY + 20), ctx.fillStyle = "rgba(255,255,255,.15)";
+      for (let t = 0; t < 40; t++) {
+        const e = (137 * t + 23) % W,
+          a = (79 * t + 11) % (.5 * groundY);
+        ctx.fillRect(e, a, 1.4, 1.4)
+      }
+      const a = ctx.createRadialGradient(.82 * W, .18 * groundY, 0, .82 * W, .18 * groundY, 120);
+      a.addColorStop(0, "rgba(255,255,255,.12)"), a.addColorStop(1, "rgba(255,255,255,0)"), ctx.fillStyle = a, ctx.beginPath(), ctx.arc(.82 * W, .18 * groundY, 120, 0, 2 * Math.PI), ctx.fill(), ctx.fillStyle = "rgba(255,255,255,.28)", ctx.beginPath(), ctx.arc(.82 * W, .18 * groundY, 26, 0, 2 * Math.PI), ctx.fill();
+      for (const t of game.clouds) ctx.fillStyle = `rgba(200,220,240,${t.alpha})`, ctx.beginPath(), ctx.ellipse(t.x + t.w / 2, t.y, t.w / 2, t.h / 2, 0, 0, 2 * Math.PI), ctx.fill(), ctx.beginPath(), ctx.ellipse(t.x + .35 * t.w, t.y - .3 * t.h, .3 * t.w, .55 * t.h, 0, 0, 2 * Math.PI), ctx.fill(), ctx.beginPath(), ctx.ellipse(t.x + .65 * t.w, t.y - .2 * t.h, .25 * t.w, .5 * t.h, 0, 0, 2 * Math.PI), ctx.fill();
+      for (const t of game.hills) ctx.fillStyle = "rgba(6,207,156,.045)", ctx.beginPath(), ctx.moveTo(t.x, groundY), ctx.quadraticCurveTo(t.x + .5 * t.w, groundY - 1.6 * t.h, t.x + t.w, groundY), ctx.closePath(), ctx.fill();
+      const n = ctx.createLinearGradient(0, groundY, 0, H);
+      n.addColorStop(0, "rgba(6,207,156,.10)"), n.addColorStop(1, "rgba(6,207,156,.01)"), ctx.fillStyle = n, ctx.fillRect(-20, groundY, W + 40, H - groundY + 20), ctx.strokeStyle = "rgba(6,207,156,.75)", ctx.lineWidth = 2.5, ctx.shadowColor = "rgba(6,207,156,.8)", ctx.shadowBlur = 14, ctx.beginPath(), ctx.moveTo(-20, groundY), ctx.lineTo(W + 20, groundY), ctx.stroke(), ctx.shadowBlur = 0, ctx.strokeStyle = "rgba(6,207,156,.30)", ctx.lineWidth = 2, ctx.setLineDash([10, 24]), ctx.lineDashOffset = -game.groundOffset, ctx.beginPath(), ctx.moveTo(-20, groundY + 10), ctx.lineTo(W + 20, groundY + 10), ctx.stroke(), ctx.setLineDash([]), ctx.fillStyle = "rgba(6,207,156,.22)";
+      for (let t = 0; t < 30; t++) {
+        const e = (97 * t + -1 * game.groundOffset2) % (W + 100) - 50,
+          a = groundY + 22 + t % 3 * 14;
+        ctx.fillRect(e, a, 3, 2)
+      }
+      if ("playing" === game.phase && game.speed > 8) {
+        const t = (game.speed - 8) / 6;
+        ctx.strokeStyle = `rgba(6,207,156,${.1*t})`, ctx.lineWidth = 1.5;
+        for (let e = 0; e < 8; e++) {
+          const a = .15 * groundY + 71 * e % (.8 * groundY),
+            n = W - (.6 * performance.now() * game.speed + 140 * e) % (W + 200);
+          ctx.beginPath(), ctx.moveTo(n, a), ctx.lineTo(n + 90 * t, a), ctx.stroke()
+        }
+      }
+      for (const t of game.coinsList) drawCoin(t.x, t.y, t.r, t.phase);
+      for (const t of game.obstacles) "cactus_small" === t.type ? drawCactus(t, !1) : "cactus_large" === t.type ? drawCactus(t, !0) : "rock" === t.type ? drawRock(t) : "bird" === t.type && drawBird(t);
+      const o = game.player,
+        l = .16 * W,
+        i = o.invincible > 0 && Math.floor(14 * o.invincible) % 2 == 0;
+      "playing" === game.phase || "over" === game.phase ? i ? (ctx.save(), ctx.globalAlpha = .4, drawDino(l, o.bottomY, o.w, o.h, o.legPhase, !o.onGround, o.squash, !0), ctx.restore()) : (o.invincible <= 0 && (ctx.save(), ctx.shadowColor = "rgba(6,207,156,.55)", ctx.shadowBlur = 26, ctx.fillStyle = "#06cf9c", rr(l - .4 * o.w, o.bottomY - .9 * o.h, .8 * o.w, .8 * o.h, 12), ctx.fill(), ctx.restore()), drawDino(l, o.bottomY, o.w, o.h, o.legPhase, !o.onGround, o.squash, !1)) : drawDino(l, groundY, o.w, o.h, 0, !1, 0, !1);
+      for (const t of game.dust) ctx.globalAlpha = .5 * Math.max(0, t.life), ctx.fillStyle = "#06cf9c", ctx.beginPath(), ctx.arc(t.x, t.y, t.size * t.life, 0, 2 * Math.PI), ctx.fill();
+      ctx.globalAlpha = 1;
+      for (const t of game.particles) ctx.globalAlpha = Math.max(0, t.life), ctx.fillStyle = t.color, ctx.beginPath(), ctx.arc(t.x, t.y, t.size * t.life, 0, 2 * Math.PI), ctx.fill();
+      ctx.globalAlpha = 1;
+      for (const t of game.floaties) ctx.globalAlpha = Math.max(0, t.life), ctx.font = '800 22px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', ctx.fillStyle = t.color, ctx.textAlign = "center", ctx.shadowColor = t.color, ctx.shadowBlur = 16, ctx.fillText(t.text, t.x, t.y), ctx.shadowBlur = 0;
+      if (ctx.globalAlpha = 1, game.flash > 0 && (ctx.fillStyle = game.flashColor.replace(/[\d.]+\)$/, .55 * game.flash + ")"), ctx.fillRect(-20, -20, W + 40, H + 40)), ctx.restore(), "playing" === game.phase) {
+        const t = clamp(game.timeLeft / 30, 0, 1),
+          e = Math.min(.5 * W, 500),
+          a = (W - e) / 2,
+          n = 88;
+        ctx.save(), ctx.fillStyle = "rgba(255,255,255,.08)", rr(a, n, e, 4, 2), ctx.fill();
+        const o = ctx.createLinearGradient(a, 0, a + e, 0);
+        o.addColorStop(0, "#f15c6d"), o.addColorStop(.5, "#ffb74d"), o.addColorStop(1, "#06cf9c"), ctx.fillStyle = o, rr(a, n, e * t, 4, 2), ctx.fill(), ctx.restore()
+      }
+      if ("playing" === game.phase && game.timeLeft <= 5) {
+        const t = .35 + .35 * Math.sin(.012 * performance.now());
+        ctx.save(), ctx.font = '800 110px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', ctx.fillStyle = `rgba(241,92,109,${t})`, ctx.textAlign = "center", ctx.textBaseline = "middle", ctx.shadowColor = "rgba(241,92,109,.9)", ctx.shadowBlur = 40, ctx.fillText(Math.ceil(game.timeLeft), W / 2, .3 * groundY), ctx.restore()
+      }
+    }
+
+    function handleJumpInput(t) { t.target.closest("button") || "playing" === game.phase && (t.preventDefault(), doJump()) } window.addEventListener("pointerdown", handleJumpInput, { passive: !1 }), window.addEventListener("keydown", t => { "Space" !== t.code && "ArrowUp" !== t.key && "w" !== t.key && "W" !== t.key || (t.preventDefault(), "playing" === game.phase && doJump()), ["ArrowDown", "ArrowLeft", "ArrowRight"].includes(t.key) && t.preventDefault() }, { passive: !1 }), canvas.addEventListener("contextmenu", t => t.preventDefault()), document.addEventListener("gesturestart", t => t.preventDefault()), document.addEventListener("dblclick", t => t.preventDefault(), { passive: !1 }), document.addEventListener("touchmove", t => { t.target.closest("button") || t.preventDefault() }, { passive: !1 }), ["pointerdown", "keydown", "touchstart"].forEach(t => { document.addEventListener(t, () => { initAudio(), audioCtx && "suspended" === audioCtx.state && audioCtx.resume() }, { once: !0 }) });
+    let lastTime = performance.now();
+
+    function update(t) { "playing" === game.phase ? (updatePlayer(t), updateWorld(t), updateHUD()) : "idle" !== game.phase && "over" !== game.phase || (game.player.legPhase += .12 * t), game.shake > 0 && (game.shake = Math.max(0, game.shake - .7 * t)), game.flash > 0 && (game.flash = Math.max(0, game.flash - .035 * t)), updateParticles(t) }
+
+    function loop(t) {
+      const e = Math.min(2.5, (t - lastTime) / 16.667);
+      lastTime = t, update(e), draw(), requestAnimationFrame(loop)
+    }
+
+    function hideCenter() { centerEl.hidden = !0 }
+
+    function showResult(t, e) {
+      let a, n, o, l;
+      t > 0 ? (a = "🎉", n = `Menang +${rp(t)}`, o = "win", l = `Jarak <b>${Math.floor(game.distance)}m</b> · Koin <b>${game.coins}</b><br>\n            Pembayaran <b>${rp(e)}</b> telah ditambahkan ke saldo.`) : t < 0 ? (a = "😔", n = `Kalah −${rp(Math.abs(t))}`, o = "lose", l = `Jarak <b>${Math.floor(game.distance)}m</b> · Koin <b>${game.coins}</b><br>\n            Pembayaran <b>${rp(e)}</b> tidak menutup taruhan.`) : (a = "🤝", n = "Impas", o = "", l = `Jarak <b>${Math.floor(game.distance)}m</b> · Koin <b>${game.coins}</b><br>\n            Pembayaran <b>${rp(e)}</b> sama dengan taruhanmu.`), centerEl.innerHTML = `\n    <div class="center-inner">\n      <div class="center-icon">${a}</div>\n      <div class="center-title ${o}">${n}</div>\n      <div class="center-text">${l}</div>\n    </div>`, centerEl.hidden = !1
+    }
+
+    function showIdle() { centerEl.innerHTML = '\n    <div class="center-inner">\n      <div class="center-icon">🦖</div>\n      <div class="center-title">Siap Berlari?</div>\n      <div class="center-text">\n        Pilih nominal taruhan di bawah, lalu tekan <b>MULAI LARI</b>.<br>\n        Lompati rintangan, kumpulkan koin, bertahan 30 detik.<br>\n        <span style="opacity:.7">Kontrol: tap / klik / spasi untuk melompat.</span>\n      </div>\n    </div>', centerEl.hidden = !1 }
+
+    function addHistory(t, e, a, n) {
+      const o = document.createElement("div");
+      o.className = "hist-item";
+      const l = a > 0 ? "" : a < 0 ? "lose" : "draw",
+        i = a > 0 ? "amt-win" : a < 0 ? "amt-lose" : "amt-draw",
+        c = a > 0 ? "+" : a < 0 ? "−" : "",
+        s = Math.abs(a);
+      for (o.innerHTML = `\n    <span class="hist-dot ${l}"></span>\n    <div class="hist-main">\n      <div class="hist-top">\n        <span>${t}m · ${e} koin</span>\n        <span class="${i}">${c}${rp(s)}</span>\n      </div>\n      <div class="hist-sub">Bayar ${rp(n)} · ${nowTime()}</div>\n    </div>`, historyEl.prepend(o); historyEl.children.length > 9;) historyEl.removeChild(historyEl.lastChild)
+    }
+
+    function updateComposer() {
+      document.querySelectorAll("#amtChips .chip").forEach(t => {
+        const e = t.dataset.amt,
+          a = "all" === e ? game.bet === state.saldo && state.saldo >= 100 : Number(e) === game.bet;
+        t.classList.toggle("active", a)
+      }), betLabel.textContent = rp(game.bet), winLabel.textContent = "+" + rp(2.5 * game.bet), "idle" === game.phase || "over" === game.phase ? (state.saldo < 100 ? (playBtn.textContent = "MULAI ULANG", playBtn.classList.add("reset"), playBtn.dataset.mode = "reset", playBtn.disabled = !1) : (playBtn.textContent = "over" === game.phase ? "LARI LAGI" : "MULAI LARI", playBtn.classList.remove("reset"), playBtn.dataset.mode = "start", playBtn.disabled = game.bet < 100 || game.bet > state.saldo), bottomBar.style.opacity = "1", bottomBar.style.pointerEvents = "auto") : (playBtn.textContent = "BERLARI…", playBtn.disabled = !0, playBtn.classList.remove("reset"), playBtn.dataset.mode = "play", bottomBar.style.opacity = "0", bottomBar.style.pointerEvents = "none")
+    }
+
+    function resetGame() { state.saldo = 1e5, state.menang = 0, state.kalah = 0, shownSaldo = 1e5, balanceEl.textContent = rp(1e5), historyEl.innerHTML = "", game.phase = "idle", game.obstacles = [], game.coinsList = [], game.particles = [], game.floaties = [], game.dust = [], game.lives = 3, game.distance = 0, game.coins = 0, game.timeLeft = 30, game.player.bottomY = groundY, game.player.vy = 0, game.player.onGround = !0, game.player.invincible = 0, updateHUD(), payoutEl.textContent = rp(0), updateComposer(), showIdle() } playBtn.addEventListener("click", t => { t.stopPropagation(); const e = playBtn.dataset.mode; "reset" !== e ? "start" !== e || startGame() : resetGame() }), document.getElementById("amtChips").addEventListener("click", t => {
+      const e = t.target.closest(".chip");
+      if (!e) return;
+      if ("idle" !== game.phase && "over" !== game.phase) return;
+      const a = e.dataset.amt;
+      game.bet = "all" === a ? Math.max(100, state.saldo) : Math.min(Number(a), state.saldo), updateComposer()
+    }), resize(), game.player.bottomY = groundY, updateHUD(), payoutEl.textContent = rp(0), updateComposer(), showIdle(), requestAnimationFrame(loop)
+  </script>
+</body>
+
+</html>

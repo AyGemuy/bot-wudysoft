@@ -1,0 +1,117 @@
+import axios from "axios";
+import {
+  upload
+} from "../../lib/upload.js";
+import {
+  simpleQuoted
+} from "../../lib/quoted.js";
+const CONFIG = {
+  TIMEOUT: 6e4,
+  USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+};
+export default {
+  name: "magiceraser",
+  aliases: ["magiceraser", "magicerase", "me2i"],
+  description: "AI Image Generator & Editor menggunakan MagicEraser (T2I & I2I).",
+  category: "AI",
+  limit: true,
+  example: "• Text-to-Image: magiceraser cyberpunk anime girl\n• Image-to-Image: Reply gambar dengan caption magiceraser filter anime style",
+  execute: async (sock, ctx, msg) => {
+    try {
+      let text = ctx.args?.join(" ")?.trim() || "";
+      if (!text && ctx.text) {
+        const raw = ctx.text.trim();
+        const firstWord = raw.split(/\s+/)[0].toLowerCase();
+        if (["magiceraser", "magicerase", "me2i"].some(alias => firstWord.endsWith(alias))) {
+          text = raw.slice(firstWord.length).trim();
+        }
+      }
+      const isMedia = ctx.isMedia || ctx.quoted?.isMedia;
+      const prefix = ctx.prefix || ".";
+      const botName = global.bot?.name || "WudysoftBot";
+      const botFooter = global.bot?.footer || `${botName} • MagicEraser AI`;
+      const quotedMsg = typeof simpleQuoted === "function" ? simpleQuoted(ctx) : msg;
+      if (!text && !isMedia) {
+        const guideText = `–  *M A G I C  E R A S E R*
+
+Layanan manipulasi dan rendering visual AI (Text-to-Image & Image-to-Image).
+
+┌  ◦  *Text-to-Image (T2I)* :
+│  └ \`${prefix}magiceraser cyberpunk anime girl, highly detailed\`
+│
+└  ◦  *Image-to-Image (I2I)* :
+   └ Reply / kirim gambar: \`${prefix}magiceraser filter anime style\``;
+        return ctx.reply(guideText, {
+          quoted: quotedMsg
+        });
+      }
+      await ctx.react("⏳");
+      const params = {
+        prompt: text || "enhance quality, masterpiece, 4k"
+      };
+      if (isMedia) {
+        const buffer = await ctx.download();
+        if (!buffer || !Buffer.isBuffer(buffer)) {
+          await ctx.react("❌");
+          return ctx.reply("❌ Gagal mengunduh media dari pesan.");
+        }
+        const uploadRes = await upload(buffer);
+        if (!uploadRes?.status || !uploadRes?.url) {
+          await ctx.react("❌");
+          return ctx.reply(`❌ Gagal mengunggah gambar: ${uploadRes?.message || "Server upload error"}`);
+        }
+        params.image = uploadRes.url;
+      }
+      const {
+        data
+      } = await axios.get(`${global.bot?.api?.wudysoft}/api/ai/magiceraser/v2`, {
+        params: params,
+        headers: {
+          "User-Agent": CONFIG.USER_AGENT
+        },
+        timeout: CONFIG.TIMEOUT
+      });
+      const resultImage = Array.isArray(data?.result) ? data.result[0] : data?.result || data?.image;
+      if (!data || data.status !== true || !resultImage) {
+        await ctx.react("❌");
+        return ctx.reply(`❌ Gagal memproses gambar: ${data?.message || "API tidak mengembalikan hasil."}`);
+      }
+      const mode = data?.type ? data.type.toUpperCase() : params.image ? "IMAGE-TO-IMAGE (I2I)" : "TEXT-TO-IMAGE (T2I)";
+      const modelUsed = data?.model_used || "magiceraser_v1";
+      const bodyText = `–  *M A G I C  E R A S E R*
+
+Proses olah visual berhasil diselesaikan.
+
+┌  ◦  *Mode* : ${mode}
+│  ◦  *Model* : \`${modelUsed}\`
+└  ◦  *Job ID* : \`${data?.job_id || "-"}\`
+
+–  *P R O M P T*
+
+“${params.prompt}”`;
+      if (typeof ctx.sendCta === "function") {
+        await ctx.sendCta(bodyText, botFooter, [], {
+          title: "– MAGICERASER AI –",
+          subtitle: `Mode: ${mode}`,
+          media: resultImage,
+          quoted: quotedMsg
+        });
+      } else {
+        await sock.sendMessage(ctx.id, {
+          image: {
+            url: resultImage
+          },
+          caption: bodyText
+        }, {
+          quoted: quotedMsg
+        });
+      }
+      await ctx.react("✅");
+    } catch (error) {
+      console.error("[MagicEraser Error]:", error?.message || error);
+      await ctx.react("❌");
+      const errMsg = error.response?.data?.message || error.response?.data?.error || (typeof error.response?.data === "string" ? error.response.data : null) || error.message;
+      ctx.reply(`❌ Terjadi kendala pada MagicEraser: ${errMsg}`);
+    }
+  }
+};
