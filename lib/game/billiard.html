@@ -3,30 +3,14 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-  <title>8-Ball Billiard — Dark Edition</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <title>8-Ball Billiard — Canvas Edition</title>
   <style>
     * {
       margin: 0;
       padding: 0;
-      box-sizing: border-box
-    }
-
-    :root {
-      --bg: #0b141a;
-      --bg2: #111b21;
-      --panel: #202c33;
-      --green: #00a884;
-      --green-d: #005c4b;
-      --green-l: #06cf9c;
-      --tx: #e9edef;
-      --tx2: #8696a0;
-      --line: #2a3942;
-      --red: #f15c6d;
-      --gold: #f4b400;
-      --felt: #0e3633;
-      --felt-border: #082321;
-      --cushion: #005c4b
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
     }
 
     body,
@@ -34,571 +18,237 @@
       height: 100%;
       width: 100%;
       overflow: hidden;
-      overscroll-behavior: none
+      overscroll-behavior: none;
+      background: #0b141a;
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      background: var(--bg);
-      color: var(--tx);
-      -webkit-font-smoothing: antialiased;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #e9edef;
       user-select: none;
       -webkit-user-select: none;
-      -webkit-tap-highlight-color: transparent;
-      position: fixed;
-      inset: 0
-    }
-
-    button {
-      font-family: inherit;
-      cursor: pointer;
-      border: none;
-      background: 0 0;
-      color: inherit;
-      touch-action: manipulation
-    }
-
-    .stage {
       position: fixed;
       inset: 0;
-      overflow: hidden;
-      isolation: isolate;
-      background-color: var(--bg);
-      background-image: radial-gradient(circle at 50% 45%, rgba(6, 207, 156, .06) 0, transparent 60%), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320' viewBox='0 0 320 320'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.022' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='40' cy='40' r='14'/%3E%3Cpath d='M115 22h32v32h-32z'/%3E%3Cpath d='M215 48q20-20 40 0'/%3E%3Ccircle cx='260' cy='200' r='19'/%3E%3Cpath d='M35 175l20 20 20-20'/%3E%3Cpath d='M135 140h38v38'/%3E%3Cpath d='M88 245q28-28 56 0'/%3E%3Ccircle cx='180' cy='262' r='10'/%3E%3Cpath d='M270 110v38'/%3E%3Cpath d='M175 200a20 20 0 1 0 20 20'/%3E%3Cpath d='M52 108h28v28'/%3E%3C/g%3E%3C/svg%3E");
-      background-size: auto, 320px
-    }
-
-    .top {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 20;
-      padding: 16px 28px 40px;
-      display: flex;
-      align-items: center;
-      gap: 24px;
-      background: linear-gradient(180deg, rgba(11, 20, 26, .94) 0, rgba(11, 20, 26, .6) 60%, transparent 100%);
-      pointer-events: none
-    }
-
-    .top>* {
-      pointer-events: auto
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px
-    }
-
-    .brand-icon {
-      width: 42px;
-      height: 42px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, var(--green-l), var(--green));
-      display: grid;
-      place-items: center;
-      font-size: 22px;
-      box-shadow: 0 6px 20px rgba(0, 168, 132, .35)
-    }
-
-    .brand-name {
-      font-size: 16px;
-      font-weight: 700;
-      letter-spacing: -.2px
-    }
-
-    .brand-sub {
-      font-size: 11px;
-      color: var(--tx2);
-      font-weight: 500;
-      margin-top: 1px
-    }
-
-    .hud {
-      display: flex;
-      align-items: center;
-      gap: 24px;
-      font-size: 13px;
-      color: var(--tx2);
-      font-weight: 500;
-      margin-left: auto;
-      margin-right: auto;
-      pointer-events: none
-    }
-
-    .hud b {
-      color: var(--tx);
-      font-weight: 700;
-      font-variant-numeric: tabular-nums;
-      font-size: 15px;
-      letter-spacing: -.2px;
-      margin-left: 5px
-    }
-
-    .hud b.green {
-      color: var(--green-l)
-    }
-
-    .hud b.gold {
-      color: var(--gold)
-    }
-
-    .wallet {
-      display: flex;
-      align-items: baseline;
-      gap: 10px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-      color: var(--tx2);
-      pointer-events: none
-    }
-
-    .wallet b {
-      font-size: 22px;
-      font-weight: 800;
-      color: var(--tx);
-      letter-spacing: -.6px;
-      font-variant-numeric: tabular-nums;
-      text-transform: none
-    }
-
-    .wallet b::before {
-      content: '';
-      display: inline-block;
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--green-l);
-      margin-right: 10px;
-      vertical-align: middle;
-      box-shadow: 0 0 0 3px rgba(6, 207, 156, .18);
-      animation: pulse 2.4s ease-in-out infinite
-    }
-
-    @keyframes pulse {
-
-      0%,
-      100% {
-        box-shadow: 0 0 0 3px rgba(6, 207, 156, .18)
-      }
-
-      50% {
-        box-shadow: 0 0 0 8px rgba(6, 207, 156, .04)
-      }
-    }
-
-    .history {
-      position: absolute;
-      right: 24px;
-      top: 90px;
-      bottom: 140px;
-      width: 230px;
-      z-index: 15;
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-      overflow: hidden;
-      padding-top: 20px;
-      pointer-events: none;
-      -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 24px, #000 calc(100% - 30px), transparent 100%);
-      mask-image: linear-gradient(180deg, transparent 0, #000 24px, #000 calc(100% - 30px), transparent 100%)
-    }
-
-    .hist-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 8px 8px;
-      border-radius: 8px;
-      animation: histIn .3s cubic-bezier(.34, 1.4, .64, 1)
-    }
-
-    @keyframes histIn {
-      from {
-        opacity: 0;
-        transform: translateX(14px)
-      }
-
-      to {
-        opacity: 1;
-        transform: none
-      }
-    }
-
-    .hist-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      flex: 0 0 7px;
-      background: var(--green-l);
-      box-shadow: 0 0 10px rgba(6, 207, 156, .7)
-    }
-
-    .hist-dot.pocket {
-      background: var(--gold);
-      box-shadow: 0 0 10px rgba(244, 180, 0, .6)
-    }
-
-    .hist-dot.foul {
-      background: var(--red);
-      box-shadow: 0 0 10px rgba(241, 92, 109, .6)
-    }
-
-    .hist-main {
-      flex: 1;
-      min-width: 0
-    }
-
-    .hist-top {
-      display: flex;
-      justify-content: space-between;
-      gap: 8px;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--tx)
-    }
-
-    .hist-sub {
-      font-size: 10px;
-      color: var(--tx2);
-      margin-top: 1px
-    }
-
-    .canvas-wrap {
-      position: absolute;
-      inset: 0;
-      display: grid;
-      place-items: center;
-      z-index: 1
     }
 
     canvas {
       display: block;
-      cursor: crosshair
-    }
-
-    .overlay {
-      position: absolute;
-      inset: 0;
-      z-index: 30;
-      background: rgba(11, 20, 26, .85);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity .3s ease
-    }
-
-    .overlay.show {
-      opacity: 1;
-      pointer-events: auto
-    }
-
-    .overlay-title {
-      font-size: 32px;
-      font-weight: 900;
-      letter-spacing: -.5px
-    }
-
-    .overlay-title.win {
-      color: var(--green-l);
-      text-shadow: 0 0 40px rgba(6, 207, 156, .5)
-    }
-
-    .overlay-title.lose {
-      color: var(--red);
-      text-shadow: 0 0 40px rgba(241, 92, 109, .4)
-    }
-
-    .overlay-sub {
-      font-size: 14px;
-      color: var(--tx2);
-      max-width: 340px;
-      text-align: center;
-      line-height: 1.5
-    }
-
-    .bottom {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      z-index: 20;
-      padding: 20px 28px 24px;
-      background: linear-gradient(0deg, rgba(11, 20, 26, .95) 0, rgba(11, 20, 26, .65) 60%, transparent 100%);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 20px;
-      pointer-events: none
-    }
-
-    .bottom>* {
-      pointer-events: auto
-    }
-
-    .power-container {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: .1em;
-      text-transform: uppercase;
-      color: var(--tx2)
-    }
-
-    .power-bar-wrap {
-      width: 160px;
-      height: 12px;
-      background: #202c33;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      overflow: hidden;
-      position: relative
-    }
-
-    .power-bar-fill {
-      height: 100%;
-      width: 0%;
-      background: linear-gradient(90deg, var(--green), var(--green-l), var(--gold), var(--red));
-      border-radius: 999px;
-      transition: width .05s ease
-    }
-
-    .chips {
-      display: flex;
-      align-items: center;
-      gap: 10px
-    }
-
-    .chip {
-      border: 1px solid var(--line);
-      background: rgba(32, 44, 51, .75);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      color: var(--tx);
-      padding: 11px 18px;
-      border-radius: 999px;
-      font-size: 13px;
-      font-weight: 700;
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      transition: .15s ease
-    }
-
-    .chip:hover {
-      background: rgba(42, 57, 66, .95);
-      border-color: #3a4a52
-    }
-
-    .chip:active {
-      transform: scale(.96)
-    }
-
-    .play-btn {
-      background: var(--green);
-      color: #0b141a;
-      font-size: 13.5px;
-      font-weight: 800;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-      padding: 15px 36px;
-      border-radius: 14px;
-      transition: .18s ease;
-      box-shadow: 0 10px 30px rgba(0, 168, 132, .45)
-    }
-
-    .play-btn:hover {
-      background: var(--green-l);
-      transform: translateY(-2px)
-    }
-
-    .play-btn:active {
-      transform: translateY(0)
-    }
-
-    @media (max-width:820px) {
-      .top {
-        padding: 12px 16px 30px;
-        gap: 10px
-      }
-
-      .brand-sub {
-        display: none
-      }
-
-      .hud {
-        gap: 12px;
-        font-size: 11.5px
-      }
-
-      .hud b {
-        font-size: 13px
-      }
-
-      .wallet b {
-        font-size: 17px
-      }
-
-      .history {
-        display: none
-      }
-
-      .bottom {
-        padding: 14px 16px 16px
-      }
-
-      .power-bar-wrap {
-        width: 110px
-      }
-
-      .chip {
-        padding: 9px 13px;
-        font-size: 11.5px
-      }
+      touch-action: none;
+      width: 100vw;
+      height: 100vh;
     }
   </style>
 </head>
 
 <body>
-  <div class="stage">
-    <div class="top">
-      <div class="brand">
-        <div class="brand-icon">🎱</div>
-        <div>
-          <div class="brand-name">Billiard Pro</div>
-          <div class="brand-sub">WhatsApp Dark Edition</div>
-        </div>
-      </div>
-      <div class="hud"><span>BOLA SISA <b class="green" id="ballsLeftCount">8</b></span> <span>PUKULAN <b class="gold" id="shotCount">0</b></span> <span>FAUL <b class="red" id="foulCount">0</b></span></div>
-      <div class="wallet"><span>Skor</span> <b id="scoreLabel">0</b></div>
-    </div>
-    <div class="history" id="history"></div>
-    <div class="canvas-wrap"><canvas id="gameCanvas"></canvas></div>
-    <div class="overlay" id="overlay">
-      <div class="overlay-title" id="overlayTitle">VICTORY!</div>
-      <div class="overlay-sub" id="overlaySub">Semua bola berhasil dimasukkan ke saku meja!</div><button class="play-btn" id="restartBtn">MAIN LAGI</button>
-    </div>
-    <div class="bottom">
-      <div class="power-container"><span>Power</span>
-        <div class="power-bar-wrap">
-          <div class="power-bar-fill" id="powerFill"></div>
-        </div>
-      </div>
-      <div class="chips"><button class="chip" id="btnRack">🎱 Susun Ulang Meja</button></div>
-    </div>
-  </div>
+  <canvas id="gameCanvas"></canvas>
+
   <script>
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    let audioCtx = null;
+    // ==========================================
+    // KONFIGURASI & STATE
+    // ==========================================
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    
+    // Resolusi Virtual (Landscape)
+    const V_W = 1000;
+    const V_H = 550;
+    
+    let scale = 1, offsetX = 0, offsetY = 0;
 
-    function ensureAudio() { audioCtx || (audioCtx = new AudioCtx), "suspended" === audioCtx.state && audioCtx.resume() }
+    const TABLE = { x: 75, y: 70, w: 850, h: 410, cushion: 32, pocketR: 24, friction: .987, ballR: 13 };
+    
+    const state = { 
+      score: 0, 
+      shots: 0, 
+      fouls: 0, 
+      ballsLeft: 15,
+      isAiming: false, 
+      aimAngle: 0, 
+      power: 0, 
+      maxPower: 26, 
+      charging: false, 
+      chargeDir: 1,
+      gameOver: false,
+      win: false
+    };
 
-    function playSound(t, e = 1) {
-      if (ensureAudio(), !audioCtx) return;
-      const a = audioCtx.currentTime,
-        s = audioCtx.createOscillator(),
-        o = audioCtx.createGain();
-      s.connect(o), o.connect(audioCtx.destination), "hit" === t ? (s.type = "triangle", s.frequency.setValueAtTime(450 + 80 * Math.random(), a), s.frequency.exponentialRampToValueAtTime(120, a + .04), o.gain.setValueAtTime(Math.min(.3 * e, .4), a), o.gain.linearRampToValueAtTime(.001, a + .05), s.start(a), s.stop(a + .05)) : "cushion" === t ? (s.type = "sine", s.frequency.setValueAtTime(140, a), s.frequency.linearRampToValueAtTime(60, a + .06), o.gain.setValueAtTime(.2 * e, a), o.gain.linearRampToValueAtTime(.001, a + .06), s.start(a), s.stop(a + .06)) : "pocket" === t ? (s.type = "sine", s.frequency.setValueAtTime(260, a), s.frequency.linearRampToValueAtTime(110, a + .18), o.gain.setValueAtTime(.25, a), o.gain.linearRampToValueAtTime(.001, a + .2), s.start(a), s.stop(a + .2)) : "cue" === t ? (s.type = "square", s.frequency.setValueAtTime(320, a), s.frequency.linearRampToValueAtTime(160, a + .05), o.gain.setValueAtTime(.25 * e, a), o.gain.linearRampToValueAtTime(.001, a + .06), s.start(a), s.stop(a + .06)) : "win" === t && [392, 523, 659, 784, 1046].forEach((t, e) => {
-        const s = audioCtx.createOscillator(),
-          o = audioCtx.createGain();
-        s.connect(o), o.connect(audioCtx.destination), s.type = "sine", s.frequency.setValueAtTime(t, a + .08 * e), o.gain.setValueAtTime(.15, a + .08 * e), o.gain.linearRampToValueAtTime(.01, a + .08 * e + .16), s.start(a + .08 * e), s.stop(a + .08 * e + .17)
-      })
-    }
-    const canvas = document.getElementById("gameCanvas"),
-      ctx = canvas.getContext("2d"),
-      scoreLabel = document.getElementById("scoreLabel"),
-      ballsLeftCount = document.getElementById("ballsLeftCount"),
-      shotCountEl = document.getElementById("shotCount"),
-      foulCountEl = document.getElementById("foulCount"),
-      powerFill = document.getElementById("powerFill"),
-      historyEl = document.getElementById("history"),
-      overlay = document.getElementById("overlay"),
-      overlayTitle = document.getElementById("overlayTitle"),
-      overlaySub = document.getElementById("overlaySub"),
-      restartBtn = document.getElementById("restartBtn"),
-      btnRack = document.getElementById("btnRack"),
-      V_W = 1e3,
-      V_H = 550;
-    let scale = 1;
-    const TABLE = { x: 75, y: 60, w: 850, h: 425, cushion: 32, pocketR: 24, friction: .987, ballR: 13 },
-      state = { score: 0, shots: 0, fouls: 0, isAiming: !1, aimAngle: 0, power: 0, maxPower: 26, charging: !1, chargeDir: 1 };
+    const pockets = [
+      { x: TABLE.x + TABLE.cushion, y: TABLE.y + TABLE.cushion }, 
+      { x: TABLE.x + TABLE.w / 2, y: TABLE.y + TABLE.cushion - 3 }, 
+      { x: TABLE.x + TABLE.w - TABLE.cushion, y: TABLE.y + TABLE.cushion }, 
+      { x: TABLE.x + TABLE.cushion, y: TABLE.y + TABLE.h - TABLE.cushion }, 
+      { x: TABLE.x + TABLE.w / 2, y: TABLE.y + TABLE.h - TABLE.cushion + 3 }, 
+      { x: TABLE.x + TABLE.w - TABLE.cushion, y: TABLE.y + TABLE.h - TABLE.cushion }
+    ];
 
-    function addLog(t, e, a = "") { const s = document.createElement("div"); for (s.className = "hist-item", s.innerHTML = `\n    <span class="hist-dot ${a}"></span>\n    <div class="hist-main">\n      <div class="hist-top"><span>${t}</span></div>\n      <div class="hist-sub">${e}</div>\n    </div>`, historyEl.prepend(s); historyEl.children.length > 7;) historyEl.removeChild(historyEl.lastChild) }
+    // Hitbox Tombol UI Canvas
+    const btnRack = { x: 760, y: V_H - 55, w: 180, h: 40 };
+    const btnRestart = { x: V_W/2 - 100, y: V_H/2 + 40, w: 200, h: 50 };
 
-    function resize() {
-      const t = window.devicePixelRatio || 1;
-      canvas.width = window.innerWidth * t, canvas.height = window.innerHeight * t, scale = Math.min(canvas.width / V_W, canvas.height / 550)
-    }
-    window.addEventListener("resize", resize), resize();
-    class Ball {
-      constructor(t, e, a, s) { this.x = t, this.y = e, this.vx = 0, this.vy = 0, this.r = TABLE.ballR, this.num = a, this.color = s, this.potted = !1, this.potScale = 1 } update() {
-        if (this.potted) return void(this.potScale > .05 && (this.potScale -= .1));
-        this.x += this.vx, this.y += this.vy, this.vx *= TABLE.friction, this.vy *= TABLE.friction, Math.hypot(this.vx, this.vy) < .05 && (this.vx = 0, this.vy = 0);
-        const t = TABLE.x + TABLE.cushion + this.r,
-          e = TABLE.x + TABLE.w - TABLE.cushion - this.r,
-          a = TABLE.y + TABLE.cushion + this.r,
-          s = TABLE.y + TABLE.h - TABLE.cushion - this.r;
-        this.checkPockets() || (this.x < t && (this.x = t, this.vx = .88 * -this.vx, playSound("cushion", Math.abs(this.vx))), this.x > e && (this.x = e, this.vx = .88 * -this.vx, playSound("cushion", Math.abs(this.vx))), this.y < a && (this.y = a, this.vy = .88 * -this.vy, playSound("cushion", Math.abs(this.vy))), this.y > s && (this.y = s, this.vy = .88 * -this.vy, playSound("cushion", Math.abs(this.vy))))
-      }
-      checkPockets() { for (const t of pockets) { if (Math.hypot(this.x - t.x, this.y - t.y) < TABLE.pocketR + 4) return this.potted = !0, this.vx = 0, this.vy = 0, playSound("pocket"), onBallPotted(this), !0 } return !1 } draw(t) {
-        if (this.potted && this.potScale <= .05) return;
-        t.save(), t.translate(this.x, this.y), t.scale(this.potScale, this.potScale), t.fillStyle = "rgba(0,0,0,0.35)", t.beginPath(), t.arc(3, 4, this.r, 0, 2 * Math.PI), t.fill(), t.fillStyle = this.color, t.beginPath(), t.arc(0, 0, this.r, 0, 2 * Math.PI), t.fill(), this.num > 8 && (t.fillStyle = "#fff", t.beginPath(), t.arc(0, 0, .72 * this.r, 0, 2 * Math.PI), t.fill(), t.fillStyle = this.color, t.fillRect(-this.r, -3, 2 * this.r, 6)), 0 !== this.num && (t.fillStyle = "#fff", t.beginPath(), t.arc(0, 0, 5.5, 0, 2 * Math.PI), t.fill(), t.fillStyle = "#0b141a", t.font = "bold 7px sans-serif", t.textAlign = "center", t.textBaseline = "middle", t.fillText(this.num, 0, .5));
-        const e = t.createRadialGradient(-4, -4, 1, -2, -2, this.r);
-        e.addColorStop(0, "rgba(255,255,255,0.7)"), e.addColorStop(.4, "rgba(255,255,255,0.1)"), e.addColorStop(1, "rgba(0,0,0,0.4)"), t.fillStyle = e, t.beginPath(), t.arc(0, 0, this.r, 0, 2 * Math.PI), t.fill(), t.restore()
-      }
-    }
-    const pockets = [{ x: TABLE.x + TABLE.cushion, y: TABLE.y + TABLE.cushion }, { x: TABLE.x + TABLE.w / 2, y: TABLE.y + TABLE.cushion - 3 }, { x: TABLE.x + TABLE.w - TABLE.cushion, y: TABLE.y + TABLE.cushion }, { x: TABLE.x + TABLE.cushion, y: TABLE.y + TABLE.h - TABLE.cushion }, { x: TABLE.x + TABLE.w / 2, y: TABLE.y + TABLE.h - TABLE.cushion + 3 }, { x: TABLE.x + TABLE.w - TABLE.cushion, y: TABLE.y + TABLE.h - TABLE.cushion }];
-    let cueBall = null,
-      balls = [];
+    let cueBall = null;
+    let balls = [];
     const BALL_COLORS = ["#fff", "#f4b400", "#1e88e5", "#f15c6d", "#7b1fa2", "#fb8c00", "#00a884", "#8d5b4c", "#0b141a", "#f4b400", "#1e88e5", "#f15c6d", "#7b1fa2", "#fb8c00", "#00a884", "#8d5b4c"];
 
-    function initRack() {
-      balls = [], overlay.classList.remove("show"), state.score = 0, state.shots = 0, state.fouls = 0, scoreLabel.textContent = "0", shotCountEl.textContent = "0", foulCountEl.textContent = "0", historyEl.innerHTML = "", cueBall = new Ball(TABLE.x + 220, TABLE.y + TABLE.h / 2, 0, "#ffffff"), balls.push(cueBall);
-      const t = TABLE.x + 620,
-        e = TABLE.y + TABLE.h / 2,
-        a = TABLE.ballR,
-        s = 2 * a + .6,
-        o = s * Math.cos(Math.PI / 6),
-        i = [
-          [1],
-          [2, 9],
-          [3, 8, 10],
-          [4, 14, 7, 5],
-          [11, 12, 13, 6, 15]
-        ];
-      for (let l = 0; l < i.length; l++) {
-        const n = i[l].length,
-          c = e - (n - 1) * a;
-        for (let e = 0; e < n; e++) {
-          const a = i[l][e],
-            n = t + l * o,
-            r = c + e * s;
-          balls.push(new Ball(n, r, a, BALL_COLORS[a]))
+    // ==========================================
+    // RESIZE & AUDIO
+    // ==========================================
+    function resize() {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      canvas.style.width = window.innerWidth + 'px';
+      canvas.style.height = window.innerHeight + 'px';
+
+      scale = Math.min(canvas.width / V_W, canvas.height / V_H);
+      offsetX = (canvas.width - V_W * scale) / 2;
+      offsetY = (canvas.height - V_H * scale) / 2;
+    }
+    window.addEventListener("resize", resize);
+    resize();
+
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+    function ensureAudio() { 
+      if(!audioCtx) audioCtx = new AudioCtx(); 
+      if(audioCtx.state === "suspended") audioCtx.resume(); 
+    }
+
+    function playSound(t, e = 1) {
+      if (!audioCtx) return;
+      const a = audioCtx.currentTime, s = audioCtx.createOscillator(), o = audioCtx.createGain();
+      s.connect(o); o.connect(audioCtx.destination); 
+      
+      if("hit" === t) {
+        s.type = "triangle"; s.frequency.setValueAtTime(450 + 80 * Math.random(), a); s.frequency.exponentialRampToValueAtTime(120, a + .04); o.gain.setValueAtTime(Math.min(.3 * e, .4), a); o.gain.linearRampToValueAtTime(.001, a + .05); s.start(a); s.stop(a + .05);
+      } else if("cushion" === t) {
+        s.type = "sine"; s.frequency.setValueAtTime(140, a); s.frequency.linearRampToValueAtTime(60, a + .06); o.gain.setValueAtTime(.2 * e, a); o.gain.linearRampToValueAtTime(.001, a + .06); s.start(a); s.stop(a + .06);
+      } else if("pocket" === t) {
+        s.type = "sine"; s.frequency.setValueAtTime(260, a); s.frequency.linearRampToValueAtTime(110, a + .18); o.gain.setValueAtTime(.25, a); o.gain.linearRampToValueAtTime(.001, a + .2); s.start(a); s.stop(a + .2);
+      } else if("cue" === t) {
+        s.type = "square"; s.frequency.setValueAtTime(320, a); s.frequency.linearRampToValueAtTime(160, a + .05); o.gain.setValueAtTime(.25 * e, a); o.gain.linearRampToValueAtTime(.001, a + .06); s.start(a); s.stop(a + .06);
+      } else if("win" === t) {
+        [392, 523, 659, 784, 1046].forEach((freq, i) => {
+          const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+          osc.connect(gain); gain.connect(audioCtx.destination); osc.type = "sine"; 
+          osc.frequency.setValueAtTime(freq, a + .08 * i); 
+          gain.gain.setValueAtTime(.15, a + .08 * i); 
+          gain.gain.linearRampToValueAtTime(.01, a + .08 * i + .16); 
+          osc.start(a + .08 * i); osc.stop(a + .08 * i + .17);
+        });
+      }
+    }
+
+    function vibrate(ms) {
+      if (navigator.vibrate) navigator.vibrate(ms);
+    }
+
+    // ==========================================
+    // LOGIKA GAME
+    // ==========================================
+    class Ball {
+      constructor(t, e, a, s) { this.x = t; this.y = e; this.vx = 0; this.vy = 0; this.r = TABLE.ballR; this.num = a; this.color = s; this.potted = !1; this.potScale = 1; }
+      
+      update() {
+        if (this.potted) {
+          if (this.potScale > .05) this.potScale -= 0.1;
+          return;
+        }
+        
+        this.x += this.vx; this.y += this.vy; 
+        this.vx *= TABLE.friction; this.vy *= TABLE.friction;
+        if (Math.hypot(this.vx, this.vy) < .05) { this.vx = 0; this.vy = 0; }
+
+        const t = TABLE.x + TABLE.cushion + this.r, e = TABLE.x + TABLE.w - TABLE.cushion - this.r, a = TABLE.y + TABLE.cushion + this.r, s = TABLE.y + TABLE.h - TABLE.cushion - this.r;
+        
+        if(!this.checkPockets()) {
+          if(this.x < t) { this.x = t; this.vx = .88 * -this.vx; playSound("cushion", Math.abs(this.vx)); }
+          if(this.x > e) { this.x = e; this.vx = .88 * -this.vx; playSound("cushion", Math.abs(this.vx)); }
+          if(this.y < a) { this.y = a; this.vy = .88 * -this.vy; playSound("cushion", Math.abs(this.vy)); }
+          if(this.y > s) { this.y = s; this.vy = .88 * -this.vy; playSound("cushion", Math.abs(this.vy)); }
         }
       }
-      updateBallsLeftHUD(), addLog("Meja Disusun", "Bola siap disodok!")
+      
+      checkPockets() { 
+        for (const t of pockets) { 
+          if (Math.hypot(this.x - t.x, this.y - t.y) < TABLE.pocketR + 4) { 
+            this.potted = !0; this.vx = 0; this.vy = 0; playSound("pocket"); vibrate(30); onBallPotted(this); return !0 
+          } 
+        } 
+        return !1 
+      } 
+      
+      draw(t) {
+        if (this.potted && this.potScale <= .05) return;
+        t.save(); t.translate(this.x, this.y); t.scale(this.potScale, this.potScale); 
+        
+        // Bayangan
+        t.fillStyle = "rgba(0,0,0,0.4)"; t.beginPath(); t.arc(3, 4, this.r, 0, 2 * Math.PI); t.fill(); 
+        
+        // Bola
+        t.fillStyle = this.color; t.beginPath(); t.arc(0, 0, this.r, 0, 2 * Math.PI); t.fill(); 
+        
+        // Strip & Nomor
+        if (this.num > 8) { 
+          t.fillStyle = "#fff"; t.beginPath(); t.arc(0, 0, .72 * this.r, 0, 2 * Math.PI); t.fill(); 
+          t.fillStyle = this.color; t.fillRect(-this.r, -3, 2 * this.r, 6); 
+        }
+        
+        if (0 !== this.num) { 
+          t.fillStyle = "#fff"; t.beginPath(); t.arc(0, 0, 5.5, 0, 2 * Math.PI); t.fill(); 
+          t.fillStyle = "#0b141a"; t.font = "bold 8px sans-serif"; t.textAlign = "center"; t.textBaseline = "middle"; t.fillText(this.num, 0, 1); 
+        }
+        
+        // Highlight 3D
+        const e = t.createRadialGradient(-4, -4, 1, -2, -2, this.r);
+        e.addColorStop(0, "rgba(255,255,255,0.8)"); e.addColorStop(.4, "rgba(255,255,255,0.1)"); e.addColorStop(1, "rgba(0,0,0,0.5)"); 
+        t.fillStyle = e; t.beginPath(); t.arc(0, 0, this.r, 0, 2 * Math.PI); t.fill(); 
+        t.restore()
+      }
+    }
+
+    function initRack() {
+      balls = []; 
+      state.score = 0; state.shots = 0; state.fouls = 0; state.gameOver = false; state.win = false; 
+      state.power = 0; state.charging = false;
+      
+      cueBall = new Ball(TABLE.x + 220, TABLE.y + TABLE.h / 2, 0, "#ffffff"); 
+      balls.push(cueBall);
+      
+      const t = TABLE.x + 620, e = TABLE.y + TABLE.h / 2, a = TABLE.ballR, s = 2 * a + .6, o = s * Math.cos(Math.PI / 6);
+      const i = [ [1], [2, 9], [3, 8, 10], [4, 14, 7, 5], [11, 12, 13, 6, 15] ];
+      
+      for (let l = 0; l < i.length; l++) {
+        const n = i[l].length, c = e - (n - 1) * a;
+        for (let e = 0; e < n; e++) {
+          const a = i[l][e], n = t + l * o, r = c + e * s;
+          balls.push(new Ball(n, r, a, BALL_COLORS[a]));
+        }
+      }
+      updateBallsLeftHUD();
     }
 
     function updateBallsLeftHUD() {
-      const t = balls.filter(t => 0 !== t.num && !t.potted).length;
-      ballsLeftCount.textContent = t, 0 === t && setTimeout(() => { playSound("win"), overlayTitle.textContent = "YOU WIN!", overlayTitle.className = "overlay-title win", overlaySub.textContent = `Hebat! Semua bola berhasil dimasukkan dalam ${state.shots} pukulan. Skor: ${state.score}`, overlay.classList.add("show") }, 600)
+      state.ballsLeft = balls.filter(t => 0 !== t.num && !t.potted).length;
+      if(state.ballsLeft === 0 && !state.gameOver) {
+        state.win = true; state.gameOver = true;
+        setTimeout(() => { playSound("win"); vibrate([100, 50, 100]); }, 400);
+      }
     }
 
     function onBallPotted(t) {
-      if (0 === t.num) state.fouls++, foulCountEl.textContent = state.fouls, state.score = Math.max(0, state.score - 150), scoreLabel.textContent = state.score, addLog("Faul! Bola Putih", "Masuk saku meja (-150)", "foul"), setTimeout(() => { t.potted = !1, t.potScale = 1, t.x = TABLE.x + 220, t.y = TABLE.y + TABLE.h / 2, t.vx = 0, t.vy = 0 }, 800);
-      else if (8 === t.num) { balls.filter(t => 0 !== t.num && 8 !== t.num && !t.potted).length > 0 ? (overlayTitle.textContent = "GAME OVER", overlayTitle.className = "overlay-title lose", overlaySub.textContent = "Bola 8 masuk terlalu cepat! Kamu kalah.", overlay.classList.add("show"), addLog("Kalah: Bola 8", "Masuk sebelum bola lain habis!", "foul")) : (state.score += 1e3, scoreLabel.textContent = state.score, addLog("+1000 Bola 8 Masuk!", "Kemenangan sempurna!", "pocket")) } else state.score += 250, scoreLabel.textContent = state.score, addLog(`+250 Bola #${t.num}`, "Berhasil masuk saku meja", "pocket");
+      if (0 === t.num) {
+        state.fouls++; state.score = Math.max(0, state.score - 150);
+        setTimeout(() => { t.potted = !1; t.potScale = 1; t.x = TABLE.x + 220; t.y = TABLE.y + TABLE.h / 2; t.vx = 0; t.vy = 0; }, 800);
+      } else if (8 === t.num) { 
+        if(balls.filter(t => 0 !== t.num && 8 !== t.num && !t.potted).length > 0) {
+          state.gameOver = true; state.win = false;
+        } else {
+          state.score += 1000;
+        }
+      } else {
+        state.score += 250; 
+      }
       updateBallsLeftHUD()
     }
 
@@ -611,80 +261,278 @@
           for (let a = t + 1; a < balls.length; a++) {
             const t = balls[a];
             if (t.potted) continue;
-            const s = t.x - e.x,
-              o = t.y - e.y,
-              i = Math.hypot(s, o);
+            const s = t.x - e.x, o = t.y - e.y, i = Math.hypot(s, o);
             if (i < e.r + t.r && i > 0) {
-              const a = s / i,
-                l = o / i,
-                n = e.r + t.r - i;
-              e.x -= a * n * .5, e.y -= l * n * .5, t.x += a * n * .5, t.y += l * n * .5;
-              const c = e.vx - t.vx,
-                r = e.vy - t.vy,
-                u = 2 * (a * c + l * r) / 2;
-              e.vx -= u * a, e.vy -= u * l, t.vx += u * a, t.vy += u * l;
+              const a = s / i, l = o / i, n = e.r + t.r - i;
+              e.x -= a * n * .5; e.y -= l * n * .5; t.x += a * n * .5; t.y += l * n * .5;
+              const c = e.vx - t.vx, r = e.vy - t.vy, u = 2 * (a * c + l * r) / 2;
+              e.vx -= u * a; e.vy -= u * l; t.vx += u * a; t.vy += u * l;
               const h = Math.hypot(c, r);
-              h > .4 && playSound("hit", h)
+              if(h > 0.4) { playSound("hit", h); vibrate(10); }
             }
           }
       }
     }
 
-    function drawTable(t) {
-      t.fillStyle = "#111b21", t.strokeStyle = "#2a3942", t.lineWidth = 2, roundRect(t, TABLE.x, TABLE.y, TABLE.w, TABLE.h, 28, !0, !0), t.fillStyle = "#0e3633", roundRect(t, TABLE.x + TABLE.cushion, TABLE.y + TABLE.cushion, TABLE.w - 2 * TABLE.cushion, TABLE.h - 2 * TABLE.cushion, 14, !0, !1), t.strokeStyle = "rgba(6, 207, 156, 0.15)", t.lineWidth = 1.5, t.beginPath();
-      const e = TABLE.x + 220;
-      t.moveTo(e, TABLE.y + TABLE.cushion), t.lineTo(e, TABLE.y + TABLE.h - TABLE.cushion), t.stroke(), t.fillStyle = "rgba(6, 207, 156, 0.4)", t.beginPath(), t.arc(e, TABLE.y + TABLE.h / 2, 3, 0, 2 * Math.PI), t.fill(), t.fillStyle = "#005c4b", t.fillRect(TABLE.x + TABLE.cushion + 20, TABLE.y + 12, (TABLE.w - 2 * TABLE.cushion) / 2 - 35, 14), t.fillRect(TABLE.x + TABLE.w / 2 + 15, TABLE.y + 12, (TABLE.w - 2 * TABLE.cushion) / 2 - 35, 14), t.fillRect(TABLE.x + TABLE.cushion + 20, TABLE.y + TABLE.h - 26, (TABLE.w - 2 * TABLE.cushion) / 2 - 35, 14), t.fillRect(TABLE.x + TABLE.w / 2 + 15, TABLE.y + TABLE.h - 26, (TABLE.w - 2 * TABLE.cushion) / 2 - 35, 14);
-      for (const e of pockets) t.fillStyle = "#0b141a", t.beginPath(), t.arc(e.x, e.y, TABLE.pocketR, 0, 2 * Math.PI), t.fill(), t.strokeStyle = "#202c33", t.lineWidth = 3, t.beginPath(), t.arc(e.x, e.y, TABLE.pocketR - 1, 0, 2 * Math.PI), t.stroke()
+    // ==========================================
+    // GAMBAR TABEL & UI CANVAS
+    // ==========================================
+    function roundRect(t, e, a, s, o, i, l, n) { 
+      t.beginPath(); t.moveTo(e + i, a); t.lineTo(e + s - i, a); t.quadraticCurveTo(e + s, a, e + s, a + i); t.lineTo(e + s, a + o - i); t.quadraticCurveTo(e + s, a + o, e + s - i, a + o); t.lineTo(e + i, a + o); t.quadraticCurveTo(e, a + o, e, a + o - i); t.lineTo(e, a + i); t.quadraticCurveTo(e, a, e + i, a); t.closePath(); l && t.fill(); n && t.stroke() 
     }
 
-    function roundRect(t, e, a, s, o, i, l, n) { t.beginPath(), t.moveTo(e + i, a), t.lineTo(e + s - i, a), t.quadraticCurveTo(e + s, a, e + s, a + i), t.lineTo(e + s, a + o - i), t.quadraticCurveTo(e + s, a + o, e + s - i, a + o), t.lineTo(e + i, a + o), t.quadraticCurveTo(e, a + o, e, a + o - i), t.lineTo(e, a + i), t.quadraticCurveTo(e, a, e + i, a), t.closePath(), l && t.fill(), n && t.stroke() }
+    function drawTable(t) {
+      // Meja Luar
+      t.fillStyle = "#111b21"; t.strokeStyle = "#2a3942"; t.lineWidth = 2; 
+      roundRect(t, TABLE.x, TABLE.y, TABLE.w, TABLE.h, 28, !0, !0); 
+      
+      // Kain Meja
+      t.fillStyle = "#0e3633"; 
+      roundRect(t, TABLE.x + TABLE.cushion, TABLE.y + TABLE.cushion, TABLE.w - 2 * TABLE.cushion, TABLE.h - 2 * TABLE.cushion, 14, !0, !1); 
+      
+      // Garis Bantu
+      t.strokeStyle = "rgba(6, 207, 156, 0.15)"; t.lineWidth = 1.5; t.beginPath();
+      const e = TABLE.x + 220;
+      t.moveTo(e, TABLE.y + TABLE.cushion); t.lineTo(e, TABLE.y + TABLE.h - TABLE.cushion); t.stroke(); 
+      t.fillStyle = "rgba(6, 207, 156, 0.4)"; t.beginPath(); t.arc(e, TABLE.y + TABLE.h / 2, 3, 0, 2 * Math.PI); t.fill(); 
+      
+      // Bantalan
+      t.fillStyle = "#005c4b"; 
+      t.fillRect(TABLE.x + TABLE.cushion + 20, TABLE.y + 12, (TABLE.w - 2 * TABLE.cushion) / 2 - 35, 14); 
+      t.fillRect(TABLE.x + TABLE.w / 2 + 15, TABLE.y + 12, (TABLE.w - 2 * TABLE.cushion) / 2 - 35, 14); 
+      t.fillRect(TABLE.x + TABLE.cushion + 20, TABLE.y + TABLE.h - 26, (TABLE.w - 2 * TABLE.cushion) / 2 - 35, 14); 
+      t.fillRect(TABLE.x + TABLE.w / 2 + 15, TABLE.y + TABLE.h - 26, (TABLE.w - 2 * TABLE.cushion) / 2 - 35, 14);
+      
+      // Lubang
+      for (const e of pockets) { 
+        t.fillStyle = "#0b141a"; t.beginPath(); t.arc(e.x, e.y, TABLE.pocketR, 0, 2 * Math.PI); t.fill(); 
+        t.strokeStyle = "#202c33"; t.lineWidth = 3; t.beginPath(); t.arc(e.x, e.y, TABLE.pocketR - 1, 0, 2 * Math.PI); t.stroke() 
+      }
+    }
 
     function drawCueAndAim(t) {
-      if (areBallsMoving() || cueBall.potted) return;
-      const e = Math.cos(state.aimAngle),
-        a = Math.sin(state.aimAngle);
-      t.save(), t.strokeStyle = "rgba(6, 207, 156, 0.7)", t.lineWidth = 2, t.setLineDash([4, 5]), t.beginPath(), t.moveTo(cueBall.x, cueBall.y), t.lineTo(cueBall.x + 350 * e, cueBall.y + 350 * a), t.stroke(), t.restore(), t.save(), t.translate(cueBall.x, cueBall.y), t.rotate(state.aimAngle);
+      if (areBallsMoving() || cueBall.potted || state.gameOver) return;
+      const e = Math.cos(state.aimAngle), a = Math.sin(state.aimAngle);
+      
+      // Garis Bantu
+      t.save(); t.strokeStyle = "rgba(6, 207, 156, 0.7)"; t.lineWidth = 2; t.setLineDash([4, 5]); 
+      t.beginPath(); t.moveTo(cueBall.x, cueBall.y); t.lineTo(cueBall.x + 350 * e, cueBall.y + 350 * a); t.stroke(); t.restore(); 
+      
+      // Stik
+      t.save(); t.translate(cueBall.x, cueBall.y); t.rotate(state.aimAngle);
       const s = 20 + 2.5 * state.power;
-      t.fillStyle = "#4a2c1b", t.fillRect(-s - 340, -4, 340, 8), t.fillStyle = "#00a884", t.fillRect(-s - 120, -3.5, 30, 7), t.fillStyle = "#fed09d", t.fillRect(-s - 40, -3, 40, 6), t.fillStyle = "#06cf9c", t.fillRect(-s - 4, -2.5, 4, 5), t.restore()
+      t.fillStyle = "#4a2c1b"; t.fillRect(-s - 340, -4, 340, 8); 
+      t.fillStyle = "#00a884"; t.fillRect(-s - 120, -3.5, 30, 7); 
+      t.fillStyle = "#fed09d"; t.fillRect(-s - 40, -3, 40, 6); 
+      t.fillStyle = "#06cf9c"; t.fillRect(-s - 4, -2.5, 4, 5); 
+      t.restore()
     }
 
+    function drawUI(t) {
+      t.save();
+      
+      // --- KIRI ATAS (SKOR DLL) ---
+      t.fillStyle = "rgba(11, 20, 26, 0.75)";
+      t.beginPath(); t.roundRect(20, 15, 320, 40, 12); t.fill();
+      
+      t.font = "12px -apple-system, sans-serif";
+      t.fillStyle = "#8696a0";
+      t.textAlign = "left"; t.textBaseline = "middle";
+      t.fillText("SKOR", 35, 35);
+      t.fillStyle = "#06cf9c";
+      t.font = "bold 16px -apple-system, sans-serif";
+      t.fillText(state.score, 75, 35);
+      
+      t.fillStyle = "#8696a0"; t.font = "12px -apple-system, sans-serif";
+      t.fillText("PUKULAN", 135, 35);
+      t.fillStyle = "#f4b400"; t.font = "bold 16px -apple-system, sans-serif";
+      t.fillText(state.shots, 200, 35);
+      
+      t.fillStyle = "#8696a0"; t.font = "12px -apple-system, sans-serif";
+      t.fillText("FAUL", 240, 35);
+      t.fillStyle = "#f15c6d"; t.font = "bold 16px -apple-system, sans-serif";
+      t.fillText(state.fouls, 285, 35);
+
+      // --- KANAN ATAS (BOLA SISA) ---
+      t.fillStyle = "rgba(11, 20, 26, 0.75)";
+      t.beginPath(); t.roundRect(V_W - 180, 15, 160, 40, 12); t.fill();
+      
+      t.font = "12px -apple-system, sans-serif";
+      t.fillStyle = "#8696a0";
+      t.textAlign = "left";
+      t.fillText("BOLA SISA", V_W - 160, 35);
+      t.fillStyle = "#e9edef"; t.font = "bold 18px -apple-system, sans-serif";
+      t.fillText(state.ballsLeft, V_W - 80, 35);
+
+      // --- POWER BAR (KIRI BAWAH) ---
+      t.fillStyle = "rgba(11, 20, 26, 0.75)";
+      t.beginPath(); t.roundRect(20, V_H - 65, 250, 50, 12); t.fill();
+      
+      t.fillStyle = "#8696a0"; t.font = "bold 11px -apple-system, sans-serif";
+      t.fillText("POWER", 35, V_H - 40);
+      
+      // Bar
+      t.fillStyle = "#202c33"; t.beginPath(); t.roundRect(95, V_H - 52, 155, 24, 12); t.fill();
+      
+      if (state.power > 0) {
+        const pct = state.power / state.maxPower;
+        const w = 155 * pct;
+        const grad = t.createLinearGradient(95, 0, 250, 0);
+        grad.addColorStop(0, "#00a884"); grad.addColorStop(0.5, "#f4b400"); grad.addColorStop(1, "#f15c6d");
+        t.fillStyle = grad;
+        t.beginPath(); t.roundRect(95, V_H - 52, w, 24, 12); t.fill();
+      }
+
+      // --- TOMBOL SUSUN ULANG (KANAN BAWAH) ---
+      t.fillStyle = "rgba(32, 44, 51, 0.85)";
+      t.strokeStyle = "rgba(255,255,255,0.1)";
+      t.lineWidth = 1;
+      t.beginPath(); t.roundRect(btnRack.x, btnRack.y, btnRack.w, btnRack.h, 20); 
+      t.fill(); t.stroke();
+      
+      t.fillStyle = "#e9edef"; 
+      t.font = "bold 13px -apple-system, sans-serif";
+      t.textAlign = "center"; t.textBaseline = "middle";
+      t.fillText("🎱 Susun Ulang", btnRack.x + btnRack.w/2, btnRack.y + btnRack.h/2 + 1);
+
+      // --- OVERLAY GAME OVER / WIN ---
+      if (state.gameOver) {
+        t.fillStyle = "rgba(11, 20, 26, 0.85)";
+        t.fillRect(0, 0, V_W, V_H);
+        
+        t.textAlign = "center"; t.textBaseline = "alphabetic";
+        t.font = "bold 36px -apple-system, sans-serif";
+        
+        if (state.win) {
+          t.fillStyle = "#06cf9c"; t.fillText("YOU WIN!", V_W/2, V_H/2 - 20);
+          t.font = "14px -apple-system, sans-serif"; t.fillStyle = "#8696a0";
+          t.fillText(`Semua bola berhasil dimasukkan dalam ${state.shots} pukulan.`, V_W/2, V_H/2 + 10);
+        } else {
+          t.fillStyle = "#f15c6d"; t.fillText("GAME OVER", V_W/2, V_H/2 - 20);
+          t.font = "14px -apple-system, sans-serif"; t.fillStyle = "#8696a0";
+          t.fillText("Bola 8 masuk terlalu cepat!", V_W/2, V_H/2 + 10);
+        }
+
+        // Tombol Restart
+        t.fillStyle = "#00a884";
+        t.beginPath(); t.roundRect(btnRestart.x, btnRestart.y, btnRestart.w, btnRestart.h, 25); t.fill();
+        t.fillStyle = "#0b141a"; t.font = "bold 15px -apple-system, sans-serif"; t.textBaseline = "middle";
+        t.fillText("MAIN LAGI", V_W/2, btnRestart.y + btnRestart.h/2 + 1);
+      }
+
+      t.restore();
+    }
+
+    // ==========================================
+    // LOOP & INPUT
+    // ==========================================
     function update() {
-      state.charging && (state.power += .6 * state.chargeDir, state.power >= state.maxPower ? (state.power = state.maxPower, state.chargeDir = -1) : state.power <= .5 && (state.power = .5, state.chargeDir = 1), powerFill.style.width = state.power / state.maxPower * 100 + "%");
+      if(state.charging && !state.gameOver) {
+        state.power += .6 * state.chargeDir;
+        if(state.power >= state.maxPower) { state.power = state.maxPower; state.chargeDir = -1; }
+        else if(state.power <= .5) { state.power = .5; state.chargeDir = 1; }
+      }
       for (const t of balls) t.update();
-      resolveBallCollisions()
+      resolveBallCollisions();
     }
 
     function draw() {
-      ctx.save(), ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const t = (canvas.width - V_W * scale) / 2,
-        e = (canvas.height - 550 * scale) / 2;
-      ctx.translate(t, e), ctx.scale(scale, scale), drawTable(ctx);
+      ctx.save(); 
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Latar Belakang
+      ctx.fillStyle = "#0b141a"; 
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Skala & Posisi
+      ctx.translate(offsetX, offsetY); 
+      ctx.scale(scale, scale); 
+      
+      drawTable(ctx);
       for (const t of balls) t.draw(ctx);
-      drawCueAndAim(ctx), ctx.restore()
+      drawCueAndAim(ctx);
+      drawUI(ctx);
+      
+      ctx.restore();
     }
 
-    function loop() { update(), draw(), requestAnimationFrame(loop) }
+    function loop() { update(); draw(); requestAnimationFrame(loop); }
 
-    function getCanvasCoords(t) {
-      const e = canvas.getBoundingClientRect(),
-        a = t.touches ? t.touches[0].clientX : t.clientX,
-        s = t.touches ? t.touches[0].clientY : t.clientY,
-        o = (canvas.width - V_W * scale) / 2,
-        i = (canvas.height - 550 * scale) / 2,
-        l = window.devicePixelRatio || 1;
-      return { x: ((a - e.left) * l - o) / scale, y: ((s - e.top) * l - i) / scale }
+    function getCanvasCoords(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      
+      const px = (clientX - rect.left) * (canvas.width / rect.width);
+      const py = (clientY - rect.top) * (canvas.height / rect.height);
+      
+      return { x: (px - offsetX) / scale, y: (py - offsetY) / scale };
     }
 
-    function onAim(t) {
-      if (areBallsMoving() || cueBall.potted) return;
-      const e = getCanvasCoords(t);
-      state.aimAngle = Math.atan2(e.y - cueBall.y, e.x - cueBall.x)
+    function onPointerDown(e) {
+      if (e.cancelable) e.preventDefault();
+      ensureAudio();
+      
+      const pos = getCanvasCoords(e);
+      
+      // Cek Hitbox Tombol
+      if (state.gameOver) {
+        if (pos.x >= btnRestart.x && pos.x <= btnRestart.x + btnRestart.w &&
+            pos.y >= btnRestart.y && pos.y <= btnRestart.y + btnRestart.h) {
+          initRack(); vibrate(30);
+        }
+        return;
+      }
+
+      if (pos.x >= btnRack.x && pos.x <= btnRack.x + btnRack.w &&
+          pos.y >= btnRack.y && pos.y <= btnRack.y + btnRack.h) {
+        initRack(); vibrate(30); return;
+      }
+
+      // Jika tidak kena tombol, mulai aim & charge
+      if (!areBallsMoving() && !cueBall.potted) {
+        state.aimAngle = Math.atan2(pos.y - cueBall.y, pos.x - cueBall.x);
+        state.charging = true; 
+        state.power = 1; 
+        state.chargeDir = 1;
+      }
     }
 
-    function startShoot() { ensureAudio(), areBallsMoving() || cueBall.potted || (state.charging = !0, state.power = 1, state.chargeDir = 1) }
+    function onPointerMove(e) {
+      if (e.cancelable) e.preventDefault();
+      if (state.gameOver || !cueBall || cueBall.potted || areBallsMoving() || state.charging) return;
+      
+      const pos = getCanvasCoords(e);
+      // Hanya update arah jika tidak sedang mengisi power (opsional, biar presisi saat charge)
+      state.aimAngle = Math.atan2(pos.y - cueBall.y, pos.x - cueBall.x);
+    }
 
-    function releaseShoot() { state.charging && (state.charging = !1, state.power > 1 && (cueBall.vx = Math.cos(state.aimAngle) * state.power, cueBall.vy = Math.sin(state.aimAngle) * state.power, playSound("cue", state.power / state.maxPower), state.shots++, shotCountEl.textContent = state.shots, addLog("Pukulan Dilakukan", `Kekuatan: ${Math.round(state.power/state.maxPower*100)}%`)), state.power = 0, powerFill.style.width = "0%") } canvas.addEventListener("mousemove", onAim), canvas.addEventListener("mousedown", startShoot), window.addEventListener("mouseup", releaseShoot), canvas.addEventListener("touchmove", t => { onAim(t), t.preventDefault() }, { passive: !1 }), canvas.addEventListener("touchstart", t => { onAim(t), startShoot(), t.preventDefault() }, { passive: !1 }), window.addEventListener("touchend", releaseShoot), btnRack.addEventListener("click", initRack), restartBtn.addEventListener("click", initRack), initRack(), requestAnimationFrame(loop)
+    function onPointerUp() {
+      if (state.charging && !state.gameOver && !cueBall.potted) {
+        state.charging = false;
+        
+        if (state.power > 1) {
+          cueBall.vx = Math.cos(state.aimAngle) * state.power;
+          cueBall.vy = Math.sin(state.aimAngle) * state.power;
+          playSound("cue", state.power / state.maxPower);
+          vibrate(40);
+          state.shots++;
+        }
+        state.power = 0;
+      }
+    }
+
+    // Event Listeners (Mouse & Touch)
+    canvas.addEventListener("mousedown", onPointerDown);
+    window.addEventListener("mousemove", onPointerMove);
+    window.addEventListener("mouseup", onPointerUp);
+    canvas.addEventListener("touchstart", onPointerDown, { passive: false });
+    window.addEventListener("touchmove", onPointerMove, { passive: false });
+    window.addEventListener("touchend", onPointerUp);
+
+    // Mulai Game
+    initRack();
+    requestAnimationFrame(loop);
   </script>
 </body>
-
 </html>

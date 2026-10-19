@@ -2,8 +2,10 @@ import axios from "axios";
 import {
   simpleQuoted
 } from "../../lib/quoted.js";
+
 const API_V3 = `${global.bot?.api?.wudysoft}/api/download/mediafire/v3`;
 const API_V2 = `${global.bot?.api?.wudysoft}/api/download/mediafire/v2`;
+
 const formatNumber = num => typeof num === "number" ? num.toLocaleString("id-ID") : num || "0";
 const formatBytes = bytes => {
   if (!bytes || isNaN(bytes)) return "-";
@@ -12,6 +14,7 @@ const formatBytes = bytes => {
   if (i === 0) return `${bytes} ${sizes[i]}`;
   return `${(bytes / 1024 ** i).toFixed(2)} ${sizes[i]}`;
 };
+
 async function fetchMediafire(targetUrl) {
   try {
     const res = await axios.get(API_V3, {
@@ -76,6 +79,7 @@ function parseFlags(input = "") {
     cleanPrompt: cleanPrompt
   };
 }
+
 export default {
   name: "mediafire",
   aliases: ["mf", "mfdl", "mediafiredl"],
@@ -103,6 +107,7 @@ export default {
         cleanPrompt
       } = parseFlags(rawText);
       const targetUrl = flags.url || cleanPrompt.match(/https?:\/\/(www\.)?mediafire\.com\/[^\s]+/i)?.[0] || cleanPrompt;
+
       if (!targetUrl || !targetUrl.includes("mediafire.com")) {
         return ctx.reply(`–  *M E D I A F I R E*
 
@@ -113,12 +118,15 @@ Silakan masukkan tautan file atau folder MediaFire yang valid.
 │  ◦  *Folder* : ${prefix}mf https://www.mediafire.com/folder/...
 └  ◦  *Flag* : --page <nomor>`);
       }
+
       await ctx.react("⏳");
       const data = await fetchMediafire(targetUrl);
       if (!data) {
         await ctx.react("❌");
         return ctx.reply("❌ Gagal memuat data MediaFire dari server. Pastikan tautan masih aktif dan publik.");
       }
+
+      // === PROSES SINGLE FILE ===
       if (data.type === "file" || data.download || data.filename || !data.files && !data.folders) {
         const fileName = data.name || data.filename || "mediafire_file";
         const fileSize = data.size || (data.raw_size ? formatBytes(data.raw_size) : "Tidak diketahui");
@@ -126,7 +134,8 @@ Silakan masukkan tautan file atau folder MediaFire yang valid.
         const mime = data.mimetype || "application/octet-stream";
         const uploaded = data.uploaded || data.created || "-";
         const downloads = formatNumber(data.downloads || data.view || 0);
-        const caption = `–  *M E D I A F I R E*
+
+        const infoCaption = `–  *M E D I A F I R E*
 
 ┌  ◦  *Name* : ${fileName}
 │  ◦  *Size* : ${fileSize}
@@ -134,34 +143,33 @@ Silakan masukkan tautan file atau folder MediaFire yang valid.
 │  ◦  *Downloads* : ${downloads}x
 └  ◦  *Mime* : ${mime}
 
-Berkas sedang dikirimkan ke chat.`;
+_Sedang mengunduh dan mengirim berkas, mohon tunggu..._`;
+
+        // 1. KIRIM INFORMASI TERLEBIH DAHULU
+        await sock.sendMessage(ctx.id, { text: infoCaption }, { quoted: quotedMsg });
+
+        // 2. UNDUH DAN KIRIM DOKUMEN
         try {
-          const {
-            data: fileBuffer
-          } = await axios.get(downloadUrl, {
+          const { data: fileBuffer } = await axios.get(downloadUrl, {
             responseType: "arraybuffer",
             timeout: 12e4
           });
+
           await sock.sendMessage(ctx.id, {
             document: Buffer.from(fileBuffer),
             fileName: fileName,
-            mimetype: mime,
-            caption: caption
+            mimetype: mime
           }, {
             quoted: quotedMsg
           });
+
           await ctx.react("✅");
           return;
         } catch (mediaErr) {
           const fallbackText = `–  *M E D I A F I R E*
 
-┌  ◦  *Name* : ${fileName}
-│  ◦  *Size* : ${fileSize}
-│  ◦  *Uploaded* : ${uploaded}
-│  ◦  *Downloads* : ${downloads}x
-└  ◦  *Mime* : ${mime}
+Gagal mengirim berkas dokumen langsung ke WhatsApp. Silakan unduh langsung melalui tautan di bawah ini:`;
 
-Gagal mengirim berkas langsung ke WhatsApp. Silakan unduh melalui tombol di bawah.`;
           if (typeof ctx.sendCta === "function") {
             const fallbackButtons = [{
               name: "cta_url",
@@ -177,14 +185,16 @@ Gagal mengirim berkas langsung ke WhatsApp. Silakan unduh melalui tombol di bawa
               quoted: quotedMsg
             });
           } else {
-            await ctx.reply(fallbackText, {
+            await ctx.reply(`${fallbackText}\n\n🔗 ${downloadUrl}`, {
               quoted: quotedMsg
             });
           }
-          await ctx.react("✅");
+          await ctx.react("⚠️");
           return;
         }
       }
+
+      // === PROSES FOLDER ===
       if (data.type === "folder" || data.files || data.folders) {
         const folderName = data.name || "MediaFire Folder";
         let directFiles = data.files || [];

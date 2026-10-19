@@ -87,7 +87,7 @@ export default {
         }
         await ctx.react("🎮");
         if (typeof sock.airich === "function") {
-          return await sock.airich().setTitle(`🎮 ${gameItem.title || "Mini Game"}`).addRichHtml(gameItem.html).send(targetJid);
+          return await sock.airich().setTitle(`🎮 ${gameItem.title || "Mini Game"}`).addHtml(gameItem.html).send(targetJid);
         } else if (typeof ctx.sendRich === "function") {
           return await ctx.sendRich({
             title: `🎮 ${gameItem.title || "Mini Game"}`,

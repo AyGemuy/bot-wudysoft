@@ -1107,7 +1107,7 @@ timeZone: "Asia/Jakarta"
           }
         }
       };
-      const onMessagesUpdate = async updates => {
+            const onMessagesUpdate = async updates => {
         for (const updateItem of updates) {
           try {
             const {
@@ -1117,7 +1117,10 @@ timeZone: "Asia/Jakarta"
             const keyId = key?.id;
             const chatId = key?.remoteJid;
             if (!keyId || !chatId) continue;
+            
             const cached = global.msgStore?.get(keyId);
+
+            // 1. PENANGANAN POLL UPDATE / VOTING
             if (update?.pollUpdates) {
               if (acquireTypedLock("poll_vote", `${chatId}_${keyId}`, 2e3)) {
                 const pollCreation = cached?.message || cached?.rawMessage;
@@ -1128,13 +1131,24 @@ timeZone: "Asia/Jakarta"
                   });
                   if (cached) cached.pollVotes = aggregate;
                 }
+                
+                // Emit event update poll agar terbaca oleh handler/store luar jika diperlukan
+                sock.ev.emit('messages.update', [{
+                  key: key,
+                  update: { pollUpdates: update.pollUpdates }
+                }]);
               }
             }
+
             const rawUpdate = update;
+            
+            // 2. PENANGANAN PESAN YANG DIEDIT (MESSAGE EDIT)
             const isStubEdit = rawUpdate?.messageStubType === 68 || rawUpdate?.messageStubType === proto.WebMessageInfo?.StubType?.MESSAGE_EDIT || rawUpdate?.stubType === 68;
             const isProtoEdit = rawUpdate?.message?.protocolMessage?.type === 14 || rawUpdate?.protocolMessage?.type === 14 || Boolean(rawUpdate?.message?.protocolMessage?.editedMessage);
+            
             if (isStubEdit || isProtoEdit) {
               if (!acquireTypedLock("msg_edit", `${chatId}_${keyId}`, 4e3)) continue;
+              
               const editedMsgPayload = rawUpdate?.message?.protocolMessage?.editedMessage || rawUpdate?.protocolMessage?.editedMessage || rawUpdate?.message;
               if (editedMsgPayload) {
                 const editMsg = {
@@ -1145,10 +1159,19 @@ timeZone: "Asia/Jakarta"
                   message: editedMsgPayload,
                   messageTimestamp: rawUpdate?.messageTimestamp || Date.now()
                 };
+                
+                // Perbarui cache pesan lama dengan isi pesan yang baru diedit
+                if (cached) {
+                  cached.message = editedMsgPayload;
+                  cached.rawMessage = editedMsgPayload;
+                }
+
                 const ctx = await SerializeMessage(sock, editMsg);
                 if (ctx) {
                   ctx.loader = loader;
                   ctx.isEdited = true;
+                  
+                  // Jalankan handler utama untuk merespon pesan edit (jika diperlukan)
                   UpsertMsgHandle(sock, editMsg, ctx, {
                     cmd: loader
                   });
@@ -1156,6 +1179,8 @@ timeZone: "Asia/Jakarta"
               }
               continue;
             }
+
+            // 3. PENANGANAN ANTI-DELETE (REVOKE)
             const isRevoked = rawUpdate?.messageStubType === 68 && !isStubEdit ? false : rawUpdate?.messageStubType === proto.WebMessageInfo?.StubType?.REVOKE || rawUpdate?.message === null || rawUpdate?.protocolMessage?.type === 0;
             if (isRevoked) {
               if (!acquireTypedLock("antidel_revoke", `${chatId}_${keyId}`, 8e3)) continue;
@@ -1204,6 +1229,7 @@ timeZone: "Asia/Jakarta"
           } catch (_) {}
         }
       };
+
       const onGroupParticipantsUpdate = async ({
         id,
         author,
