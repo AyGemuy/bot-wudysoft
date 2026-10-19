@@ -358,12 +358,12 @@ export async function startJadiBot(parentSock, senderJid, options = {}) {
   const sock = makeWASocket({
     version: version,
     logger: pino({
-      level: "silent"
+      level: "debug"
     }),
     auth: {
       creds: state.creds,
       keys: makeCacheableSignalKeyStore(state.keys, pino({
-        level: "silent"
+        level: "debug"
       }))
     },
     browser: Browsers.ubuntu("Chrome"),

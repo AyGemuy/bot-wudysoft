@@ -741,12 +741,12 @@ async function createSessionZip(sessionDir) {
       }
       const pairing = !isRegistered && (selectedPairing ?? false);
       global.signalKeyStore = makeCacheableSignalKeyStore(state.keys, pino({
-        level: "silent"
+        level: "debug"
       }));
       const sock = makeWASocket({
         version: version,
         logger: pino({
-          level: "silent"
+          level: "debug"
         }),
         auth: {
           creds: state.creds,
@@ -1107,128 +1107,149 @@ timeZone: "Asia/Jakarta"
           }
         }
       };
-            const onMessagesUpdate = async updates => {
-        for (const updateItem of updates) {
-          try {
-            const {
-              key,
-              update
-            } = updateItem;
-            const keyId = key?.id;
-            const chatId = key?.remoteJid;
-            if (!keyId || !chatId) continue;
-            
-            const cached = global.msgStore?.get(keyId);
-
-            // 1. PENANGANAN POLL UPDATE / VOTING
-            if (update?.pollUpdates) {
-              if (acquireTypedLock("poll_vote", `${chatId}_${keyId}`, 2e3)) {
-                const pollCreation = cached?.message || cached?.rawMessage;
-                if (pollCreation) {
-                  const aggregate = getAggregateVotesInPollMessage({
-                    message: pollCreation,
-                    pollUpdates: update.pollUpdates
-                  });
-                  if (cached) cached.pollVotes = aggregate;
-                }
-                
-                // Emit event update poll agar terbaca oleh handler/store luar jika diperlukan
-                sock.ev.emit('messages.update', [{
-                  key: key,
-                  update: { pollUpdates: update.pollUpdates }
-                }]);
-              }
-            }
-
-            const rawUpdate = update;
-            
-            // 2. PENANGANAN PESAN YANG DIEDIT (MESSAGE EDIT)
-            const isStubEdit = rawUpdate?.messageStubType === 68 || rawUpdate?.messageStubType === proto.WebMessageInfo?.StubType?.MESSAGE_EDIT || rawUpdate?.stubType === 68;
-            const isProtoEdit = rawUpdate?.message?.protocolMessage?.type === 14 || rawUpdate?.protocolMessage?.type === 14 || Boolean(rawUpdate?.message?.protocolMessage?.editedMessage);
-            
-            if (isStubEdit || isProtoEdit) {
-              if (!acquireTypedLock("msg_edit", `${chatId}_${keyId}`, 4e3)) continue;
-              
-              const editedMsgPayload = rawUpdate?.message?.protocolMessage?.editedMessage || rawUpdate?.protocolMessage?.editedMessage || rawUpdate?.message;
-              if (editedMsgPayload) {
-                const editMsg = {
-                  key: {
-                    ...key,
-                    participant: key?.participant || cached?.sender || (key?.fromMe ? sock.user?.id : chatId)
-                  },
-                  message: editedMsgPayload,
-                  messageTimestamp: rawUpdate?.messageTimestamp || Date.now()
-                };
-                
-                // Perbarui cache pesan lama dengan isi pesan yang baru diedit
-                if (cached) {
-                  cached.message = editedMsgPayload;
-                  cached.rawMessage = editedMsgPayload;
-                }
-
-                const ctx = await SerializeMessage(sock, editMsg);
-                if (ctx) {
-                  ctx.loader = loader;
-                  ctx.isEdited = true;
+                        const onMessagesUpdate = async updates => {
+              for (const updateItem of updates) {
+                try {
+                  const {
+                    key,
+                    update
+                  } = updateItem;
+                  const keyId = key?.id;
+                  const chatId = key?.remoteJid;
+                  if (!keyId || !chatId) continue;
                   
-                  // Jalankan handler utama untuk merespon pesan edit (jika diperlukan)
-                  UpsertMsgHandle(sock, editMsg, ctx, {
-                    cmd: loader
-                  });
-                }
-              }
-              continue;
-            }
+                  const cached = global.msgStore?.get(keyId);
 
-            // 3. PENANGANAN ANTI-DELETE (REVOKE)
-            const isRevoked = rawUpdate?.messageStubType === 68 && !isStubEdit ? false : rawUpdate?.messageStubType === proto.WebMessageInfo?.StubType?.REVOKE || rawUpdate?.message === null || rawUpdate?.protocolMessage?.type === 0;
-            if (isRevoked) {
-              if (!acquireTypedLock("antidel_revoke", `${chatId}_${keyId}`, 8e3)) continue;
-              const groupCfg = global.db?.group?.[chatId];
-              if (cached && groupCfg?.antidelete === true && chatId?.endsWith("@g.us")) {
-                let senderJid = cached.sender || cached.key?.participant || cached.participant;
-                if (senderJid && senderJid.endsWith("@lid")) {
-                  senderJid = await withTimeout(resolveLidToJid(senderJid, sock, null, []), 2500).catch(() => senderJid);
-                }
-                const senderNum = extractNum(senderJid) || senderJid?.split("@")[0] || "Unknown";
-                const deleteTime = new Date().toLocaleTimeString("id-ID", {
-                  timeZone: "Asia/Jakarta"
-                });
-                const noticeText = `–  *A N T I - D E L E T E*\n\nTerdeteksi pesan yang baru saja dihapus oleh pengirim.\n\n┌  ◦  *Sender* : @${senderNum}\n└  ◦  *Time* : ${deleteTime} WIB\n\n_Pesan asli yang dihapus diteruskan di bawah ini:_`;
-                const safeMentions = sanitizeMentions([senderJid]);
-                const sentNotice = await safeSendMessage(sock, chatId, {
-                  text: noticeText,
-                  mentions: safeMentions
-                }).catch(() => null);
-                const targetMsg = cached.fakeObj || cached.vM || cached.msg || (cached.key ? cached : null) || {
-                  key: {
-                    remoteJid: chatId,
-                    id: keyId,
-                    participant: senderJid
-                  },
-                  message: cached.rawMessage || {
-                    conversation: cached.text || ""
-                  },
-                  messageTimestamp: cached.timestamp || Date.now()
-                };
-                if (targetMsg) {
-                  try {
-                    await copyNForward(sock, chatId, targetMsg, false, {}, sentNotice || undefined);
-                  } catch (_) {
-                    if (cached.text || cached.body) {
-                      await safeSendMessage(sock, chatId, {
-                        text: `💬 *Isi Pesan:*\n\`\`\`${cached.text || cached.body}\`\`\``
-                      }, {
-                        quoted: sentNotice || undefined
-                      });
+                  // 1. PENANGANAN POLL UPDATE / VOTING (DAPAT MEMICU COMMAND)
+                  if (update?.pollUpdates) {
+                    if (acquireTypedLock("poll_vote", `${chatId}_${keyId}`, 2e3)) {
+                      const pollCreation = cached?.message || cached?.rawMessage;
+                      if (pollCreation) {
+                        const aggregate = getAggregateVotesInPollMessage({
+                          message: pollCreation,
+                          pollUpdates: update.pollUpdates
+                        });
+                        if (cached) cached.pollVotes = aggregate;
+
+                        // Ambil opsi yang dipilih user untuk dijadikan teks command (jika ada)
+                        const latestVote = update.pollUpdates[update.pollUpdates.length - 1];
+                        const selectedOptionName = latestVote?.vote?.selectedOptions?.[0]?.name || "";
+
+                        if (selectedOptionName) {
+                          const fakePollMsg = {
+                            key: {
+                              remoteJid: chatId,
+                              fromMe: false,
+                              id: keyId + "_vote",
+                              participant: latestVote.pollUpdateMessageKey?.participant || key.participant
+                            },
+                            message: { conversation: selectedOptionName },
+                            messageTimestamp: Date.now()
+                          };
+                          const ctx = await SerializeMessage(sock, fakePollMsg);
+                          if (ctx) {
+                            ctx.loader = loader;
+                            UpsertMsgHandle(sock, fakePollMsg, ctx, { cmd: loader });
+                          }
+                        }
+                      }
+                      
+                      sock.ev.emit('messages.update', [{
+                        key: key,
+                        update: { pollUpdates: update.pollUpdates }
+                      }]);
                     }
                   }
-                }
+
+                  const rawUpdate = update;
+                  
+                  // 2. PENANGANAN PESAN YANG DIEDIT (MESSAGE EDIT)
+                  const isStubEdit = rawUpdate?.messageStubType === 68 || rawUpdate?.messageStubType === proto.WebMessageInfo?.StubType?.MESSAGE_EDIT || rawUpdate?.stubType === 68;
+                  const isProtoEdit = rawUpdate?.message?.protocolMessage?.type === 14 || rawUpdate?.protocolMessage?.type === 14 || Boolean(rawUpdate?.message?.protocolMessage?.editedMessage);
+                  
+                  if (isStubEdit || isProtoEdit) {
+                    if (!acquireTypedLock("msg_edit", `${chatId}_${keyId}`, 4e3)) continue;
+                    
+                    const editedMsgPayload = rawUpdate?.message?.protocolMessage?.editedMessage || rawUpdate?.protocolMessage?.editedMessage || rawUpdate?.message;
+                    if (editedMsgPayload) {
+                      const editMsg = {
+                        key: {
+                          ...key,
+                          participant: key?.participant || cached?.sender || (key?.fromMe ? sock.user?.id : chatId)
+                        },
+                        message: editedMsgPayload,
+                        messageTimestamp: rawUpdate?.messageTimestamp || Date.now()
+                      };
+                      
+                      if (cached) {
+                        cached.message = editedMsgPayload;
+                        cached.rawMessage = editedMsgPayload;
+                      }
+
+                      const ctx = await SerializeMessage(sock, editMsg);
+                      if (ctx) {
+                        ctx.loader = loader;
+                        ctx.isEdited = true; // Tandai sebagai pesan edit
+                        
+                        // Eksekusi ulang handler command dengan teks baru hasil edit
+                        UpsertMsgHandle(sock, editMsg, ctx, {
+                          cmd: loader
+                        });
+                      }
+                    }
+                    continue;
+                  }
+
+                  // 3. PENANGANAN ANTI-DELETE (REVOKE)
+                  const isRevoked = rawUpdate?.messageStubType === 68 && !isStubEdit ? false : rawUpdate?.messageStubType === proto.WebMessageInfo?.StubType?.REVOKE || rawUpdate?.message === null || rawUpdate?.protocolMessage?.type === 0;
+                  if (isRevoked) {
+                    if (!acquireTypedLock("antidel_revoke", `${chatId}_${keyId}`, 8e3)) continue;
+                    const groupCfg = global.db?.group?.[chatId];
+                    if (cached && groupCfg?.antidelete === true && chatId?.endsWith("@g.us")) {
+                      let senderJid = cached.sender || cached.key?.participant || cached.participant;
+                      if (senderJid && senderJid.endsWith("@lid")) {
+                        senderJid = await withTimeout(resolveLidToJid(senderJid, sock, null, []), 2500).catch(() => senderJid);
+                      }
+                      const senderNum = extractNum(senderJid) || senderJid?.split("@")[0] || "Unknown";
+                      const deleteTime = new Date().toLocaleTimeString("id-ID", {
+                        timeZone: "Asia/Jakarta"
+                      });
+                      const noticeText = `–  *A N T I - D E L E T E*\n\nTerdeteksi pesan yang baru saja dihapus oleh pengirim.\n\n┌  ◦  *Sender* : @${senderNum}\n└  ◦  *Time* : ${deleteTime} WIB\n\n_Pesan asli yang dihapus diteruskan di bawah ini:_`;
+                      const safeMentions = sanitizeMentions([senderJid]);
+                      const sentNotice = await safeSendMessage(sock, chatId, {
+                        text: noticeText,
+                        mentions: safeMentions
+                      }).catch(() => null);
+                      const targetMsg = cached.fakeObj || cached.vM || cached.msg || (cached.key ? cached : null) || {
+                        key: {
+                          remoteJid: chatId,
+                          id: keyId,
+                          participant: senderJid
+                        },
+                        message: cached.rawMessage || {
+                          conversation: cached.text || ""
+                        },
+                        messageTimestamp: cached.timestamp || Date.now()
+                      };
+                      if (targetMsg) {
+                        try {
+                          await copyNForward(sock, chatId, targetMsg, false, {}, sentNotice || undefined);
+                        } catch (_) {
+                          if (cached.text || cached.body) {
+                            await safeSendMessage(sock, chatId, {
+                              text: `💬 *Isi Pesan:*\n\`\`\`${cached.text || cached.body}\`\`\``
+                            }, {
+                              quoted: sentNotice || undefined
+                            });
+                          }
+                        }
+                      }
+                    }
+                  }
+                } catch (_) {}
               }
-            }
-          } catch (_) {}
-        }
-      };
+            };
+
 
       const onGroupParticipantsUpdate = async ({
         id,

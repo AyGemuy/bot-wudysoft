@@ -670,10 +670,29 @@ export async function UpsertMsgHandle(sock, msg, ctx, {
       console.error(chalk.yellow(`[GROUP SYNC WARNING] ${chatId}:`), grpErr?.message || grpErr);
     }
   }
-  await normalizeLidCtx(ctx, sock);
-  let textBody = (ctx.selectedId || ctx.selectedRowId || typeof ctx.text === "string" && ctx.text.trim() || getBody(ctx.rawMessage || msg?.message || msg) || "").trim();
+    await normalizeLidCtx(ctx, sock);
+  
+  // ---> TAMBAHKAN PENANGANAN POLL & EDIT DI SINI <---
+  let textBody = "";
+  
+  // Jika ini adalah pembaruan vote polling, ambil teks/pilihan yang dipilih user
+  if (msg.pollUpdates || ctx.pollUpdates || msg.update?.pollUpdates) {
+      const pUpdates = msg.pollUpdates || ctx.pollUpdates || msg.update?.pollUpdates;
+      // Ambil opsi yang dipilih jika tersedia di vote
+      if (Array.isArray(pUpdates) && pUpdates.length > 0) {
+          const latestVote = pUpdates[pUpdates.length - 1];
+          // Anda bisa memetakan vote ke command jika formatnya mendukung, contoh:
+          textBody = latestVote.vote?.selectedOptions?.[0]?.name || "";
+      }
+  }
+  
+  if (!textBody) {
+      textBody = (ctx.selectedId || ctx.selectedRowId || typeof ctx.text === "string" && ctx.text.trim() || getBody(ctx.rawMessage || msg?.message || msg) || "").trim();
+  }
+
   ctx.text = textBody;
   ctx.body = textBody;
+
   const isAntiBotActive = global.bot?.antiBot === true || isGroup && groupData?.antibot === true;
   if (isAntiBotActive && (ctx.isBaileys || ctx.isBot) && !isFromMe && !isOwner) {
     if (isGroup) {
@@ -838,7 +857,8 @@ export async function UpsertMsgHandle(sock, msg, ctx, {
   const cdTime = (command.cooldown || global.bot?.cooldown || 3) * 1e3;
   const userCdKey = `${userPhoneJid}_${chatId}_${command.name || ctx.cmd}`;
   const now = Date.now();
-  if (cooldowns.has(userCdKey) && !isOwner && !ctx.isEdited) {
+    if (cooldowns.has(userCdKey) && !isOwner && !ctx.isEdited) {
+
     const expirationTime = cooldowns.get(userCdKey) + cdTime;
     if (now < expirationTime) {
       const timeLeft = ((expirationTime - now) / 1e3).toFixed(1);
