@@ -606,7 +606,7 @@ async function generateWelcomeCard(params) {
       headers: {
         "Content-Type": "application/json"
       },
-      timeout: 2e4
+      timeout: 6e4
     });
     if (!response?.data) return null;
     const buf = Buffer.isBuffer(response.data) ? response.data : Buffer.from(response.data);
@@ -1121,43 +1121,67 @@ timeZone: "Asia/Jakarta"
                   const cached = global.msgStore?.get(keyId);
 
                   // 1. PENANGANAN POLL UPDATE / VOTING (DAPAT MEMICU COMMAND)
+                  // 1. PENANGANAN POLL UPDATE / VOTING (MEMICU COMMAND OTOMATIS)
                   if (update?.pollUpdates) {
                     if (acquireTypedLock("poll_vote", `${chatId}_${keyId}`, 2e3)) {
                       const pollCreation = cached?.message || cached?.rawMessage;
                       if (pollCreation) {
+                        const userJid = sock.user?.lid ? jidNormalizedUser(sock.user.lid) : jidNormalizedUser(sock.user?.id || "");
+                        
+                        // Hitung akumulasi vote dengan Baileys
                         const aggregate = getAggregateVotesInPollMessage({
                           message: pollCreation,
                           pollUpdates: update.pollUpdates
-                        });
+                        }, userJid);
+
                         if (cached) cached.pollVotes = aggregate;
 
-                        // Ambil opsi yang dipilih user untuk dijadikan teks command (jika ada)
+                        // Ambil JID pemilih (voter) dari update terakhir
                         const latestVote = update.pollUpdates[update.pollUpdates.length - 1];
-                        const selectedOptionName = latestVote?.vote?.selectedOptions?.[0]?.name || "";
+                        const voterRaw = latestVote?.pollUpdateMessageKey?.participant || 
+                                         latestVote?.pollUpdateMessageKey?.remoteJid || 
+                                         key.participant || 
+                                         key.remoteJid;
+                        const voterJid = decodeJid(voterRaw);
 
+                        // CARI NAMA OPSI YANG DIPILIH OLEH VOTER DARI AGGREGATE
+                        const chosenOption = aggregate.find(opt => 
+                          opt.voters?.some(v => areJidsSameUser(v, voterJid) || areJidsSameUser(v, voterRaw))
+                        );
+
+                        let selectedOptionName = chosenOption?.name || "";
+
+                        // Cek apakah ada mapping custom untuk opsi ini
+                        if (global.pollMappings?.[keyId]) {
+                          const mapped = global.pollMappings[keyId].options?.find(o => o.name === selectedOptionName);
+                          if (mapped?.id || mapped?.cmd) {
+                            selectedOptionName = mapped.id || mapped.cmd;
+                          }
+                        }
+
+                        // Jika user memilih opsi yang valid, eksekusi seolah-olah user mengirim teks tersebut
                         if (selectedOptionName) {
+                          const isFromMe = areJidsSameUser(voterJid, sock.user?.id);
                           const fakePollMsg = {
                             key: {
                               remoteJid: chatId,
-                              fromMe: false,
-                              id: keyId + "_vote",
-                              participant: latestVote.pollUpdateMessageKey?.participant || key.participant
+                              fromMe: isFromMe,
+                              id: keyId + "_" + Date.now(),
+                              participant: chatId.endsWith("@g.us") ? voterJid : undefined
                             },
                             message: { conversation: selectedOptionName },
                             messageTimestamp: Date.now()
                           };
+
                           const ctx = await SerializeMessage(sock, fakePollMsg);
                           if (ctx) {
                             ctx.loader = loader;
+                            ctx.isPollVote = true;
+                            // Jalankan command handler
                             UpsertMsgHandle(sock, fakePollMsg, ctx, { cmd: loader });
                           }
                         }
                       }
-                      
-                      sock.ev.emit('messages.update', [{
-                        key: key,
-                        update: { pollUpdates: update.pollUpdates }
-                      }]);
                     }
                   }
 

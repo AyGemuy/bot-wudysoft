@@ -7,7 +7,8 @@ import {
   generateWAMessageFromContent,
   generateMessageID,
   prepareWAMessageMedia,
-  extractMessageContent
+  extractMessageContent,
+  getAggregateVotesInPollMessage
 } from "@whiskeysockets/baileys";
 import {
   getExpNeeded
@@ -454,7 +455,7 @@ async function generateLevelUpCard({
         Accept: "image/*, application/json, text/plain, */*",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
       },
-      timeout: 6e3,
+      timeout: 6e4,
       validateStatus: status => status >= 200 && status < 400
     });
     if (!response?.data) return null;
@@ -676,13 +677,20 @@ export async function UpsertMsgHandle(sock, msg, ctx, {
   let textBody = "";
   
   // Jika ini adalah pembaruan vote polling, ambil teks/pilihan yang dipilih user
+  // Jika ini adalah pembaruan vote polling, ekstrak opsi yang dipilih user
   if (msg.pollUpdates || ctx.pollUpdates || msg.update?.pollUpdates) {
       const pUpdates = msg.pollUpdates || ctx.pollUpdates || msg.update?.pollUpdates;
-      // Ambil opsi yang dipilih jika tersedia di vote
       if (Array.isArray(pUpdates) && pUpdates.length > 0) {
-          const latestVote = pUpdates[pUpdates.length - 1];
-          // Anda bisa memetakan vote ke command jika formatnya mendukung, contoh:
-          textBody = latestVote.vote?.selectedOptions?.[0]?.name || "";
+          const pollCreation = ctx.quoted?.message || ctx.quoted?.rawMessage;
+          if (pollCreation) {
+              const userJid = sock?.user?.lid ? jidNormalizedUser(sock.user.lid) : jidNormalizedUser(sock?.user?.id || "");
+              const aggregate = getAggregateVotesInPollMessage({
+                  message: pollCreation,
+                  pollUpdates: pUpdates
+              }, userJid);
+              const chosen = aggregate.find(opt => opt.voters?.some(v => areJidsSameUser(v, ctx.sender)));
+              if (chosen?.name) textBody = chosen.name;
+          }
       }
   }
   

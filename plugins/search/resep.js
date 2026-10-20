@@ -1,7 +1,6 @@
 import axios from "axios";
-import {
-  simpleQuoted
-} from "../../lib/quoted.js";
+import { simpleQuoted } from "../../lib/quoted.js";
+
 const API_URL = `${global.bot?.api?.wudysoft}/api/search/resep/v4`;
 
 function formatImageUrl(path) {
@@ -24,7 +23,7 @@ function parseFlags(input = "") {
     if (["related", "terkait"].includes(lowerKey)) key = "related";
     if (["trending", "home", "inspirasi"].includes(lowerKey)) key = lowerKey;
     if (rawVal !== undefined) {
-      if (rawVal.startsWith('"') && rawVal.endsWith('"') || rawVal.startsWith("'") && rawVal.endsWith("'")) {
+      if ((rawVal.startsWith('"') && rawVal.endsWith('"')) || (rawVal.startsWith("'") && rawVal.endsWith("'"))) {
         rawVal = rawVal.slice(1, -1);
       }
       if (rawVal === "true") val = true;
@@ -36,18 +35,26 @@ function parseFlags(input = "") {
   }
   const cleanPrompt = input.replace(flagRegex, "").trim();
   return {
-    flags: flags,
-    cleanPrompt: cleanPrompt
+    flags,
+    cleanPrompt
   };
 }
+
 export default {
   name: "resep",
   aliases: ["resepmasak", "masak", "cook", "resepkoki", "yummy"],
-  description: "Cari resep masakan, rincian bahan & langkah memasak, serta inspirasi menu harian",
+  description: "Cari resep masakan, rincian bahan & langkah memasak (Tampilan Neoxr).",
   category: "Information",
   limit: true,
   example: "resep cilok atau resep --slug cilok-21 atau resep --trending",
+
   execute: async (sock, ctx, msg) => {
+    const prefix = ctx.prefix || ".";
+    const botName = global.bot?.name || "WudysoftBot";
+    const footer = global.footer || global.bot?.footer || `_${botName}_`;
+    const targetJid = ctx.chat || ctx.id;
+    const quotedMsg = typeof simpleQuoted === "function" ? simpleQuoted(ctx) || msg : msg;
+
     try {
       let rawText = ctx.args?.join(" ")?.trim() || "";
       if (!rawText && ctx.text) {
@@ -57,69 +64,100 @@ export default {
           rawText = raw.slice(firstWord.length).trim();
         }
       }
-      const prefix = ctx.prefix || ".";
-      const botName = global.bot?.name || "WudysoftBot";
-      const quotedMsg = typeof simpleQuoted === "function" ? simpleQuoted(ctx) : msg;
-      const {
-        flags,
-        cleanPrompt
-      } = parseFlags(rawText);
+
+      const { flags, cleanPrompt } = parseFlags(rawText);
       const isListHome = flags.home || flags.trending || flags.inspirasi;
+
       if (!rawText && !flags.slug && !flags.related && !isListHome) {
-        return ctx.reply(`🍳 *RESEP MASAKAN & INSPIRASI KULINER*\n\n` + `• *Cara Penggunaan:*\n` + `  👉 Cari resep: \`${prefix}resep cilok\`\n` + `  👉 Lihat detail resep: \`${prefix}resep --slug cilok-21\`\n\n` + `• *Lihat Inspirasi & Menu Trending (CTA UI):*\n` + `  👉 \`${prefix}resep --trending\` atau \`${prefix}resep --home\`\n\n` + `• *Opsi Flag Kustomisasi:*\n` + `  • \`--slug <slug_resep>\` (Detail resep berdasarkan ID/slug)\n` + `  • \`--related <slug_resep>\` (Daftar resep terkait)\n` + `  • \`--trending\` / \`--home\` (Menu trending & inspirasi harian)`);
+        const guideText = `–  *R E S E P  M A S A K A N*
+
+Cari panduan memasak, takaran bahan, dan inspirasi menu harian nusantara.
+
+┌  ◦  *Cari Resep* : \`${prefix}resep cilok kuah\`
+│  ◦  *Detail Resep* : \`${prefix}resep --slug cilok-21\`
+│  ◦  *Menu Terkait* : \`${prefix}resep --related cilok-21\`
+└  ◦  *Inspirasi Harian* : \`${prefix}resep --trending\` atau \`${prefix}resep --home\`
+
+${footer}`;
+        return ctx.reply(guideText, { quoted: quotedMsg });
       }
+
       await ctx.react("🍳");
+
+      // 1. DETAIL RESEP LENGKAP (BY SLUG)
       if (flags.slug) {
         const slug = flags.slug;
-        const {
-          data
-        } = await axios.post(API_URL, {
-          action: "detail",
-          slug: slug,
-          ...flags
-        }, {
-          headers: {
-            "Content-Type": "application/json"
-          },
-          timeout: 6e4
-        });
+        const { data } = await axios.post(
+          API_URL,
+          { action: "detail", slug, ...flags },
+          { headers: { "Content-Type": "application/json" }, timeout: 6e4 }
+        );
+
         const recipe = data?.data;
         if (!data || !recipe) {
           await ctx.react("❌");
-          return ctx.reply("❌ Detail resep tidak ditemukan. Pastikan slug resep valid.");
+          return ctx.reply(
+            `–  *R E S E P  N O T  F O U N D*\n\n` +
+            `┌  ◦  *Slug* : "${slug}"\n` +
+            `└  ◦  *Status* : Resep tidak ditemukan.\n\n` +
+            `${footer}`,
+            { quoted: quotedMsg }
+          );
         }
+
         const title = recipe.title || "Resep Masakan";
         const author = recipe.author?.name || "Chef Yummy";
         const rating = recipe.rating_user || recipe.rating || "5.0";
         const cookingTime = recipe.cooking_time ? `${recipe.cooking_time} Menit` : "30 Menit";
         const serving = recipe.serving_min ? `${recipe.serving_min}-${recipe.serving_max} Porsi` : "-";
-        const bannerImage = formatImageUrl(recipe.original_image || recipe.cover_url) || global.bot?.media?.banner1 || "https://files.catbox.moe/g2e6i5.jpg";
+        const bannerImage = formatImageUrl(recipe.original_image || recipe.cover_url);
+
         let ingredientsText = "";
         const ingTypes = recipe.ingredient_type || [];
         ingTypes.forEach(type => {
-          ingredientsText += `*${type.name.toUpperCase()}:*\n`;
+          ingredientsText += `*${type.name.toUpperCase()}*\n`;
           (type.ingredients || []).forEach(ing => {
             ingredientsText += `• ${ing.description}\n`;
           });
           ingredientsText += "\n";
         });
+
         let stepsText = "";
         const steps = recipe.cooking_step || [];
         steps.forEach((st, idx) => {
           stepsText += `*${idx + 1}. ${st.title}*\n${st.text}\n\n`;
         });
-        const bodyText = `🍳 *RESEP LENGKAP: ${title.toUpperCase()}*\n\n` + `• *Pembuat:* ${author}\n` + `• *Rating:* ⭐ ${rating} / 5.0\n` + `• *Waktu Masak:* ⏱️ ${cookingTime}\n` + `• *Porsi:* 🍽️ ${serving}\n\n` + `🖼️ *BAHAN-BAHAN:*\n${ingredientsText.trim()}\n\n` + `📝 *LANGKAH MEMASAK:*\n${stepsText.trim()}\n\n` + `_Klik tombol di bawah untuk menyalin seluruh resep ini!_`;
-        const footerText = `${botName} • Resep Masakan Nusantara`;
+
+        const bodyText = `–  *R E S E P  M A S A K A N*\n\n` +
+          `┌  ◦  *Judul* : ${title.toUpperCase()}\n` +
+          `├  ◦  *Koki* : ${author}\n` +
+          `├  ◦  *Rating* : ⭐ ${rating} / 5.0\n` +
+          `├  ◦  *Waktu* : ⏱️ ${cookingTime}\n` +
+          `└  ◦  *Porsi* : 🍽️ ${serving}\n\n` +
+          `┌  ◦  *B A H A N - B A H A N* :\n` +
+          ingredientsText.trim().split("\n").map(l => l ? `│  ${l}` : "│").join("\n") + "\n" +
+          `└  ◦\n\n` +
+          `┌  ◦  *L A N G K A H  M E M A S A K* :\n` +
+          stepsText.trim().split("\n").map(l => l ? `│  ${l}` : "│").join("\n") + "\n" +
+          `└  ◦\n\n` +
+          `${footer}`;
+
         const fullRecipeCopy = `*${title.toUpperCase()}*\nOleh: ${author}\nWaktu: ${cookingTime}\n\n*BAHAN:*\n${ingredientsText}\n*LANGKAH:*\n${stepsText}`;
-        const buttons = [{
-          name: "cta_copy",
-          display_text: "📌 Salin Resep Lengkap",
-          copy_code: fullRecipeCopy
-        }, {
-          name: "quick_reply",
-          display_text: "🍲 Resep Terkait",
-          id: `${prefix}resep --related ${slug}`
-        }];
+        const buttons = [
+          {
+            name: "cta_copy",
+            display_text: "📄 Salin Resep",
+            copy_code: fullRecipeCopy
+          },
+          {
+            name: "quick_reply",
+            buttonParamsJson: JSON.stringify({
+              display_text: "🍲 Resep Terkait",
+              id: `${prefix}resep --related ${slug}`
+            })
+          }
+        ];
+
         if (recipe.share_link) {
           buttons.push({
             name: "cta_url",
@@ -127,257 +165,201 @@ export default {
             url: recipe.share_link
           });
         }
-        const options = {
-          image: bannerImage,
-          params: {
-            bottom_sheet: {
-              in_thread_buttons_limit: 1,
-              divider_indices: [1],
-              list_title: `${botName} • Resep Masak`,
-              button_title: "Lihat Resep"
-            },
-            limited_time_offer: {
-              text: `✦ ${botName} - Resep Masakan ✦`,
-              url: "",
-              copy_code: "",
-              expiration_time: Date.now() + 3600 * 1e3
-            }
-          },
-          contextInfo: {
-            forwardingScore: 999,
-            isForwarded: true,
-            forwardedAiBotMessageInfo: {
-              botJid: "0@bot"
-            }
-          },
-          quoted: quotedMsg
-        };
+
         if (typeof ctx.sendCta === "function") {
-          await ctx.sendCta(bodyText, footerText, buttons, options);
-        } else {
-          await sock.sendMessage(ctx.id, {
-            image: {
-              url: bannerImage
-            },
-            caption: bodyText
-          }, {
+          await ctx.sendCta(bodyText, "", buttons, {
+            media: bannerImage || null,
             quoted: quotedMsg
           });
+        } else if (bannerImage) {
+          await sock.sendMessage(targetJid, {
+            image: { url: bannerImage },
+            caption: bodyText
+          }, { quoted: quotedMsg });
+        } else {
+          await sock.sendMessage(targetJid, { text: bodyText }, { quoted: quotedMsg });
         }
+
         await ctx.react("✅");
         return;
       }
+
+      // 2. RESEP TERKAIT (BY SLUG)
       if (flags.related) {
         const slug = flags.related;
-        const {
-          data
-        } = await axios.post(API_URL, {
-          action: "related",
-          slug: slug,
-          ...flags
-        }, {
-          headers: {
-            "Content-Type": "application/json"
-          },
-          timeout: 6e4
-        });
+        const { data } = await axios.post(
+          API_URL,
+          { action: "related", slug, ...flags },
+          { headers: { "Content-Type": "application/json" }, timeout: 6e4 }
+        );
+
         const recipes = data?.data?.recipes || [];
         if (!data || recipes.length === 0) {
           await ctx.react("❌");
-          return ctx.reply("❌ Tidak ada resep terkait yang ditemukan.");
+          return ctx.reply(`–  *E R R O R*\n\n┌  ◦  *Info* : Tidak ada resep terkait yang ditemukan.\n\n${footer}`);
         }
-        const recipeRows = recipes.slice(0, 15).map(r => ({
-          title: r.title.slice(0, 24),
-          description: `⭐ ${r.rating || 5} • ⏱️ ${r.cooking_time || 30}m`,
-          id: `${prefix}resep --slug ${r.slug}`
+
+        const recipeRows = recipes.slice(0, 15).map((r, i) => ({
+          title: `${i + 1}. ${r.title}`.slice(0, 24),
+          id: `${prefix}resep --slug ${r.slug}`,
+          description: `⭐ ${r.rating || 5} • ⏱️ ${r.cooking_time || 30}m`.slice(0, 60)
         }));
-        const firstCover = formatImageUrl(recipes[0]?.cover_url) || global.bot?.media?.banner1 || "https://files.catbox.moe/g2e6i5.jpg";
-        const bodyText = `🍲 *RESEP MASAKAN TERKAIT*\n\n` + `• *Total Rekomendasi:* ${recipes.length} Resep\n\n` + `_Pilih salah satu resep di bawah untuk melihat bahan & cara memasak!_`;
-        const footerText = `${botName} • Resep Terkait`;
+
+        const firstCover = formatImageUrl(recipes[0]?.cover_url);
+        const bodyText = `–  *R E S E P  T E R K A I T*\n\n` +
+          `┌  ◦  *Total Ditemukan* : ${recipes.length} Resep\n` +
+          `└  ◦  *Kategori* : Variasi Masakan Sejenis\n\n` +
+          `_Pilih resep pada tombol menu di bawah untuk membuka panduan lengkap:_`;
+
         const buttons = [{
           name: "single_select",
-          title: `🍲 Pilih Resep Terkait (${recipes.length})`,
-          sections: [{
-            title: "🍲 RESEP TERKAIT",
-            rows: recipeRows
-          }]
+          buttonParamsJson: JSON.stringify({
+            title: `PILIH RESEP (${recipes.length})`,
+            sections: [{
+              title: "RESEP MASAKAN TERKAIT",
+              rows: recipeRows
+            }]
+          })
         }];
-        const options = {
-          image: firstCover,
-          params: {
-            bottom_sheet: {
-              in_thread_buttons_limit: 1,
-              divider_indices: [1],
-              list_title: `${botName} • Related Recipes`,
-              button_title: "Lihat Resep"
-            },
-            limited_time_offer: {
-              text: `✦ ${botName} - Resep Terkait ✦`,
-              url: "",
-              copy_code: "",
-              expiration_time: Date.now() + 3600 * 1e3
-            }
-          },
-          contextInfo: {
-            forwardingScore: 999,
-            isForwarded: true,
-            forwardedAiBotMessageInfo: {
-              botJid: "0@bot"
-            }
-          },
-          quoted: quotedMsg
-        };
+
         if (typeof ctx.sendCta === "function") {
-          await ctx.sendCta(bodyText, footerText, buttons, options);
+          await ctx.sendCta(bodyText, footer, buttons, {
+            media: firstCover || null,
+            quoted: quotedMsg
+          });
         } else {
-          let fallbackMsg = `🍲 *RESEP TERKAIT*\n\n`;
-          fallbackMsg += recipes.map(r => `• *${r.title}*\n  ID: \`${r.slug}\``).join("\n\n");
+          let fallbackMsg = `${bodyText}\n\n`;
+          fallbackMsg += recipes.map(r => `• *${r.title}*\n  Perintah: \`${prefix}resep --slug ${r.slug}\``).join("\n\n");
           await ctx.reply(fallbackMsg);
         }
+
         await ctx.react("✅");
         return;
       }
+
+      // 3. INSPIRASI HARIAN / TRENDING MENU
       if (!cleanPrompt || isListHome) {
-        const {
-          data
-        } = await axios.post(API_URL, {
-          action: "home",
-          ...flags
-        }, {
-          headers: {
-            "Content-Type": "application/json"
-          },
-          timeout: 6e4
-        });
+        const { data } = await axios.post(
+          API_URL,
+          { action: "home", ...flags },
+          { headers: { "Content-Type": "application/json" }, timeout: 6e4 }
+        );
+
         const daily = data?.data?.daily_inspirations?.data?.recipes || [];
         const trending = data?.data?.trending?.data || [];
         const allPicks = [...trending.map(t => t.content || t), ...daily];
+
         if (allPicks.length === 0) {
           await ctx.react("❌");
-          return ctx.reply("❌ Gagal memuat inspirasi menu harian.");
+          return ctx.reply(`–  *E R R O R*\n\n┌  ◦  *Info* : Gagal memuat inspirasi menu harian.\n\n${footer}`);
         }
-        const recipeRows = allPicks.slice(0, 15).map(r => ({
-          title: r.title.slice(0, 24),
-          description: `⭐ ${r.rating || 5} • ⏱️ ${r.cooking_time || 30}m`,
-          id: `${prefix}resep --slug ${r.slug}`
+
+        const recipeRows = allPicks.slice(0, 15).map((r, i) => ({
+          title: `${i + 1}. ${r.title}`.slice(0, 24),
+          id: `${prefix}resep --slug ${r.slug}`,
+          description: `⭐ ${r.rating || 5} • ⏱️ ${r.cooking_time || 30}m`.slice(0, 60)
         }));
-        const firstCover = formatImageUrl(allPicks[0]?.cover_url || allPicks[0]?.media_url) || global.bot?.media?.banner1 || "https://files.catbox.moe/g2e6i5.jpg";
-        const bodyText = `✨ *INSPIRASI MENU HARIAN & TRENDING*\n\n` + `Bingung mau masak apa hari ini? Berikut ide masakan terpopuler untukmu!\n\n` + `• *Menu Utama:* ${allPicks[0]?.title || "-"}\n` + `• *Rating:* ⭐ ${allPicks[0]?.rating || "5.0"}\n` + `• *Waktu Masak:* ⏱️ ${allPicks[0]?.cooking_time || "30"} Menit\n\n` + `_Pilih menu di bawah untuk melihat resep selengkapnya!_`;
-        const footerText = `${botName} • Inspirasi Masak`;
+
+        const firstCover = formatImageUrl(allPicks[0]?.cover_url || allPicks[0]?.media_url);
+        const bodyText = `–  *I N S P I R A S I  M E N U*\n\n` +
+          `┌  ◦  *Rekomendasi Utama* : ${allPicks[0]?.title || "-"}\n` +
+          `├  ◦  *Rating* : ⭐ ${allPicks[0]?.rating || "5.0"}\n` +
+          `├  ◦  *Estimasi Waktu* : ⏱️ ${allPicks[0]?.cooking_time || "30"} Menit\n` +
+          `└  ◦  *Total Menu* : ${allPicks.length} Pilihan\n\n` +
+          `_Pilih resep pada tombol menu di bawah untuk membuka panduan lengkap:_`;
+
         const buttons = [{
           name: "single_select",
-          title: `🍳 Pilih Inspirasi Resep (${allPicks.length})`,
-          sections: [{
-            title: "🍳 MENU TRENDING & INSPIRASI",
-            rows: recipeRows
-          }]
+          buttonParamsJson: JSON.stringify({
+            title: `PILIH INSPIRASI (${allPicks.length})`,
+            sections: [{
+              title: "TRENDING & INSPIRASI HARIAN",
+              rows: recipeRows
+            }]
+          })
         }];
-        const options = {
-          image: firstCover,
-          params: {
-            bottom_sheet: {
-              in_thread_buttons_limit: 1,
-              divider_indices: [1],
-              list_title: `${botName} • Inspirasi Resep`,
-              button_title: "Lihat Menu"
-            },
-            limited_time_offer: {
-              text: `✦ ${botName} - Inspirasi Harian ✦`,
-              url: "",
-              copy_code: "",
-              expiration_time: Date.now() + 3600 * 1e3
-            }
-          },
-          contextInfo: {
-            forwardingScore: 999,
-            isForwarded: true,
-            forwardedAiBotMessageInfo: {
-              botJid: "0@bot"
-            }
-          },
-          quoted: quotedMsg
-        };
+
         if (typeof ctx.sendCta === "function") {
-          await ctx.sendCta(bodyText, footerText, buttons, options);
+          await ctx.sendCta(bodyText, footer, buttons, {
+            media: firstCover || null,
+            quoted: quotedMsg
+          });
         } else {
-          let fallbackMsg = `✨ *INSPIRASI RESEP HARIAN*\n\n`;
-          fallbackMsg += allPicks.map(r => `• *${r.title}*\n  ID: \`${r.slug}\``).join("\n\n");
+          let fallbackMsg = `${bodyText}\n\n`;
+          fallbackMsg += allPicks.map(r => `• *${r.title}*\n  Perintah: \`${prefix}resep --slug ${r.slug}\``).join("\n\n");
           await ctx.reply(fallbackMsg);
         }
+
         await ctx.react("✅");
         return;
       }
+
+      // 4. HASIL PENCARIAN RESEP (SEARCH QUERY)
       const searchQuery = cleanPrompt;
-      const {
-        data
-      } = await axios.post(API_URL, {
-        action: "search",
-        query: searchQuery,
-        ...flags
-      }, {
-        headers: {
-          "Content-Type": "application/json"
-        },
-        timeout: 6e4
-      });
+      const { data } = await axios.post(
+        API_URL,
+        { action: "search", query: searchQuery, ...flags },
+        { headers: { "Content-Type": "application/json" }, timeout: 6e4 }
+      );
+
       const searchResults = data?.data?.result || [];
       if (!data || searchResults.length === 0) {
         await ctx.react("❌");
-        return ctx.reply(`❌ Resep masakan dengan kata kunci "*${searchQuery}*" tidak ditemukan.`);
+        return ctx.reply(
+          `–  *R E S E P  N O T  F O U N D*\n\n` +
+          `┌  ◦  *Query* : "${searchQuery}"\n` +
+          `└  ◦  *Status* : Resep masakan tidak ditemukan.\n\n` +
+          `${footer}`,
+          { quoted: quotedMsg }
+        );
       }
-      const recipeRows = searchResults.slice(0, 15).map(r => ({
-        title: r.title.slice(0, 24),
-        description: `⭐ ${r.rating || 4.5} • ⏱️ ${r.cooking_time || 30}m`,
-        id: `${prefix}resep --slug ${r.slug}`
+
+      const recipeRows = searchResults.slice(0, 15).map((r, i) => ({
+        title: `${i + 1}. ${r.title}`.slice(0, 24),
+        id: `${prefix}resep --slug ${r.slug}`,
+        description: `⭐ ${r.rating || 4.5} • ⏱️ ${r.cooking_time || 30}m`.slice(0, 60)
       }));
-      const firstCover = formatImageUrl(searchResults[0]?.cover_url) || global.bot?.media?.banner1 || "https://files.catbox.moe/g2e6i5.jpg";
+
+      const firstCover = formatImageUrl(searchResults[0]?.cover_url);
       const totalCount = data?.data?.result_count || searchResults.length;
-      const bodyText = `🔍 *HASIL PENCARIAN RESEP*\n\n` + `• *Kata Kunci:* \`${searchQuery}\`\n` + `• *Total Ditemukan:* ${totalCount} Masakan\n\n` + `_Pilih resep di bawah untuk melihat bahan dan cara memasak!_`;
-      const footerText = `${botName} • Resep Masakan`;
-      const buttons = [{
-        name: "single_select",
-        title: `🍳 Pilih Resep Masakan (${searchResults.length})`,
-        sections: [{
-          title: `Hasil: ${searchQuery}`,
-          rows: recipeRows
-        }]
-      }, {
-        name: "quick_reply",
-        display_text: "✨ Inspirasi Harian",
-        id: `${prefix}resep --home`
-      }];
-      const options = {
-        image: firstCover,
-        params: {
-          bottom_sheet: {
-            in_thread_buttons_limit: 1,
-            divider_indices: [1],
-            list_title: `${botName} • Search Resep`,
-            button_title: "Lihat Resep"
-          },
-          limited_time_offer: {
-            text: `✦ ${botName} - Cari Resep ✦`,
-            url: "",
-            copy_code: "",
-            expiration_time: Date.now() + 3600 * 1e3
-          }
+
+      const bodyText = `–  *H A S I L  P E N C A R I A N*\n\n` +
+        `┌  ◦  *Kata Kunci* : "${searchQuery}"\n` +
+        `├  ◦  *Total Ditemukan* : ${totalCount} Masakan\n` +
+        `└  ◦  *Penyedia* : Yummy App Official\n\n` +
+        `_Pilih resep pada tombol menu di bawah untuk membuka panduan lengkap:_`;
+
+      const buttons = [
+        {
+          name: "single_select",
+          buttonParamsJson: JSON.stringify({
+            title: `PILIH RESEP (${searchResults.length})`,
+            sections: [{
+              title: `HASIL: ${searchQuery.toUpperCase()}`,
+              rows: recipeRows
+            }]
+          })
         },
-        contextInfo: {
-          forwardingScore: 999,
-          isForwarded: true,
-          forwardedAiBotMessageInfo: {
-            botJid: "0@bot"
-          }
-        },
-        quoted: quotedMsg
-      };
+        {
+          name: "quick_reply",
+          buttonParamsJson: JSON.stringify({
+            display_text: "✨ Menu Trending",
+            id: `${prefix}resep --home`
+          })
+        }
+      ];
+
       if (typeof ctx.sendCta === "function") {
-        await ctx.sendCta(bodyText, footerText, buttons, options);
+        await ctx.sendCta(bodyText, footer, buttons, {
+          media: firstCover || null,
+          quoted: quotedMsg
+        });
       } else {
-        let fallbackMsg = `🔍 *HASIL PENCARIAN RESEP: ${searchQuery}*\n\n`;
-        fallbackMsg += searchResults.map(r => `• *${r.title}*\n  ID: \`${r.slug}\``).join("\n\n");
+        let fallbackMsg = `${bodyText}\n\n`;
+        fallbackMsg += searchResults.map(r => `• *${r.title}*\n  Perintah: \`${prefix}resep --slug ${r.slug}\``).join("\n\n");
         await ctx.reply(fallbackMsg);
       }
+
       await ctx.react("✅");
     } catch (error) {
       await ctx.react("❌");
@@ -388,7 +370,7 @@ export default {
           errorMessage = parsed.message || parsed.error || errorMessage;
         } catch {}
       }
-      ctx.reply(`❌ Resep Error: ${errorMessage}`);
+      ctx.reply(`–  *E R R O R*\n\n┌  ◦  *Info* : ${errorMessage}\n└  ◦  *Command* : ${ctx.command || "resep"}\n\n${footer}`);
     }
   }
 };
