@@ -193,7 +193,6 @@ Pilih game dari tombol menu di bawah atau ketik langsung nomor index-nya.`;
         });
       }
       const options = {
-        image: bannerImage,
         params: {
           bottom_sheet: {
             in_thread_buttons_limit: 1,

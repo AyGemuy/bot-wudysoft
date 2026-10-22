@@ -1,10 +1,13 @@
 import axios from "axios";
 import db from "../../data/db.js";
-import { upload } from "../../lib/upload.js";
-import { simpleQuoted } from "../../lib/quoted.js";
-
+import {
+  upload
+} from "../../lib/upload.js";
+import {
+  simpleQuoted
+} from "../../lib/quoted.js";
 const API_URL = `${global.bot?.api?.wudysoft}/api/ai/pixster`;
-const SESSION_TIMEOUT = 25 * 60 * 1e3; // 25 Menit
+const SESSION_TIMEOUT = 25 * 60 * 1e3;
 const CONFIG = {
   TIMEOUT: 65e3,
   USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -38,13 +41,11 @@ function parseFlags(input = "") {
     let key = match[1].toLowerCase();
     let rawVal = match[2];
     let val = true;
-
     if (["mod", "m"].includes(key)) key = "model";
     if (["img", "image"].includes(key)) key = "media";
     if (["tipe", "type"].includes(key)) key = "mode";
-
     if (rawVal !== undefined) {
-      if ((rawVal.startsWith('"') && rawVal.endsWith('"')) || (rawVal.startsWith("'") && rawVal.endsWith("'"))) {
+      if (rawVal.startsWith('"') && rawVal.endsWith('"') || rawVal.startsWith("'") && rawVal.endsWith("'")) {
         rawVal = rawVal.slice(1, -1);
       }
       if (rawVal === "true") val = true;
@@ -56,14 +57,14 @@ function parseFlags(input = "") {
   }
   const cleanPrompt = input.replace(flagRegex, "").trim();
   return {
-    flags,
-    cleanPrompt
+    flags: flags,
+    cleanPrompt: cleanPrompt
   };
 }
-
-// Request API Pixster
 async function requestPixsterAi(payload = {}) {
-  const { data } = await axios.get(API_URL, {
+  const {
+    data
+  } = await axios.get(API_URL, {
     params: payload,
     headers: {
       "User-Agent": CONFIG.USER_AGENT
@@ -76,7 +77,6 @@ async function requestPixsterAi(payload = {}) {
   return data;
 }
 
-// Ekstraksi jawaban teks dari format respon chat / vision
 function parseResponseText(resData) {
   if (!resData) return "Tidak ada respon teks.";
   if (typeof resData === "string") return resData;
@@ -112,7 +112,6 @@ function recordSession(chatId, messageId, model, lastMedia) {
   s.expireTime = Date.now() + SESSION_TIMEOUT;
   saveDB();
 }
-
 export default {
   name: "pixster",
   aliases: ["pixsterai", "pxai", "pixchat"],
@@ -120,41 +119,32 @@ export default {
   category: "AI",
   limit: true,
   example: "pixster Jelaskan teori relativitas\npixster Analisis gambar ini (kirim/balas gambar)\nBalas/reply pesan bot untuk melanjutkan percakapan.",
-
-  before: async (msg, { sock, ctx }) => {
+  before: async (msg, {
+    sock,
+    ctx
+  }) => {
     try {
       const chatId = ctx?.id || msg?.key?.remoteJid;
       if (!chatId) return;
       initDB();
       if (!global.db.pixsterAi[chatId]) return;
-
       const isFromMe = Boolean(msg?.key?.fromMe || ctx?.isFromMe);
       if (isFromMe) return;
-
       const sessionData = global.db.pixsterAi[chatId];
       if (Date.now() > sessionData.expireTime) {
         delete global.db.pixsterAi[chatId];
         saveDB();
         return;
       }
-
       const quotedStanzaId = ctx?.quoted?.id || msg?.message?.extendedTextMessage?.contextInfo?.stanzaId;
-      const isQuotingAi = quotedStanzaId && (
-        quotedStanzaId === sessionData.lastMsgId ||
-        (Array.isArray(sessionData.msgIds) && sessionData.msgIds.includes(quotedStanzaId))
-      );
-
+      const isQuotingAi = quotedStanzaId && (quotedStanzaId === sessionData.lastMsgId || Array.isArray(sessionData.msgIds) && sessionData.msgIds.includes(quotedStanzaId));
       if (!isQuotingAi) return;
-
       const userText = (ctx?.text || ctx?.query || msg?.message?.conversation || msg?.message?.extendedTextMessage?.text || "").trim();
       const prefixList = [".", "#", "!", "/", ctx?.prefix].filter(Boolean);
       if (prefixList.some(p => userText.startsWith(p))) return;
-
       const isMedia = ctx?.isMedia || ctx?.quoted?.isMedia;
       if (!userText && !isMedia) return;
-
       if (typeof ctx?.react === "function") await ctx.react("💭");
-
       let uploadedMediaUrl = null;
       if (isMedia && typeof ctx.download === "function") {
         const buffer = await ctx.download();
@@ -165,28 +155,25 @@ export default {
           }
         }
       }
-
       const activeMedia = uploadedMediaUrl || sessionData.last_media;
       const mode = activeMedia ? "vision" : "chat";
-      const modelToUse = mode === "vision" ? "gemini-2.5-flash" : (sessionData.model || "gpt-5-nano");
-
+      const modelToUse = mode === "vision" ? "gemini-2.5-flash" : sessionData.model || "gpt-5-nano";
       const payload = {
         mode: mode,
         prompt: userText || (activeMedia ? "Jelaskan gambar ini" : "Lanjutkan"),
         model: modelToUse,
-        ...(activeMedia ? { image: activeMedia } : {})
+        ...activeMedia ? {
+          image: activeMedia
+        } : {}
       };
-
       const data = await requestPixsterAi(payload);
       const answerText = parseResponseText(data?.data);
       const bodyText = answerText;
-
       const buttons = [{
         name: "cta_copy",
         display_text: "📄 Salin Jawaban",
         copy_code: answerText
       }];
-
       let sentMsg;
       if (typeof ctx.sendCta === "function") {
         sentMsg = await ctx.sendCta(bodyText, `_Model: ${data?.data?.modelUsed || data?.data?.modelVersion || modelToUse}_`, buttons, {
@@ -195,31 +182,33 @@ export default {
         });
       } else if (activeMedia) {
         sentMsg = await sock.sendMessage(ctx.id, {
-          image: { url: activeMedia },
+          image: {
+            url: activeMedia
+          },
           caption: bodyText
-        }, { quoted: msg });
+        }, {
+          quoted: msg
+        });
       } else {
         sentMsg = await sock.sendMessage(ctx.id, {
           text: bodyText
-        }, { quoted: msg });
+        }, {
+          quoted: msg
+        });
       }
-
       const newMsgId = sentMsg?.key?.id;
       recordSession(chatId, newMsgId, sessionData.model, activeMedia);
-
       if (typeof ctx?.react === "function") await ctx.react("✨");
       return true;
     } catch (e) {
       console.error("[PIXSTER BEFORE ERROR]:", e.message);
     }
   },
-
   execute: async (sock, ctx, msg) => {
     try {
       const chatId = ctx.id;
       const senderId = ctx.sender || ctx.author || msg.key?.participant || msg.key?.remoteJid || ctx.id;
       initDB(senderId, ctx.pushName);
-
       let rawText = ctx.args?.join(" ")?.trim() || "";
       if (!rawText && ctx.text) {
         const raw = ctx.text.trim();
@@ -228,11 +217,8 @@ export default {
           rawText = raw.slice(firstWord.length).trim();
         }
       }
-
       const prefix = ctx.prefix || ".";
       const quotedMsg = typeof simpleQuoted === "function" ? simpleQuoted(ctx) : msg;
-
-      // 1. Reset Sesi
       if (rawText === "--reset" || rawText === "--clear" || rawText === "reset" || rawText === "clear") {
         if (global.db.pixsterAi[chatId]) {
           delete global.db.pixsterAi[chatId];
@@ -241,48 +227,60 @@ export default {
         }
         return ctx.reply("ℹ️ Tidak ada sesi aktif di percakapan ini.");
       }
-
-      const { flags, cleanPrompt } = parseFlags(rawText);
+      const {
+        flags,
+        cleanPrompt
+      } = parseFlags(rawText);
       const existingSession = global.db.pixsterAi[chatId];
-
-      // 2. Set Model Pilihan
       if (flags.setmodel) {
         const chosenModel = String(flags.setmodel).trim();
         recordSession(chatId, null, chosenModel, existingSession?.last_media);
-
         await ctx.react("✅");
-        return ctx.reply(
-          `–  *P I X S T E R  A I*\n\n` +
-          `┌  ◦  *Model Aktif* : \`${chosenModel}\`\n` +
-          `└  ◦  *Status* : Tersimpan ke sesi chat Anda\n\n` +
-          `_Ketik \`${prefix}pixster <pertanyaan>\` untuk mulai berbicara dengan model ini._`
-        );
+        return ctx.reply(`–  *P I X S T E R  A I*\n\n` + `┌  ◦  *Model Aktif* : \`${chosenModel}\`\n` + `└  ◦  *Status* : Tersimpan ke sesi chat Anda\n\n` + `_Ketik \`${prefix}pixster <pertanyaan>\` untuk mulai berbicara dengan model ini._`);
       }
-
-      // 3. CTA Pagination List Models
       if (flags.models || flags.list || rawText.startsWith("--list") || flags.page) {
-        const availableModels = [
-          { name: "gpt-5-nano", type: "Chat", desc: "Fast & Smartest Next-Gen OpenAI Model" },
-          { name: "gpt-4o-mini", type: "Chat / Vision", desc: "Efficient & High-Performance Multimodal" },
-          { name: "gpt-4o", type: "Chat / Vision", desc: "Flagship Omni Intelligence" },
-          { name: "gpt-4", type: "Chat", desc: "Standard GPT-4 Reasoning Engine" },
-          { name: "gpt-3.5-turbo", type: "Chat", desc: "Classic High-Speed Conversational" },
-          { name: "gemini-2.5-flash", type: "Chat / Vision", desc: "Google Ultra-Fast Next-Gen Vision" },
-          { name: "gemini-1.5-flash", type: "Chat / Vision", desc: "Google Flash Long Context & Vision" },
-          { name: "claude-3-5-sonnet", type: "Chat", desc: "Anthropic Top-Tier Coding & Nuance" }
-        ];
-
-        const searchQuery = flags.search || flags.query || (!flags.page && cleanPrompt) || "";
+        const availableModels = [{
+          name: "gpt-5-nano",
+          type: "Chat",
+          desc: "Fast & Smartest Next-Gen OpenAI Model"
+        }, {
+          name: "gpt-4o-mini",
+          type: "Chat / Vision",
+          desc: "Efficient & High-Performance Multimodal"
+        }, {
+          name: "gpt-4o",
+          type: "Chat / Vision",
+          desc: "Flagship Omni Intelligence"
+        }, {
+          name: "gpt-4",
+          type: "Chat",
+          desc: "Standard GPT-4 Reasoning Engine"
+        }, {
+          name: "gpt-3.5-turbo",
+          type: "Chat",
+          desc: "Classic High-Speed Conversational"
+        }, {
+          name: "gemini-2.5-flash",
+          type: "Chat / Vision",
+          desc: "Google Ultra-Fast Next-Gen Vision"
+        }, {
+          name: "gemini-1.5-flash",
+          type: "Chat / Vision",
+          desc: "Google Flash Long Context & Vision"
+        }, {
+          name: "claude-3-5-sonnet",
+          type: "Chat",
+          desc: "Anthropic Top-Tier Coding & Nuance"
+        }];
+        const searchQuery = flags.search || flags.query || !flags.page && cleanPrompt || "";
         let matched = availableModels;
         if (searchQuery && searchQuery !== "true") {
           const kw = searchQuery.toLowerCase();
           matched = availableModels.filter(m => m.name.toLowerCase().includes(kw) || m.desc.toLowerCase().includes(kw));
         }
-
         const page = Math.max(1, Number(flags.page) || 1);
         const totalPages = Math.ceil(matched.length / CONFIG.ITEMS_PER_PAGE) || 1;
         const pageItems = matched.slice((page - 1) * CONFIG.ITEMS_PER_PAGE, page * CONFIG.ITEMS_PER_PAGE);
-
         const rows = pageItems.map((m, idx) => {
           const globalIdx = (page - 1) * CONFIG.ITEMS_PER_PAGE + idx + 1;
           return {
@@ -291,11 +289,9 @@ export default {
             description: `[${m.type}] ${m.desc}`.slice(0, 60)
           };
         });
-
         let baseCmd = `${prefix}pixster`;
         if (searchQuery && searchQuery !== "true") baseCmd += ` --search "${searchQuery}"`;
         else baseCmd += ` --list`;
-
         const buttons = [{
           name: "single_select",
           buttonParamsJson: JSON.stringify({
@@ -306,7 +302,6 @@ export default {
             }]
           })
         }];
-
         if (page > 1) {
           buttons.push({
             name: "quick_reply",
@@ -325,13 +320,7 @@ export default {
             })
           });
         }
-
-        const bodyText = `–  *P I X S T E R  -  M O D E L S*\n\n` +
-          `┌  ◦  *Total Model* : ${matched.length}\n` +
-          `├  ◦  *Halaman* : ${page} / ${totalPages}\n` +
-          `└  ◦  *Penyedia* : OpenAI, Anthropic, Google Gemini\n\n` +
-          `_Pilih model yang ingin digunakan melalui menu di bawah:_`;
-
+        const bodyText = `–  *P I X S T E R  -  M O D E L S*\n\n` + `┌  ◦  *Total Model* : ${matched.length}\n` + `├  ◦  *Halaman* : ${page} / ${totalPages}\n` + `└  ◦  *Penyedia* : OpenAI, Anthropic, Google Gemini\n\n` + `_Pilih model yang ingin digunakan melalui menu di bawah:_`;
         const options = {
           params: {
             bottom_sheet: {
@@ -343,7 +332,6 @@ export default {
           },
           quoted: quotedMsg
         };
-
         if (typeof ctx.sendCta === "function") {
           await ctx.sendCta(bodyText, "", buttons, options);
         } else {
@@ -353,12 +341,9 @@ export default {
           }
           await ctx.reply(fallback);
         }
-
         await ctx.react("✅");
         return;
       }
-
-      // 4. Mode Chat & Vision
       const isMedia = ctx.isMedia || ctx.quoted?.isMedia;
       if (!rawText && !isMedia) {
         const activeModel = existingSession?.model || "gpt-5-nano";
@@ -384,12 +369,11 @@ Asisten percakapan cerdas multimodal berbasis ChatGPT-5, Gemini 2.5 & Claude.
    ├ \`--model <nama_model>\` (Pakai model spesifik)
    ├ \`--media <image_url>\` (Sertakan URL gambar)
    └ \`--reset\` (Hapus riwayat sesi)`;
-
-        return ctx.reply(guideText, { quoted: quotedMsg });
+        return ctx.reply(guideText, {
+          quoted: quotedMsg
+        });
       }
-
       await ctx.react("💭");
-
       let uploadedMediaUrl = null;
       if (isMedia) {
         const buffer = await ctx.download();
@@ -400,29 +384,26 @@ Asisten percakapan cerdas multimodal berbasis ChatGPT-5, Gemini 2.5 & Claude.
           }
         }
       }
-
       const inputImage = uploadedMediaUrl || flags.media || null;
       const mode = inputImage ? "vision" : "chat";
-      const modelToUse = flags.model || (mode === "vision" ? "gemini-2.5-flash" : (existingSession?.model || "gpt-5-nano"));
+      const modelToUse = flags.model || (mode === "vision" ? "gemini-2.5-flash" : existingSession?.model || "gpt-5-nano");
       const promptText = cleanPrompt || flags.prompt || (inputImage ? "Describe this image in detail" : "Halo");
-
       const payload = {
         mode: mode,
         prompt: promptText,
         model: modelToUse,
-        ...(inputImage ? { image: inputImage } : {})
+        ...inputImage ? {
+          image: inputImage
+        } : {}
       };
-
       const data = await requestPixsterAi(payload);
       const answerText = parseResponseText(data?.data);
       const bodyText = answerText;
-
       const buttons = [{
         name: "cta_copy",
         display_text: "📄 Salin Jawaban",
         copy_code: answerText
       }];
-
       let sentMsg;
       if (typeof ctx.sendCta === "function") {
         sentMsg = await ctx.sendCta(bodyText, `_Model: ${data?.data?.modelUsed || data?.data?.modelVersion || modelToUse}_`, buttons, {
@@ -431,18 +412,22 @@ Asisten percakapan cerdas multimodal berbasis ChatGPT-5, Gemini 2.5 & Claude.
         });
       } else if (inputImage) {
         sentMsg = await sock.sendMessage(ctx.id, {
-          image: { url: inputImage },
+          image: {
+            url: inputImage
+          },
           caption: bodyText
-        }, { quoted: quotedMsg });
+        }, {
+          quoted: quotedMsg
+        });
       } else {
         sentMsg = await sock.sendMessage(ctx.id, {
           text: bodyText
-        }, { quoted: quotedMsg });
+        }, {
+          quoted: quotedMsg
+        });
       }
-
       const sentMsgId = sentMsg?.key?.id;
       recordSession(chatId, sentMsgId, existingSession?.model || modelToUse, inputImage);
-
       await ctx.react("✨");
     } catch (error) {
       console.error("[Pixster AI Error]:", error?.message || error);

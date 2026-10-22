@@ -1,10 +1,13 @@
 import axios from "axios";
 import db from "../../data/db.js";
-import { upload } from "../../lib/upload.js";
-import { simpleQuoted } from "../../lib/quoted.js";
-
+import {
+  upload
+} from "../../lib/upload.js";
+import {
+  simpleQuoted
+} from "../../lib/quoted.js";
 const API_URL = `${global.bot?.api?.wudysoft}/api/ai/zyra`;
-const SESSION_TIMEOUT = 25 * 60 * 1e3; // 25 Menit
+const SESSION_TIMEOUT = 25 * 60 * 1e3;
 const CONFIG = {
   TIMEOUT: 65e3,
   USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -37,13 +40,11 @@ function parseFlags(input = "") {
     let key = match[1].toLowerCase();
     let rawVal = match[2];
     let val = true;
-
     if (["mod", "m"].includes(key)) key = "model";
     if (["img", "image"].includes(key)) key = "media";
     if (["generate", "draw", "txt2img"].includes(key)) key = "is_image";
-
     if (rawVal !== undefined) {
-      if ((rawVal.startsWith('"') && rawVal.endsWith('"')) || (rawVal.startsWith("'") && rawVal.endsWith("'"))) {
+      if (rawVal.startsWith('"') && rawVal.endsWith('"') || rawVal.startsWith("'") && rawVal.endsWith("'")) {
         rawVal = rawVal.slice(1, -1);
       }
       if (rawVal === "true") val = true;
@@ -55,28 +56,28 @@ function parseFlags(input = "") {
   }
   const cleanPrompt = input.replace(flagRegex, "").trim();
   return {
-    flags,
-    cleanPrompt
+    flags: flags,
+    cleanPrompt: cleanPrompt
   };
 }
-
-// Request API Zyra
 async function requestZyraAi(payload = {}) {
-  const { data } = await axios.post(API_URL, payload, {
+  const {
+    data
+  } = await axios.post(API_URL, payload, {
     headers: {
       "Content-Type": "application/json",
       "User-Agent": CONFIG.USER_AGENT
     },
     timeout: CONFIG.TIMEOUT
   }).catch(err => {
-    // Fallback jika API mengharapkan GET query
     return axios.get(API_URL, {
       params: payload,
-      headers: { "User-Agent": CONFIG.USER_AGENT },
+      headers: {
+        "User-Agent": CONFIG.USER_AGENT
+      },
       timeout: CONFIG.TIMEOUT
     });
   });
-
   if (!data?.status) {
     throw new Error(data?.message || data?.error || "Gagal memproses respons dari Zyra AI.");
   }
@@ -112,7 +113,6 @@ function recordSession(chatId, messageId, updatedHistory, model, lastMedia) {
   s.expireTime = Date.now() + SESSION_TIMEOUT;
   saveDB();
 }
-
 export default {
   name: "zyra",
   aliases: ["zyraai", "geminizyra"],
@@ -120,41 +120,32 @@ export default {
   category: "AI",
   limit: true,
   example: "zyra Jelaskan teori relativitas\nzyra cute cat --image\nBalas/reply pesan bot untuk melanjutkan percakapan.",
-
-  before: async (msg, { sock, ctx }) => {
+  before: async (msg, {
+    sock,
+    ctx
+  }) => {
     try {
       const chatId = ctx?.id || msg?.key?.remoteJid;
       if (!chatId) return;
       initDB();
       if (!global.db.zyraAi[chatId]) return;
-
       const isFromMe = Boolean(msg?.key?.fromMe || ctx?.isFromMe);
       if (isFromMe) return;
-
       const sessionData = global.db.zyraAi[chatId];
       if (Date.now() > sessionData.expireTime) {
         delete global.db.zyraAi[chatId];
         saveDB();
         return;
       }
-
       const quotedStanzaId = ctx?.quoted?.id || msg?.message?.extendedTextMessage?.contextInfo?.stanzaId;
-      const isQuotingAi = quotedStanzaId && (
-        quotedStanzaId === sessionData.lastMsgId ||
-        (Array.isArray(sessionData.msgIds) && sessionData.msgIds.includes(quotedStanzaId))
-      );
-
+      const isQuotingAi = quotedStanzaId && (quotedStanzaId === sessionData.lastMsgId || Array.isArray(sessionData.msgIds) && sessionData.msgIds.includes(quotedStanzaId));
       if (!isQuotingAi) return;
-
       const userText = (ctx?.text || ctx?.query || msg?.message?.conversation || msg?.message?.extendedTextMessage?.text || "").trim();
       const prefixList = [".", "#", "!", "/", ctx?.prefix].filter(Boolean);
       if (prefixList.some(p => userText.startsWith(p))) return;
-
       const isMedia = ctx?.isMedia || ctx?.quoted?.isMedia;
       if (!userText && !isMedia) return;
-
       if (typeof ctx?.react === "function") await ctx.react("💭");
-
       let uploadedMediaUrl = null;
       if (isMedia && typeof ctx.download === "function") {
         const buffer = await ctx.download();
@@ -165,28 +156,25 @@ export default {
           }
         }
       }
-
       const activeMedia = uploadedMediaUrl || sessionData.last_media;
       const promptText = userText || (activeMedia ? "Jelaskan gambar ini secara detail" : "Lanjutkan");
-
       const payload = {
         mode: "chat",
         prompt: promptText,
         messages: Array.isArray(sessionData.history) ? sessionData.history : [],
         model: sessionData.model || "gemini-2.5-flash",
-        ...(activeMedia ? { media: activeMedia } : {})
+        ...activeMedia ? {
+          media: activeMedia
+        } : {}
       };
-
       const data = await requestZyraAi(payload);
       const answerText = (data.result || data.chunks?.[0]?.candidates?.[0]?.content?.parts?.[0]?.text || "Tidak ada respon.").trim();
       const bodyText = answerText;
-
       const buttons = [{
         name: "cta_copy",
         display_text: "📄 Salin Jawaban",
         copy_code: answerText
       }];
-
       let sentMsg;
       if (typeof ctx.sendCta === "function") {
         sentMsg = await ctx.sendCta(bodyText, `_Model: ${payload.model}_`, buttons, {
@@ -195,31 +183,33 @@ export default {
         });
       } else if (activeMedia) {
         sentMsg = await sock.sendMessage(ctx.id, {
-          image: { url: activeMedia },
+          image: {
+            url: activeMedia
+          },
           caption: bodyText
-        }, { quoted: msg });
+        }, {
+          quoted: msg
+        });
       } else {
         sentMsg = await sock.sendMessage(ctx.id, {
           text: bodyText
-        }, { quoted: msg });
+        }, {
+          quoted: msg
+        });
       }
-
       const newMsgId = sentMsg?.key?.id;
       recordSession(chatId, newMsgId, data.history || sessionData.history, payload.model, activeMedia);
-
       if (typeof ctx?.react === "function") await ctx.react("✨");
       return true;
     } catch (e) {
       console.error("[ZYRA BEFORE ERROR]:", e.message);
     }
   },
-
   execute: async (sock, ctx, msg) => {
     try {
       const chatId = ctx.id;
       const senderId = ctx.sender || ctx.author || msg.key?.participant || msg.key?.remoteJid || ctx.id;
       initDB(senderId, ctx.pushName);
-
       let rawText = ctx.args?.join(" ")?.trim() || "";
       if (!rawText && ctx.text) {
         const raw = ctx.text.trim();
@@ -228,11 +218,8 @@ export default {
           rawText = raw.slice(firstWord.length).trim();
         }
       }
-
       const prefix = ctx.prefix || ".";
       const quotedMsg = typeof simpleQuoted === "function" ? simpleQuoted(ctx) : msg;
-
-      // 1. Reset Sesi
       if (rawText === "--reset" || rawText === "--clear" || rawText === "reset" || rawText === "clear") {
         if (global.db.zyraAi[chatId]) {
           delete global.db.zyraAi[chatId];
@@ -241,7 +228,6 @@ export default {
         }
         return ctx.reply("ℹ️ Tidak ada sesi aktif di percakapan ini.");
       }
-
       const isMedia = ctx.isMedia || ctx.quoted?.isMedia;
       if (!rawText && !isMedia) {
         const sessionData = global.db.zyraAi[chatId];
@@ -269,13 +255,14 @@ Layanan asisten cerdas multimodal bertenaga Vertex Gemini 2.5 Flash & Flux Image
    ├ \`--model <nama_model>\` (Pakai model spesifik)
    ├ \`--media <image_url>\` (Sertakan URL gambar)
    └ \`--reset\` (Hapus riwayat obrolan)`;
-
-        return ctx.reply(guideText, { quoted: quotedMsg });
+        return ctx.reply(guideText, {
+          quoted: quotedMsg
+        });
       }
-
-      const { flags, cleanPrompt } = parseFlags(rawText);
-
-      // Handle Upload Media
+      const {
+        flags,
+        cleanPrompt
+      } = parseFlags(rawText);
       let uploadedMediaUrl = null;
       if (isMedia) {
         const buffer = await ctx.download();
@@ -286,13 +273,10 @@ Layanan asisten cerdas multimodal bertenaga Vertex Gemini 2.5 Flash & Flux Image
           }
         }
       }
-
       const isImageGen = flags.is_image === true || flags.mode === "image";
       const existingSession = global.db.zyraAi[chatId];
       const activeMedia = uploadedMediaUrl || flags.media || null;
       const modelToUse = flags.model || existingSession?.model || "gemini-2.5-flash";
-
-      // A. GENERATE IMAGE (FLUX ENGINE)
       if (isImageGen) {
         await ctx.react("🎨");
         const promptImage = cleanPrompt || "A cute cat artwork masterpiece";
@@ -304,26 +288,17 @@ Layanan asisten cerdas multimodal bertenaga Vertex Gemini 2.5 Flash & Flux Image
           steps: flags.steps || 20,
           ...flags
         };
-
         const data = await requestZyraAi(payload);
         const imageUrl = data?.result?.url || (typeof data?.result === "string" ? data.result : null);
         if (!imageUrl) throw new Error("Gagal menerima URL gambar dari Zyra AI.");
-
         const seedInfo = data?.result?.seed !== undefined ? data.result.seed : "-";
         const costInfo = data?.result?.cost !== undefined ? data.result.cost : "-";
-
-        const captionText = `–  *Z Y R A  I M A G E*\n\n` +
-          `┌  ◦  *Prompt* : ${promptImage}\n` +
-          `├  ◦  *Seed* : ${seedInfo}\n` +
-          `├  ◦  *Cost* : ${costInfo}\n` +
-          `└  ◦  *Engine* : Flux Gen / Firebase Storage`;
-
+        const captionText = `–  *Z Y R A  I M A G E*\n\n` + `┌  ◦  *Prompt* : ${promptImage}\n` + `├  ◦  *Seed* : ${seedInfo}\n` + `├  ◦  *Cost* : ${costInfo}\n` + `└  ◦  *Engine* : Flux Gen / Firebase Storage`;
         const buttons = [{
           name: "cta_copy",
           display_text: "📄 Salin Prompt",
           copy_code: promptImage
         }];
-
         if (typeof ctx.sendCta === "function") {
           await ctx.sendCta(captionText, "", buttons, {
             media: imageUrl,
@@ -331,16 +306,17 @@ Layanan asisten cerdas multimodal bertenaga Vertex Gemini 2.5 Flash & Flux Image
           });
         } else {
           await sock.sendMessage(ctx.id, {
-            image: { url: imageUrl },
+            image: {
+              url: imageUrl
+            },
             caption: captionText
-          }, { quoted: quotedMsg });
+          }, {
+            quoted: quotedMsg
+          });
         }
-
         await ctx.react("✨");
         return;
       }
-
-      // B. CHAT & VISION
       await ctx.react("💭");
       const promptText = cleanPrompt || flags.prompt || (activeMedia ? "Jelaskan gambar ini secara detail dan mendalam" : "Halo!");
       const payload = {
@@ -348,20 +324,19 @@ Layanan asisten cerdas multimodal bertenaga Vertex Gemini 2.5 Flash & Flux Image
         prompt: promptText,
         messages: Array.isArray(existingSession?.history) ? existingSession.history : [],
         model: modelToUse,
-        ...(activeMedia ? { media: activeMedia } : {}),
+        ...activeMedia ? {
+          media: activeMedia
+        } : {},
         ...flags
       };
-
       const data = await requestZyraAi(payload);
       const answerText = (data.result || data.chunks?.[0]?.candidates?.[0]?.content?.parts?.[0]?.text || "Tidak ada respon yang diterima.").trim();
       const bodyText = answerText;
-
       const buttons = [{
         name: "cta_copy",
         display_text: "📄 Salin Jawaban",
         copy_code: answerText
       }];
-
       let sentMsg;
       if (typeof ctx.sendCta === "function") {
         sentMsg = await ctx.sendCta(bodyText, `_Model: ${modelToUse}_`, buttons, {
@@ -370,18 +345,22 @@ Layanan asisten cerdas multimodal bertenaga Vertex Gemini 2.5 Flash & Flux Image
         });
       } else if (activeMedia) {
         sentMsg = await sock.sendMessage(ctx.id, {
-          image: { url: activeMedia },
+          image: {
+            url: activeMedia
+          },
           caption: bodyText
-        }, { quoted: quotedMsg });
+        }, {
+          quoted: quotedMsg
+        });
       } else {
         sentMsg = await sock.sendMessage(ctx.id, {
           text: bodyText
-        }, { quoted: quotedMsg });
+        }, {
+          quoted: quotedMsg
+        });
       }
-
       const sentMsgId = sentMsg?.key?.id;
       recordSession(chatId, sentMsgId, data.history || existingSession?.history, modelToUse, activeMedia);
-
       await ctx.react("✨");
     } catch (error) {
       console.error("[Zyra AI Error]:", error?.message || error);

@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Supreme Box Type</title>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    body,
+    html {
+      height: 100%;
+      background: #0b0b0b;
+      display: grid;
+      place-items: center;
+      overflow: hidden
+    }
+
+    .stage {
+      position: relative;
+      width: 512px;
+      height: 512px;
+      display: grid;
+      place-items: center;
+      background: #f0ebe0;
+      border-radius: 6px;
+      box-shadow: 0 30px 90px rgba(0, 0, 0, .7);
+      overflow: hidden;
+      isolation: isolate;
+      visibility: hidden
+    }
+
+    .stage.run,
+    .stage.settle,
+    .stage.shining {
+      visibility: visible
+    }
+
+    .stage::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      opacity: .09;
+      mix-blend-mode: multiply;
+      pointer-events: none;
+      z-index: 1
+    }
+
+    .stage::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 50%, transparent 60%, rgba(0, 0, 0, .1) 100%);
+      pointer-events: none;
+      z-index: 2
+    }
+
+    .box {
+      position: relative;
+      width: 440px;
+      padding: 22px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #e01a22;
+      z-index: 3;
+      overflow: hidden;
+      box-shadow: 0 10px 28px rgba(224, 26, 34, .3), 0 2px 6px rgba(0, 0, 0, .18);
+      transform: scale(1);
+      opacity: 1
+    }
+
+    .box::after {
+      content: '';
+      position: absolute;
+      inset: 5px;
+      border: 1px solid rgba(255, 255, 255, .14);
+      pointer-events: none
+    }
+
+    .word {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Archivo Black', sans-serif;
+      color: #fff;
+      line-height: 1;
+      transform: skewX(-10deg);
+      position: relative;
+      z-index: 2;
+      text-shadow: 0 1px 1px rgba(0, 0, 0, .16)
+    }
+
+    .ch {
+      display: inline-block;
+      white-space: pre;
+      opacity: 1;
+      will-change: transform, opacity, filter;
+      backface-visibility: hidden
+    }
+
+    .stage.run .box {
+      animation: boxSlam .85s cubic-bezier(.2, .9, .3, 1.25) both
+    }
+
+    @keyframes boxSlam {
+      0% {
+        transform: scale(0) rotate(-6deg);
+        opacity: 0
+      }
+
+      55% {
+        transform: scale(1.12) rotate(2deg);
+        opacity: 1
+      }
+
+      78% {
+        transform: scale(.96) rotate(-1deg)
+      }
+
+      100% {
+        transform: scale(1) rotate(0);
+        opacity: 1
+      }
+    }
+
+    .stage.run .ch {
+      animation: chIn .7s cubic-bezier(.34, 1.56, .64, 1) both;
+      animation-delay: calc(var(--i) * 55ms + 480ms)
+    }
+
+    @keyframes chIn {
+      0% {
+        transform: translateY(34px) scale(1.7);
+        opacity: 0;
+        filter: blur(6px)
+      }
+
+      55% {
+        opacity: 1;
+        filter: blur(0)
+      }
+
+      100% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+        filter: blur(0)
+      }
+    }
+
+    .shine {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(105deg, transparent 32%, rgba(255, 255, 255, .55) 46%, rgba(255, 255, 255, .85) 50%, rgba(255, 255, 255, .55) 54%, transparent 68%);
+      transform: translateX(-130%) skewX(-14deg);
+      pointer-events: none;
+      z-index: 4
+    }
+
+    .stage.shining .shine {
+      animation: shineSweep .85s cubic-bezier(.4, 0, .2, 1) forwards
+    }
+
+    @keyframes shineSweep {
+      0% {
+        transform: translateX(-130%) skewX(-14deg)
+      }
+
+      100% {
+        transform: translateX(130%) skewX(-14deg)
+      }
+    }
+
+    .stage.settle .box {
+      animation: boxBreath 3.2s ease-in-out infinite
+    }
+
+    @keyframes boxBreath {
+
+      0%,
+      100% {
+        transform: scale(1)
+      }
+
+      50% {
+        transform: scale(1.025)
+      }
+    }
+
+    .stage.settle .ch {
+      animation: chFloat 3.2s ease-in-out infinite;
+      animation-delay: calc(var(--i) * -.24s)
+    }
+
+    @keyframes chFloat {
+
+      0%,
+      100% {
+        transform: translateY(0)
+      }
+
+      50% {
+        transform: translateY(-2px)
+      }
+    }
+
+    .stage.settle .ch.glitch {
+      animation: chFloat 3.2s ease-in-out infinite, glitchFx .42s steps(3) both;
+      animation-delay: calc(var(--i) * -.24s), 0s
+    }
+
+    @keyframes glitchFx {
+      0% {
+        filter: brightness(1) saturate(1)
+      }
+
+      25% {
+        filter: brightness(2.6) saturate(2) hue-rotate(25deg)
+      }
+
+      50% {
+        filter: brightness(.55) saturate(.3)
+      }
+
+      75% {
+        filter: brightness(2) saturate(1.8) hue-rotate(-25deg)
+      }
+
+      100% {
+        filter: brightness(1) saturate(1)
+      }
+    }
+
+    .stage.settle .box.blackout {
+      animation: boxBreath 3.2s ease-in-out infinite, boxBlackout .9s steps(1) both
+    }
+
+    @keyframes boxBlackout {
+
+      0%,
+      100% {
+        background: #e01a22
+      }
+
+      30% {
+        background: #0a0a0a
+      }
+
+      65% {
+        background: #0a0a0a
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="kalimat-src" data-text="{{TEXT}}" hidden></div>
+  <div class="stage" id="stage">
+    <div class="box" id="box">
+      <div class="word" id="word"></div>
+      <div class="shine"></div>
+    </div>
+  </div>
+  <script>
+    ! function() { "use strict"; var t = document.getElementById("kalimat-src"),
+        e = (t && t.dataset.text || "SUPREME").trim() || "SUPREME",
+        s = document.getElementById("stage"),
+        n = document.getElementById("box"),
+        a = document.getElementById("word"),
+        o = document.createElement("canvas").getContext("2d"),
+        i = [],
+        c = [],
+        r = [];
+
+      function l(t, e) { var s = setTimeout(t, e); return c.push(s), s }
+
+      function u() { c.forEach(clearTimeout), c = [], r.forEach(clearInterval), r = [], s.classList.remove("run", "shining", "settle"), i.forEach(function(t) { t.classList.remove("glitch") }), n.classList.remove("blackout"), s.offsetWidth }
+
+      function d() { for (var t = 1 + Math.floor(2 * Math.random()), e = {}, s = 0; s < t; s++) { var n = Math.floor(Math.random() * i.length); if (!e[n]) { e[n] = !0; var a = i[n];
+            a.classList.remove("glitch"), a.offsetWidth, a.classList.add("glitch"),
+              function(t) { l(function() { t.classList.remove("glitch") }, 460) }(a) } } }
+
+      function h() { s.classList.remove("shining"), s.offsetWidth, s.classList.add("shining"), l(function() { s.classList.remove("shining") }, 950) }
+
+      function f() { n.classList.remove("blackout"), n.offsetWidth, n.classList.add("blackout"), l(function() { n.classList.remove("blackout") }, 950) }
+
+      function m() {! function() { var t = e;
+          o.font = '400 100px "Archivo Black", sans-serif'; var s = o.measureText(t).width || 1,
+            n = Math.min(38e3 / s, 110);
+          a.style.fontSize = n + "px", a.innerHTML = "", i = []; for (var c = [], r = 0; r < t.length; r++) { var l = " " === t[r] ? " " : t[r];
+            c.push(o.measureText(l).width * n / 100) } for (var u = 0; u < t.length; u++) { var d = " " === t[u] ? " " : t[u],
+              h = document.createElement("span");
+            h.className = "ch", h.textContent = d, h.style.setProperty("--i", u), h.style.width = c[u] + "px", a.appendChild(h), i.push(h) } }(), u(), s.classList.add("run"), l(function() { s.classList.remove("run"), s.classList.add("shining"), l(function() { s.classList.remove("shining"), s.classList.add("settle"), r.push(setInterval(d, 1700)), r.push(setInterval(h, 3400)), r.push(setInterval(f, 7200)) }, 900) }, 55 * i.length + 480 + 700) } document.fonts && document.fonts.load ? document.fonts.load('400 100px "Archivo Black"').then(m).catch(m) : m() }()
+  </script>
+</body>
+
+</html>

@@ -1107,174 +1107,142 @@ timeZone: "Asia/Jakarta"
           }
         }
       };
-                        const onMessagesUpdate = async updates => {
-              for (const updateItem of updates) {
-                try {
-                  const {
-                    key,
-                    update
-                  } = updateItem;
-                  const keyId = key?.id;
-                  const chatId = key?.remoteJid;
-                  if (!keyId || !chatId) continue;
-                  
-                  const cached = global.msgStore?.get(keyId);
-
-                  // 1. PENANGANAN POLL UPDATE / VOTING (DAPAT MEMICU COMMAND)
-                  // 1. PENANGANAN POLL UPDATE / VOTING (MEMICU COMMAND OTOMATIS)
-                  if (update?.pollUpdates) {
-                    if (acquireTypedLock("poll_vote", `${chatId}_${keyId}`, 2e3)) {
-                      const pollCreation = cached?.message || cached?.rawMessage;
-                      if (pollCreation) {
-                        const userJid = sock.user?.lid ? jidNormalizedUser(sock.user.lid) : jidNormalizedUser(sock.user?.id || "");
-                        
-                        // Hitung akumulasi vote dengan Baileys
-                        const aggregate = getAggregateVotesInPollMessage({
-                          message: pollCreation,
-                          pollUpdates: update.pollUpdates
-                        }, userJid);
-
-                        if (cached) cached.pollVotes = aggregate;
-
-                        // Ambil JID pemilih (voter) dari update terakhir
-                        const latestVote = update.pollUpdates[update.pollUpdates.length - 1];
-                        const voterRaw = latestVote?.pollUpdateMessageKey?.participant || 
-                                         latestVote?.pollUpdateMessageKey?.remoteJid || 
-                                         key.participant || 
-                                         key.remoteJid;
-                        const voterJid = decodeJid(voterRaw);
-
-                        // CARI NAMA OPSI YANG DIPILIH OLEH VOTER DARI AGGREGATE
-                        const chosenOption = aggregate.find(opt => 
-                          opt.voters?.some(v => areJidsSameUser(v, voterJid) || areJidsSameUser(v, voterRaw))
-                        );
-
-                        let selectedOptionName = chosenOption?.name || "";
-
-                        // Cek apakah ada mapping custom untuk opsi ini
-                        if (global.pollMappings?.[keyId]) {
-                          const mapped = global.pollMappings[keyId].options?.find(o => o.name === selectedOptionName);
-                          if (mapped?.id || mapped?.cmd) {
-                            selectedOptionName = mapped.id || mapped.cmd;
-                          }
-                        }
-
-                        // Jika user memilih opsi yang valid, eksekusi seolah-olah user mengirim teks tersebut
-                        if (selectedOptionName) {
-                          const isFromMe = areJidsSameUser(voterJid, sock.user?.id);
-                          const fakePollMsg = {
-                            key: {
-                              remoteJid: chatId,
-                              fromMe: isFromMe,
-                              id: keyId + "_" + Date.now(),
-                              participant: chatId.endsWith("@g.us") ? voterJid : undefined
-                            },
-                            message: { conversation: selectedOptionName },
-                            messageTimestamp: Date.now()
-                          };
-
-                          const ctx = await SerializeMessage(sock, fakePollMsg);
-                          if (ctx) {
-                            ctx.loader = loader;
-                            ctx.isPollVote = true;
-                            // Jalankan command handler
-                            UpsertMsgHandle(sock, fakePollMsg, ctx, { cmd: loader });
-                          }
-                        }
-                      }
+      const onMessagesUpdate = async updates => {
+        for (const updateItem of updates) {
+          try {
+            const {
+              key,
+              update
+            } = updateItem;
+            const keyId = key?.id;
+            const chatId = key?.remoteJid;
+            if (!keyId || !chatId) continue;
+            const cached = global.msgStore?.get(keyId);
+            if (update?.pollUpdates) {
+              if (acquireTypedLock("poll_vote", `${chatId}_${keyId}`, 2e3)) {
+                const pollCreation = cached?.message || cached?.rawMessage;
+                if (pollCreation) {
+                  const userJid = sock.user?.lid ? jidNormalizedUser(sock.user.lid) : jidNormalizedUser(sock.user?.id || "");
+                  const aggregate = getAggregateVotesInPollMessage({
+                    message: pollCreation,
+                    pollUpdates: update.pollUpdates
+                  }, userJid);
+                  if (cached) cached.pollVotes = aggregate;
+                  const latestVote = update.pollUpdates[update.pollUpdates.length - 1];
+                  const voterRaw = latestVote?.pollUpdateMessageKey?.participant || latestVote?.pollUpdateMessageKey?.remoteJid || key.participant || key.remoteJid;
+                  const voterJid = decodeJid(voterRaw);
+                  const chosenOption = aggregate.find(opt => opt.voters?.some(v => areJidsSameUser(v, voterJid) || areJidsSameUser(v, voterRaw)));
+                  let selectedOptionName = chosenOption?.name || "";
+                  if (global.pollMappings?.[keyId]) {
+                    const mapped = global.pollMappings[keyId].options?.find(o => o.name === selectedOptionName);
+                    if (mapped?.id || mapped?.cmd) {
+                      selectedOptionName = mapped.id || mapped.cmd;
                     }
                   }
-
-                  const rawUpdate = update;
-                  
-                  // 2. PENANGANAN PESAN YANG DIEDIT (MESSAGE EDIT)
-                  const isStubEdit = rawUpdate?.messageStubType === 68 || rawUpdate?.messageStubType === proto.WebMessageInfo?.StubType?.MESSAGE_EDIT || rawUpdate?.stubType === 68;
-                  const isProtoEdit = rawUpdate?.message?.protocolMessage?.type === 14 || rawUpdate?.protocolMessage?.type === 14 || Boolean(rawUpdate?.message?.protocolMessage?.editedMessage);
-                  
-                  if (isStubEdit || isProtoEdit) {
-                    if (!acquireTypedLock("msg_edit", `${chatId}_${keyId}`, 4e3)) continue;
-                    
-                    const editedMsgPayload = rawUpdate?.message?.protocolMessage?.editedMessage || rawUpdate?.protocolMessage?.editedMessage || rawUpdate?.message;
-                    if (editedMsgPayload) {
-                      const editMsg = {
-                        key: {
-                          ...key,
-                          participant: key?.participant || cached?.sender || (key?.fromMe ? sock.user?.id : chatId)
-                        },
-                        message: editedMsgPayload,
-                        messageTimestamp: rawUpdate?.messageTimestamp || Date.now()
-                      };
-                      
-                      if (cached) {
-                        cached.message = editedMsgPayload;
-                        cached.rawMessage = editedMsgPayload;
-                      }
-
-                      const ctx = await SerializeMessage(sock, editMsg);
-                      if (ctx) {
-                        ctx.loader = loader;
-                        ctx.isEdited = true; // Tandai sebagai pesan edit
-                        
-                        // Eksekusi ulang handler command dengan teks baru hasil edit
-                        UpsertMsgHandle(sock, editMsg, ctx, {
-                          cmd: loader
-                        });
-                      }
-                    }
-                    continue;
-                  }
-
-                  // 3. PENANGANAN ANTI-DELETE (REVOKE)
-                  const isRevoked = rawUpdate?.messageStubType === 68 && !isStubEdit ? false : rawUpdate?.messageStubType === proto.WebMessageInfo?.StubType?.REVOKE || rawUpdate?.message === null || rawUpdate?.protocolMessage?.type === 0;
-                  if (isRevoked) {
-                    if (!acquireTypedLock("antidel_revoke", `${chatId}_${keyId}`, 8e3)) continue;
-                    const groupCfg = global.db?.group?.[chatId];
-                    if (cached && groupCfg?.antidelete === true && chatId?.endsWith("@g.us")) {
-                      let senderJid = cached.sender || cached.key?.participant || cached.participant;
-                      if (senderJid && senderJid.endsWith("@lid")) {
-                        senderJid = await withTimeout(resolveLidToJid(senderJid, sock, null, []), 2500).catch(() => senderJid);
-                      }
-                      const senderNum = extractNum(senderJid) || senderJid?.split("@")[0] || "Unknown";
-                      const deleteTime = new Date().toLocaleTimeString("id-ID", {
-                        timeZone: "Asia/Jakarta"
+                  if (selectedOptionName) {
+                    const isFromMe = areJidsSameUser(voterJid, sock.user?.id);
+                    const fakePollMsg = {
+                      key: {
+                        remoteJid: chatId,
+                        fromMe: isFromMe,
+                        id: keyId + "_" + Date.now(),
+                        participant: chatId.endsWith("@g.us") ? voterJid : undefined
+                      },
+                      message: {
+                        conversation: selectedOptionName
+                      },
+                      messageTimestamp: Date.now()
+                    };
+                    const ctx = await SerializeMessage(sock, fakePollMsg);
+                    if (ctx) {
+                      ctx.loader = loader;
+                      ctx.isPollVote = true;
+                      UpsertMsgHandle(sock, fakePollMsg, ctx, {
+                        cmd: loader
                       });
-                      const noticeText = `–  *A N T I - D E L E T E*\n\nTerdeteksi pesan yang baru saja dihapus oleh pengirim.\n\n┌  ◦  *Sender* : @${senderNum}\n└  ◦  *Time* : ${deleteTime} WIB\n\n_Pesan asli yang dihapus diteruskan di bawah ini:_`;
-                      const safeMentions = sanitizeMentions([senderJid]);
-                      const sentNotice = await safeSendMessage(sock, chatId, {
-                        text: noticeText,
-                        mentions: safeMentions
-                      }).catch(() => null);
-                      const targetMsg = cached.fakeObj || cached.vM || cached.msg || (cached.key ? cached : null) || {
-                        key: {
-                          remoteJid: chatId,
-                          id: keyId,
-                          participant: senderJid
-                        },
-                        message: cached.rawMessage || {
-                          conversation: cached.text || ""
-                        },
-                        messageTimestamp: cached.timestamp || Date.now()
-                      };
-                      if (targetMsg) {
-                        try {
-                          await copyNForward(sock, chatId, targetMsg, false, {}, sentNotice || undefined);
-                        } catch (_) {
-                          if (cached.text || cached.body) {
-                            await safeSendMessage(sock, chatId, {
-                              text: `💬 *Isi Pesan:*\n\`\`\`${cached.text || cached.body}\`\`\``
-                            }, {
-                              quoted: sentNotice || undefined
-                            });
-                          }
-                        }
-                      }
                     }
                   }
-                } catch (_) {}
+                }
               }
-            };
-
-
+            }
+            const rawUpdate = update;
+            const isStubEdit = rawUpdate?.messageStubType === 68 || rawUpdate?.messageStubType === proto.WebMessageInfo?.StubType?.MESSAGE_EDIT || rawUpdate?.stubType === 68;
+            const isProtoEdit = rawUpdate?.message?.protocolMessage?.type === 14 || rawUpdate?.protocolMessage?.type === 14 || Boolean(rawUpdate?.message?.protocolMessage?.editedMessage);
+            if (isStubEdit || isProtoEdit) {
+              if (!acquireTypedLock("msg_edit", `${chatId}_${keyId}`, 4e3)) continue;
+              const editedMsgPayload = rawUpdate?.message?.protocolMessage?.editedMessage || rawUpdate?.protocolMessage?.editedMessage || rawUpdate?.message;
+              if (editedMsgPayload) {
+                const editMsg = {
+                  key: {
+                    ...key,
+                    participant: key?.participant || cached?.sender || (key?.fromMe ? sock.user?.id : chatId)
+                  },
+                  message: editedMsgPayload,
+                  messageTimestamp: rawUpdate?.messageTimestamp || Date.now()
+                };
+                if (cached) {
+                  cached.message = editedMsgPayload;
+                  cached.rawMessage = editedMsgPayload;
+                }
+                const ctx = await SerializeMessage(sock, editMsg);
+                if (ctx) {
+                  ctx.loader = loader;
+                  ctx.isEdited = true;
+                  UpsertMsgHandle(sock, editMsg, ctx, {
+                    cmd: loader
+                  });
+                }
+              }
+              continue;
+            }
+            const isRevoked = rawUpdate?.messageStubType === 68 && !isStubEdit ? false : rawUpdate?.messageStubType === proto.WebMessageInfo?.StubType?.REVOKE || rawUpdate?.message === null || rawUpdate?.protocolMessage?.type === 0;
+            if (isRevoked) {
+              if (!acquireTypedLock("antidel_revoke", `${chatId}_${keyId}`, 8e3)) continue;
+              const groupCfg = global.db?.group?.[chatId];
+              if (cached && groupCfg?.antidelete === true && chatId?.endsWith("@g.us")) {
+                let senderJid = cached.sender || cached.key?.participant || cached.participant;
+                if (senderJid && senderJid.endsWith("@lid")) {
+                  senderJid = await withTimeout(resolveLidToJid(senderJid, sock, null, []), 2500).catch(() => senderJid);
+                }
+                const senderNum = extractNum(senderJid) || senderJid?.split("@")[0] || "Unknown";
+                const deleteTime = new Date().toLocaleTimeString("id-ID", {
+                  timeZone: "Asia/Jakarta"
+                });
+                const noticeText = `–  *A N T I - D E L E T E*\n\nTerdeteksi pesan yang baru saja dihapus oleh pengirim.\n\n┌  ◦  *Sender* : @${senderNum}\n└  ◦  *Time* : ${deleteTime} WIB\n\n_Pesan asli yang dihapus diteruskan di bawah ini:_`;
+                const safeMentions = sanitizeMentions([senderJid]);
+                const sentNotice = await safeSendMessage(sock, chatId, {
+                  text: noticeText,
+                  mentions: safeMentions
+                }).catch(() => null);
+                const targetMsg = cached.fakeObj || cached.vM || cached.msg || (cached.key ? cached : null) || {
+                  key: {
+                    remoteJid: chatId,
+                    id: keyId,
+                    participant: senderJid
+                  },
+                  message: cached.rawMessage || {
+                    conversation: cached.text || ""
+                  },
+                  messageTimestamp: cached.timestamp || Date.now()
+                };
+                if (targetMsg) {
+                  try {
+                    await copyNForward(sock, chatId, targetMsg, false, {}, sentNotice || undefined);
+                  } catch (_) {
+                    if (cached.text || cached.body) {
+                      await safeSendMessage(sock, chatId, {
+                        text: `💬 *Isi Pesan:*\n\`\`\`${cached.text || cached.body}\`\`\``
+                      }, {
+                        quoted: sentNotice || undefined
+                      });
+                    }
+                  }
+                }
+              }
+            }
+          } catch (_) {}
+        }
+      };
       const onGroupParticipantsUpdate = async ({
         id,
         author,

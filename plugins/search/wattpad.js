@@ -1,6 +1,7 @@
 import axios from "axios";
-import { simpleQuoted } from "../../lib/quoted.js";
-
+import {
+  simpleQuoted
+} from "../../lib/quoted.js";
 const CONFIG = {
   API_URL: `${global.bot?.api?.wudysoft}/api/search/wattpad`,
   TIMEOUT: 3e4,
@@ -13,12 +14,10 @@ function parseFlags(input = "") {
   const flags = {};
   const flagRegex = /(?:--|-)([a-zA-Z0-9_-]+)(?:[=\s]+("(?:\\"|[^"])*"|'(?:\\'|[^'])*'|[^\s]+))?/g;
   let match;
-
   while ((match = flagRegex.exec(input)) !== null) {
     let key = match[1].toLowerCase();
     let rawVal = match[2];
     let val = true;
-
     const aliasMap = {
       search: ["s", "q", "query"],
       detail: ["u", "info", "story"],
@@ -31,13 +30,11 @@ function parseFlags(input = "") {
       mature: ["m", "mature", "nsfw"],
       language: ["lang", "language"]
     };
-
     for (const [realKey, aliases] of Object.entries(aliasMap)) {
       if (aliases.includes(key)) key = realKey;
     }
-
     if (rawVal !== undefined) {
-      if ((rawVal.startsWith('"') && rawVal.endsWith('"')) || (rawVal.startsWith("'") && rawVal.endsWith("'"))) {
+      if (rawVal.startsWith('"') && rawVal.endsWith('"') || rawVal.startsWith("'") && rawVal.endsWith("'")) {
         rawVal = rawVal.slice(1, -1);
       }
       if (rawVal === "true") val = true;
@@ -47,10 +44,7 @@ function parseFlags(input = "") {
     }
     flags[key] = val;
   }
-
   const cleanPrompt = input.replace(flagRegex, "").trim();
-
-  // Deteksi URL Wattpad otomatis (story ID atau part ID)
   if (!flags.detail && !flags.read && /^https?:\/\/(?:www\.)?wattpad\.com\/.+/i.test(cleanPrompt)) {
     const storyMatch = cleanPrompt.match(/\/story\/(\d+)/i);
     const partMatch = cleanPrompt.match(/\/(\d+)-/i);
@@ -60,10 +54,11 @@ function parseFlags(input = "") {
       flags.read = partMatch[1];
     }
   }
-
-  return { flags, cleanPrompt };
+  return {
+    flags: flags,
+    cleanPrompt: cleanPrompt
+  };
 }
-
 export default {
   name: "wattpad",
   aliases: ["wattpad", "wp", "wpad"],
@@ -81,62 +76,59 @@ export default {
           rawText = raw.slice(firstWord.length).trim();
         }
       }
-
       const prefix = ctx.prefix || ".";
       const botName = global.bot?.name || "WudysoftBot";
       const botFooter = global.bot?.footer || `${botName} • Wattpad Reader`;
       const userName = ctx.pushname || ctx.sender.split("@")[0];
       const quotedMsg = typeof simpleQuoted === "function" ? simpleQuoted(ctx) : msg;
       const targetChat = ctx.chat || ctx.id;
-
-      const { flags, cleanPrompt } = parseFlags(rawText);
-
-      // Parameter Helper Flags
+      const {
+        flags,
+        cleanPrompt
+      } = parseFlags(rawText);
       const targetId = flags.id || flags.detail || flags.read || flags.parts;
       const query = flags.search || cleanPrompt;
       const limit = Number(flags.limit) || CONFIG.DEFAULT_LIMIT;
       const offset = Number(flags.offset) || 0;
       const pageNum = Number(flags.page) || 1;
-      const mature = flags.mature !== undefined ? (String(flags.mature) === "true" || flags.mature === true) : true;
+      const mature = flags.mature !== undefined ? String(flags.mature) === "true" || flags.mature === true : true;
       const language = flags.language ? String(flags.language) : CONFIG.DEFAULT_LANG;
-
-      // 1. FITUR BACA TEKS BAB (action=read)
       if (flags.read) {
         const partId = String(flags.read).trim();
         await ctx.react?.("⏳");
-
-        const [partRes, storyTextRes] = await Promise.all([
-          axios.get(CONFIG.API_URL, {
-            params: { action: "viewParts", id: partId },
-            headers: { "User-Agent": CONFIG.USER_AGENT },
-            timeout: CONFIG.TIMEOUT
-          }).then(res => res.data).catch(() => null),
-
-          axios.get(CONFIG.API_URL, {
-            params: { action: "read", id: partId },
-            headers: { "User-Agent": CONFIG.USER_AGENT },
-            timeout: CONFIG.TIMEOUT
-          }).then(res => res.data).catch(() => null)
-        ]);
-
+        const [partRes, storyTextRes] = await Promise.all([axios.get(CONFIG.API_URL, {
+          params: {
+            action: "viewParts",
+            id: partId
+          },
+          headers: {
+            "User-Agent": CONFIG.USER_AGENT
+          },
+          timeout: CONFIG.TIMEOUT
+        }).then(res => res.data).catch(() => null), axios.get(CONFIG.API_URL, {
+          params: {
+            action: "read",
+            id: partId
+          },
+          headers: {
+            "User-Agent": CONFIG.USER_AGENT
+          },
+          timeout: CONFIG.TIMEOUT
+        }).then(res => res.data).catch(() => null)]);
         const fullText = storyTextRes?.text;
         if (!fullText) {
           await ctx.react?.("❌");
           return ctx.reply("❌ Gagal memuat teks bab. Bab mungkin tidak ditemukan atau dikunci (paywalled).");
         }
-
         const title = partRes?.title || "Bab Wattpad";
         const storyTitle = partRes?.group?.title || "Cerita Wattpad";
         const author = partRes?.group?.user?.name || "-";
         const coverImg = partRes?.group?.cover || global.bot?.media?.banner1 || "https://files.catbox.moe/g2e6i5.jpg";
-
-        // Paginated text reading jika teks sangat panjang
         const chunkSize = 3500;
         const totalTextPages = Math.ceil(fullText.length / chunkSize) || 1;
         const currentTextPage = Math.min(Math.max(pageNum, 1), totalTextPages);
         const startIndex = (currentTextPage - 1) * chunkSize;
         const textChunk = fullText.slice(startIndex, startIndex + chunkSize);
-
         const bodyText = `Hi ${userName}! Selamat membaca.
 
 –  *W A T T P A D  R E A D E R*
@@ -150,11 +142,9 @@ export default {
 ───────────────────
 
 ${textChunk}${fullText.length > startIndex + chunkSize ? "\n\n...(Teks belum selesai, gunakan tombol/flag untuk halaman berikutnya)..." : ""}`;
-
         const buttons = [];
         const partsList = partRes?.group?.parts || [];
         const currentIndex = partsList.findIndex(p => String(p.id) === String(partId));
-
         if (currentTextPage < totalTextPages) {
           buttons.push({
             name: "quick_reply",
@@ -173,7 +163,6 @@ ${textChunk}${fullText.length > startIndex + chunkSize ? "\n\n...(Teks belum sel
             })
           });
         }
-
         buttons.push({
           name: "cta_url",
           buttonParamsJson: JSON.stringify({
@@ -182,7 +171,6 @@ ${textChunk}${fullText.length > startIndex + chunkSize ? "\n\n...(Teks belum sel
             merchant_url: partRes?.url || `https://www.wattpad.com/${partId}`
           })
         });
-
         const options = {
           image: coverImg,
           contextInfo: {
@@ -191,34 +179,39 @@ ${textChunk}${fullText.length > startIndex + chunkSize ? "\n\n...(Teks belum sel
           },
           quoted: quotedMsg
         };
-
         await ctx.react?.("✅");
         if (typeof ctx.sendCta === "function") {
           return await ctx.sendCta(bodyText, botFooter, buttons, options);
         } else {
           return await sock.sendMessage(targetChat, {
-            image: { url: coverImg },
+            image: {
+              url: coverImg
+            },
             caption: bodyText
-          }, { quoted: quotedMsg });
+          }, {
+            quoted: quotedMsg
+          });
         }
       }
-
-      // 2. FITUR VIEW PARTS / RINCIAN BAB (action=viewParts)
       if (flags.parts) {
         const partId = String(flags.parts).trim();
         await ctx.react?.("⏳");
-
-        const { data: res } = await axios.get(CONFIG.API_URL, {
-          params: { action: "viewParts", id: partId },
-          headers: { "User-Agent": CONFIG.USER_AGENT },
+        const {
+          data: res
+        } = await axios.get(CONFIG.API_URL, {
+          params: {
+            action: "viewParts",
+            id: partId
+          },
+          headers: {
+            "User-Agent": CONFIG.USER_AGENT
+          },
           timeout: CONFIG.TIMEOUT
         });
-
         if (!res || res.error || !res.id) {
           await ctx.react?.("❌");
           return ctx.reply("❌ Rincian bab/part Wattpad tidak ditemukan.");
         }
-
         const groupParts = res.group?.parts || [];
         const coverImg = res.group?.cover || "https://files.catbox.moe/g2e6i5.jpg";
         const partRows = groupParts.slice(0, 50).map(p => ({
@@ -226,7 +219,6 @@ ${textChunk}${fullText.length > startIndex + chunkSize ? "\n\n...(Teks belum sel
           id: `${prefix}wattpad -r ${p.id}`,
           description: `Klik untuk membaca bab ini`
         }));
-
         const bodyText = `–  *W A T T P A D  V I E W  P A R T S*
 
 ┌  ◦  *Judul Story* : ${res.group?.title || "-"}
@@ -236,12 +228,14 @@ ${textChunk}${fullText.length > startIndex + chunkSize ? "\n\n...(Teks belum sel
 │  ◦  *Dibaca* : 👀 ${res.readCount?.toLocaleString() || 0}
 │  ◦  *Di-Vote* : ⭐ ${res.voteCount?.toLocaleString() || 0}
 └  ◦  *Total Parts* : ${groupParts.length} Bab`;
-
         const buttons = [{
           name: "single_select",
           buttonParamsJson: JSON.stringify({
             title: "📖 DAFTAR SEMUA BAB",
-            sections: [{ title: "Daftar Parts", rows: partRows }]
+            sections: [{
+              title: "Daftar Parts",
+              rows: partRows
+            }]
           })
         }, {
           name: "quick_reply",
@@ -257,7 +251,6 @@ ${textChunk}${fullText.length > startIndex + chunkSize ? "\n\n...(Teks belum sel
             merchant_url: res.url || `https://www.wattpad.com/${res.id}`
           })
         }];
-
         const options = {
           image: coverImg,
           contextInfo: {
@@ -266,45 +259,48 @@ ${textChunk}${fullText.length > startIndex + chunkSize ? "\n\n...(Teks belum sel
           },
           quoted: quotedMsg
         };
-
         await ctx.react?.("✅");
         if (typeof ctx.sendCta === "function") {
           return await ctx.sendCta(bodyText, botFooter, buttons, options);
         } else {
           return await sock.sendMessage(targetChat, {
-            image: { url: coverImg },
+            image: {
+              url: coverImg
+            },
             caption: bodyText
-          }, { quoted: quotedMsg });
+          }, {
+            quoted: quotedMsg
+          });
         }
       }
-
-      // 3. FITUR DETAIL CERITA & DAFTAR BAB (action=detail)
-      if (flags.detail || (flags.id && !query)) {
+      if (flags.detail || flags.id && !query) {
         const storyId = String(targetId).trim();
         await ctx.react?.("⏳");
-
-        const { data: res } = await axios.get(CONFIG.API_URL, {
-          params: { action: "detail", id: storyId },
-          headers: { "User-Agent": CONFIG.USER_AGENT },
+        const {
+          data: res
+        } = await axios.get(CONFIG.API_URL, {
+          params: {
+            action: "detail",
+            id: storyId
+          },
+          headers: {
+            "User-Agent": CONFIG.USER_AGENT
+          },
           timeout: CONFIG.TIMEOUT
         });
-
         if (!res || res.deleted || res.error) {
           await ctx.react?.("❌");
           return ctx.reply("❌ Cerita Wattpad tidak ditemukan atau telah dihapus.");
         }
-
         const cleanDesc = (res.description || "Tidak ada deskripsi.").slice(0, 300);
         const parts = res.parts || [];
         const coverImg = res.cover || "https://files.catbox.moe/g2e6i5.jpg";
         const tags = res.tags ? res.tags.slice(0, 8).map(t => `#${t}`).join(" ") : "-";
-
         const episodeRows = parts.slice(0, 50).map((p, idx) => ({
           title: `[#${idx + 1}] ${p.title || "Bab"}`.slice(0, 24),
           id: `${prefix}wattpad -r ${p.id}`,
           description: `⭐ ${p.voteCount?.toLocaleString() || 0} • 👀 ${p.readCount?.toLocaleString() || 0}`
         }));
-
         const bodyText = `–  *W A T T P A D  I N F O  L E N G K A P*
 
 ┌  ◦  *Judul* : ${res.title}
@@ -323,15 +319,16 @@ ${textChunk}${fullText.length > startIndex + chunkSize ? "\n\n...(Teks belum sel
 “${cleanDesc}...”
 
 Pilih bab pada menu di bawah untuk mulai membaca.`;
-
         const buttons = [{
           name: "single_select",
           buttonParamsJson: JSON.stringify({
             title: "📖 PILIH BAB / PART",
-            sections: [{ title: `DAFTAR BAB (${parts.length} Bab)`, rows: episodeRows }]
+            sections: [{
+              title: `DAFTAR BAB (${parts.length} Bab)`,
+              rows: episodeRows
+            }]
           })
         }];
-
         if (parts[0]?.id) {
           buttons.push({
             name: "quick_reply",
@@ -341,7 +338,6 @@ Pilih bab pada menu di bawah untuk mulai membaca.`;
             })
           });
         }
-
         buttons.push({
           name: "cta_url",
           buttonParamsJson: JSON.stringify({
@@ -350,7 +346,6 @@ Pilih bab pada menu di bawah untuk mulai membaca.`;
             merchant_url: res.url || `https://www.wattpad.com/story/${res.id}`
           })
         });
-
         const options = {
           image: coverImg,
           params: {
@@ -367,19 +362,20 @@ Pilih bab pada menu di bawah untuk mulai membaca.`;
           },
           quoted: quotedMsg
         };
-
         await ctx.react?.("✅");
         if (typeof ctx.sendCta === "function") {
           return await ctx.sendCta(bodyText, botFooter, buttons, options);
         } else {
           return await sock.sendMessage(targetChat, {
-            image: { url: coverImg },
+            image: {
+              url: coverImg
+            },
             caption: bodyText
-          }, { quoted: quotedMsg });
+          }, {
+            quoted: quotedMsg
+          });
         }
       }
-
-      // 4. MENU UTAMA/PANDUAN JIKA TANPA PARAMETER
       if (!query) {
         return ctx.reply(`–  *W A T T P A D  F E A T U R E*
 
@@ -402,10 +398,10 @@ Pusat pencarian, rincian cerita lengkap, dan pembaca novel Wattpad.
 │  ◦  *-m, --mature* : Konten dewasa (true/false)
 └  ◦  *-lang, --language* : Kode Bahasa (default: 20 ID)`);
       }
-
-      // 5. FITUR PENCARIAN CERITA (action=search)
       await ctx.react?.("⏳");
-      const { data: searchResult } = await axios.get(CONFIG.API_URL, {
+      const {
+        data: searchResult
+      } = await axios.get(CONFIG.API_URL, {
         params: {
           action: "search",
           query: query,
@@ -414,25 +410,23 @@ Pusat pencarian, rincian cerita lengkap, dan pembaca novel Wattpad.
           mature: mature,
           language: language
         },
-        headers: { "User-Agent": CONFIG.USER_AGENT },
+        headers: {
+          "User-Agent": CONFIG.USER_AGENT
+        },
         timeout: CONFIG.TIMEOUT
       });
-
       const stories = searchResult?.stories || [];
       if (!stories.length) {
         await ctx.react?.("❌");
         return ctx.reply(`❌ Tidak ditemukan cerita Wattpad untuk kata kunci: *"${query}"*`);
       }
-
       const topStory = stories[0];
       const coverImg = topStory.cover || "https://files.catbox.moe/g2e6i5.jpg";
-
       const searchRows = stories.map((item, idx) => ({
         title: `[#${offset + idx + 1}] ${item.title}`.slice(0, 24),
         id: `${prefix}wattpad -u ${item.id}`,
         description: `Penulis: ${item.user?.name || "-"} • ⭐ ${item.voteCount || 0}`
       }));
-
       const bodyText = `Hi ${userName}! Ditemukan ${searchResult.total?.toLocaleString() || stories.length} cerita.
 
 –  *W A T T P A D  S E A R C H*
@@ -446,15 +440,16 @@ Pusat pencarian, rincian cerita lengkap, dan pembaca novel Wattpad.
 └  ◦  *Offset / Limit* : ${offset} / ${limit}
 
 Pilih cerita dari menu di bawah untuk melihat rincian detail dan membaca.`;
-
       const buttons = [{
         name: "single_select",
         buttonParamsJson: JSON.stringify({
           title: `📚 HASIL PENCARIAN (${stories.length})`,
-          sections: [{ title: `Daftar Cerita (Offset ${offset})`, rows: searchRows }]
+          sections: [{
+            title: `Daftar Cerita (Offset ${offset})`,
+            rows: searchRows
+          }]
         })
       }];
-
       if (searchResult.nextUrl || stories.length >= limit) {
         buttons.push({
           name: "quick_reply",
@@ -464,7 +459,6 @@ Pilih cerita dari menu di bawah untuk melihat rincian detail dan membaca.`;
           })
         });
       }
-
       const options = {
         image: coverImg,
         params: {
@@ -481,17 +475,19 @@ Pilih cerita dari menu di bawah untuk melihat rincian detail dan membaca.`;
         },
         quoted: quotedMsg
       };
-
       await ctx.react?.("✅");
       if (typeof ctx.sendCta === "function") {
         await ctx.sendCta(bodyText, botFooter, buttons, options);
       } else {
         await sock.sendMessage(targetChat, {
-          image: { url: coverImg },
+          image: {
+            url: coverImg
+          },
           caption: bodyText
-        }, { quoted: quotedMsg });
+        }, {
+          quoted: quotedMsg
+        });
       }
-
     } catch (error) {
       console.error("[Wattpad Error]:", error?.message || error);
       await ctx.react?.("❌");

@@ -1,6 +1,7 @@
 import axios from "axios";
-import { simpleQuoted } from "../../lib/quoted.js";
-
+import {
+  simpleQuoted
+} from "../../lib/quoted.js";
 const CONFIG = {
   SEARCH_V1_URL: `${global.bot?.api?.wudysoft}/api/search/twibbon/v1`,
   SEARCH_V2_URL: `${global.bot?.api?.wudysoft}/api/search/twibbon/v2`,
@@ -8,21 +9,16 @@ const CONFIG = {
   TIMEOUT: 45e3,
   USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"
 };
-
-// Cache internal untuk menyimpan sesi pencarian & frame terpilih per user
 const twibbonCache = new Map();
 
 function parseFlags(input = "") {
   const flags = {};
   const flagRegex = /(?:--|-)([a-zA-Z0-9_-]+)(?:[=\s]+("(?:\\"|[^"])*"|'(?:\\'|[^'])*'|[^\s]+))?/g;
   let match;
-
   while ((match = flagRegex.exec(input)) !== null) {
     let key = match[1].toLowerCase();
     let rawVal = match[2];
     let val = true;
-
-    // Mapping Alias Helper Flags
     const aliasMap = {
       set: ["s", "select", "pilih"],
       page: ["p", "pg", "halaman"],
@@ -34,13 +30,11 @@ function parseFlags(input = "") {
       detail: ["d", "rinci"],
       category: ["cat", "kategori"]
     };
-
     for (const [realKey, aliases] of Object.entries(aliasMap)) {
       if (aliases.includes(key)) key = realKey;
     }
-
     if (rawVal !== undefined) {
-      if ((rawVal.startsWith('"') && rawVal.endsWith('"')) || (rawVal.startsWith("'") && rawVal.endsWith("'"))) {
+      if (rawVal.startsWith('"') && rawVal.endsWith('"') || rawVal.startsWith("'") && rawVal.endsWith("'")) {
         rawVal = rawVal.slice(1, -1);
       }
       if (rawVal === "true") val = true;
@@ -50,46 +44,42 @@ function parseFlags(input = "") {
     }
     flags[key] = val;
   }
-
   const cleanPrompt = input.replace(flagRegex, "").trim();
-  return { flags, cleanPrompt };
+  return {
+    flags: flags,
+    cleanPrompt: cleanPrompt
+  };
 }
-
-// Helper untuk mengambil buffer gambar dari Chat (Reply Media / Profile Picture Mention)
 async function resolveAvatarBuffer(sock, ctx, msg) {
-  // 1. Dari Reply Image / Quoted Media
   const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
   const mime = quotedMsg?.imageMessage?.mimetype || msg.message?.imageMessage?.mimetype;
-
   if (mime) {
     try {
-      const downloadMsg = quotedMsg?.imageMessage ? { message: quotedMsg } : msg;
+      const downloadMsg = quotedMsg?.imageMessage ? {
+        message: quotedMsg
+      } : msg;
       const buffer = await sock.downloadMediaMessage(downloadMsg);
       if (buffer) return buffer;
     } catch (e) {
       console.error("[Twibbon] Gagal mengunduh gambar dari chat:", e);
     }
   }
-
-  // 2. Dari Mentioned User / Sender (Profile Picture)
   const mentionedJid = ctx.mentionedJid?.[0] || msg.message?.extendedTextMessage?.contextInfo?.participant;
   const targetJid = mentionedJid || ctx.sender || ctx.author;
-
   if (targetJid) {
     try {
       const ppUrl = await sock.profilePictureUrl(targetJid, "image");
       if (ppUrl) {
-        const res = await axios.get(ppUrl, { responseType: "arraybuffer", timeout: 15e3 });
+        const res = await axios.get(ppUrl, {
+          responseType: "arraybuffer",
+          timeout: 15e3
+        });
         return Buffer.from(res.data);
       }
-    } catch (_) {
-      // Jika profil di-private
-    }
+    } catch (_) {}
   }
-
   return null;
 }
-
 export default {
   name: "twibbon",
   aliases: ["twib", "frametwibbon", "twibify"],
@@ -107,50 +97,41 @@ export default {
           rawText = raw.slice(firstWord.length).trim();
         }
       }
-
       const prefix = ctx.prefix || ".";
       const botName = global.bot?.name || "WudysoftBot";
       const botFooter = global.bot?.footer || `${botName} • Twibbon Generator`;
       const userName = ctx.pushname || ctx.sender.split("@")[0];
       const quotedMsg = typeof simpleQuoted === "function" ? simpleQuoted(ctx) : msg;
       const senderId = ctx.sender || ctx.author || msg.key?.participant || msg.key?.remoteJid || ctx.id;
-
-      const { flags, cleanPrompt } = parseFlags(rawText);
+      const {
+        flags,
+        cleanPrompt
+      } = parseFlags(rawText);
       const userCached = twibbonCache.get(senderId);
-
-      // --- AKSI 1: Memilih & Menetapkan Frame dari Hasil Pencarian ---
       if (flags.set !== undefined && userCached?.searchResults) {
         const selectIdx = Number(flags.set) - 1;
         const selected = userCached.searchResults[selectIdx];
-
         if (!selected) {
           await ctx.react("❌");
           return ctx.reply(`❌ Pilihan #${flags.set} tidak ditemukan. Pilih angka antara 1 - ${userCached.searchResults.length}`);
         }
-
-        // Ekstrak URL Frame PNG
         let frameUrl = selected.frameUrl;
         if (!frameUrl && selected.modules) {
           const frmModule = selected.modules.find(m => m.moduleCode === "FRM" || m.data?.frames);
           frameUrl = frmModule?.data?.frames?.[0];
         }
-
         if (!frameUrl) {
           frameUrl = selected.image || selected.thumbnail;
         }
-
         const captionText = selected.caption || selected.modules?.[0]?.data?.caption || selected.description || selected.title || "Support campaign ini!";
-
         userCached.activeFrame = {
           title: selected.name || selected.title || "Twibbon Campaign",
           frameUrl: frameUrl,
           caption: captionText,
           creator: selected.campaignCreator?.name || selected.creator?.name || "Anonymous"
         };
-
         twibbonCache.set(senderId, userCached);
         await ctx.react("✅");
-
         return ctx.reply(`–  *F R A M E  T W I B B O N  S E T*
 
 ┌  ◦  *Judul* : ${userCached.activeFrame.title}
@@ -161,27 +142,19 @@ export default {
 💡 *Langkah Selanjutnya*:
 Balas/reply pesan ini dengan *foto/gambar*, atau ketik \`${prefix}twibbon\` sambil *mention @user* untuk membuat twibbon.`);
       }
-
-      // --- AKSI 2: Generate Twibbon (Jika Ada Frame Aktif & Ada Reply Gambar / Mention) ---
       const hasImageInChat = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage || msg.message?.imageMessage;
       const isMentioning = ctx.mentionedJid?.length > 0;
-
-      if (userCached?.activeFrame && (hasImageInChat || isMentioning || (!cleanPrompt && !flags.url))) {
+      if (userCached?.activeFrame && (hasImageInChat || isMentioning || !cleanPrompt && !flags.url)) {
         await ctx.react("⏳");
-
         const avatarBuffer = await resolveAvatarBuffer(sock, ctx, msg);
-
         if (!avatarBuffer) {
           await ctx.react("❌");
           return ctx.reply(`❌ Foto tidak ditemukan. Kirim/reply gambar atau mention pengguna untuk menggabungkan foto ke frame *"${userCached.activeFrame.title}"*.`);
         }
-
-        // Payload Maker Twibbon (Base64 avatar + URL frame)
         const payload = {
           avatar: avatarBuffer.toString("base64"),
           frame: userCached.activeFrame.frameUrl
         };
-
         const response = await axios.post(CONFIG.MAKER_URL, payload, {
           headers: {
             "Content-Type": "application/json",
@@ -190,12 +163,10 @@ Balas/reply pesan ini dengan *foto/gambar*, atau ketik \`${prefix}twibbon\` samb
           responseType: "arraybuffer",
           timeout: CONFIG.TIMEOUT
         });
-
         const resultBuffer = response?.data;
         if (!resultBuffer || resultBuffer.length === 0) {
           throw new Error("Gagal menerima gambar hasil twibbon.");
         }
-
         const resCaption = `–  *T W I B B O N  G E N E R A T E D*
 
 ┌  ◦  *Campaign* : ${userCached.activeFrame.title}
@@ -203,28 +174,18 @@ Balas/reply pesan ini dengan *foto/gambar*, atau ketik \`${prefix}twibbon\` samb
 
 💬 *Caption Campaign*:
 ${userCached.activeFrame.caption}`;
-
-        await sock.sendMessage(
-          ctx.id,
-          {
-            image: Buffer.from(resultBuffer),
-            caption: resCaption
-          },
-          { quoted: quotedMsg }
-        );
-
+        await sock.sendMessage(ctx.id, {
+          image: Buffer.from(resultBuffer),
+          caption: resCaption
+        }, {
+          quoted: quotedMsg
+        });
         await ctx.react("✅");
         return;
       }
-
-      // --- AKSI 3: Pencarian Campaign Twibbon Baru / Navigasi Halaman ---
       const query = cleanPrompt || userCached?.query;
-
       if (!query && !flags.url) {
-        let activeInfo = userCached?.activeFrame
-          ? `\n\n📌 *Frame Terpilih Sesi Ini*:\n└  *Title*: ${userCached.activeFrame.title}`
-          : "";
-
+        let activeInfo = userCached?.activeFrame ? `\n\n📌 *Frame Terpilih Sesi Ini*:\n└  *Title*: ${userCached.activeFrame.title}` : "";
         return ctx.reply(`–  *T W I B B O N  S E A R C H  &  M A K E R*
 
 Gunakan fitur ini untuk mencari campaign Twibbon & memasang foto kamu.
@@ -241,68 +202,52 @@ Gunakan fitur ini untuk mencari campaign Twibbon & memasang foto kamu.
 ├  ◦  \`--sort <newest/support>\` : Pengurutan hasil
 └  ◦  \`--category <FRM,BKG>\` : Kategori frame (khusus v1)`);
       }
-
       await ctx.react("⏳");
-
-      // Tentukan Versi API (Default v1 jika tidak ada v2)
-      const selectedVersion = flags.v2 ? "v2" : (flags.v1 ? "v1" : (flags.version === 2 || flags.version === "v2" ? "v2" : "v1"));
+      const selectedVersion = flags.v2 ? "v2" : flags.v1 ? "v1" : flags.version === 2 || flags.version === "v2" ? "v2" : "v1";
       const isV2 = selectedVersion === "v2";
       const searchEndpoint = isV2 ? CONFIG.SEARCH_V2_URL : CONFIG.SEARCH_V1_URL;
-
       const page = Number(flags.page) || 1;
       const limit = Number(flags.limit) || (isV2 ? 12 : 5);
-
-      // Payload lengkap disesuaikan dengan skema v1 / v2
-      const payload = isV2
-        ? {
-            query: query,
-            page: page,
-            perPage: limit,
-            sort: flags.sort || "newest"
-          }
-        : {
-            query: query,
-            page: page,
-            limit: limit,
-            numItems: limit,
-            sort: flags.sort || "support",
-            category: flags.category || "FRM,BKG",
-            detail: flags.detail !== undefined ? flags.detail : true,
-            reactive: 1,
-            ...flags
-          };
-
-      const { data } = await axios.post(
-        searchEndpoint,
-        payload,
-        {
+      const payload = isV2 ? {
+        query: query,
+        page: page,
+        perPage: limit,
+        sort: flags.sort || "newest"
+      } : {
+        query: query,
+        page: page,
+        limit: limit,
+        numItems: limit,
+        sort: flags.sort || "support",
+        category: flags.category || "FRM,BKG",
+        detail: flags.detail !== undefined ? flags.detail : true,
+        reactive: 1,
+        ...flags
+      };
+      const {
+        data
+      } = await axios.post(searchEndpoint, payload, {
+        headers: {
+          "Content-Type": "application/json",
+          "User-Agent": CONFIG.USER_AGENT
+        },
+        timeout: CONFIG.TIMEOUT
+      }).catch(async () => {
+        return await axios.get(searchEndpoint, {
+          params: payload,
           headers: {
-            "Content-Type": "application/json",
             "User-Agent": CONFIG.USER_AGENT
           },
           timeout: CONFIG.TIMEOUT
-        }
-      ).catch(async () => {
-        // Fallback GET jika endpoint membutuhkan parameter via Query
-        return await axios.get(searchEndpoint, {
-          params: payload,
-          headers: { "User-Agent": CONFIG.USER_AGENT },
-          timeout: CONFIG.TIMEOUT
         });
       });
-
       const rawCampaigns = data?.campaigns || data?.results || (Array.isArray(data) ? data : []);
       const totalItems = data?.total || data?.total_count || rawCampaigns.length;
-
       if (!rawCampaigns || rawCampaigns.length === 0) {
         await ctx.react("❌");
         return ctx.reply(`❌ Campaign Twibbon [${selectedVersion.toUpperCase()}] dengan kata kunci *"${query}"* tidak ditemukan.`);
       }
-
-      // Hitung total halaman
       const totalPages = Math.ceil(totalItems / limit) || 1;
-
-      // Simpan Hasil Search & Sesi ke Cache
       twibbonCache.set(senderId, {
         query: query,
         version: selectedVersion,
@@ -311,27 +256,20 @@ Gunakan fitur ini untuk mencari campaign Twibbon & memasang foto kamu.
         searchResults: rawCampaigns,
         activeFrame: userCached?.activeFrame || null
       });
-
-      // Menyiapkan Menu CTA / List Pilihan Frame
       const listRows = rawCampaigns.map((item, idx) => {
         const itemNum = idx + 1;
         const titleName = item.name || item.title || "Twibbon Campaign";
         const creatorName = item.campaignCreator?.name || item.creator?.name || "Anon";
-
         return {
           title: `🖼️ #${itemNum} ${titleName.slice(0, 32)}`,
           id: `${prefix}twibbon --set ${itemNum}`,
           description: `By ${creatorName}`
         };
       });
-
-      const listSections = [
-        {
-          title: `🎯 HASIL TWIBBON [${selectedVersion.toUpperCase()}] (Hal ${page}/${totalPages})`,
-          rows: listRows
-        }
-      ];
-
+      const listSections = [{
+        title: `🎯 HASIL TWIBBON [${selectedVersion.toUpperCase()}] (Hal ${page}/${totalPages})`,
+        rows: listRows
+      }];
       const bodyText = `Hi ${userName}!
 Ditemukan *${totalItems}* campaign Twibbon untuk *"${query}"*.
 
@@ -342,20 +280,14 @@ Ditemukan *${totalItems}* campaign Twibbon untuk *"${query}"*.
 └  ◦  *Halaman* : ${page} / ${totalPages}
 
 Pilih salah satu nomor twibbon di bawah untuk menetapkan frame yang akan dipakai.`;
-
-      const buttons = [
-        {
-          name: "single_select",
-          buttonParamsJson: JSON.stringify({
-            title: "📂 PILIH FRAME TWIBBON",
-            sections: listSections
-          })
-        }
-      ];
-
-      // Tombol Navigasi Pagination
+      const buttons = [{
+        name: "single_select",
+        buttonParamsJson: JSON.stringify({
+          title: "📂 PILIH FRAME TWIBBON",
+          sections: listSections
+        })
+      }];
       const versionFlag = isV2 ? "--v2" : "--v1";
-
       if (page > 1) {
         buttons.push({
           name: "quick_reply",
@@ -365,7 +297,6 @@ Pilih salah satu nomor twibbon di bawah untuk menetapkan frame yang akan dipakai
           })
         });
       }
-
       if (page < totalPages) {
         buttons.push({
           name: "quick_reply",
@@ -375,8 +306,6 @@ Pilih salah satu nomor twibbon di bawah untuk menetapkan frame yang akan dipakai
           })
         });
       }
-
-      // Tombol Switch Engine (v1 <-> v2)
       buttons.push({
         name: "quick_reply",
         buttonParamsJson: JSON.stringify({
@@ -384,9 +313,7 @@ Pilih salah satu nomor twibbon di bawah untuk menetapkan frame yang akan dipakai
           id: `${prefix}twibbon "${query}" ${isV2 ? "--v1" : "--v2"} -p 1`
         })
       });
-
       const bannerImage = rawCampaigns[0]?.thumbnail || rawCampaigns[0]?.image || "https://files.catbox.moe/g2e6i5.jpg";
-
       const options = {
         image: bannerImage,
         params: {
@@ -403,33 +330,29 @@ Pilih salah satu nomor twibbon di bawah untuk menetapkan frame yang akan dipakai
         },
         quoted: quotedMsg
       };
-
       if (typeof ctx.sendCta === "function") {
         await ctx.sendCta(bodyText, botFooter, buttons, options);
       } else {
-        await sock.sendMessage(
-          ctx.id,
-          {
-            image: { url: bannerImage },
-            caption: bodyText
+        await sock.sendMessage(ctx.id, {
+          image: {
+            url: bannerImage
           },
-          { quoted: quotedMsg }
-        );
+          caption: bodyText
+        }, {
+          quoted: quotedMsg
+        });
       }
-
       await ctx.react("✅");
     } catch (error) {
       console.error("[Twibbon Error]:", error?.message || error);
       await ctx.react("❌");
       let errorMessage = error.message;
-
       if (error.response?.data) {
         try {
           const parsed = typeof error.response.data === "string" ? JSON.parse(error.response.data) : error.response.data;
           errorMessage = parsed.message || parsed.error || errorMessage;
         } catch {}
       }
-
       ctx.reply(`❌ Terjadi kesalahan twibbon: ${errorMessage}`);
     }
   }

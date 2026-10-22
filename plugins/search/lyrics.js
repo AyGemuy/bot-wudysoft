@@ -1,9 +1,10 @@
 import axios from "axios";
 import db from "../../data/db.js";
-import { simpleQuoted } from "../../lib/quoted.js";
-
+import {
+  simpleQuoted
+} from "../../lib/quoted.js";
 const API_URL = `${global.bot?.api?.wudysoft}/api/search/lyrics/v13`;
-const SESSION_TIMEOUT = 25 * 60 * 1e3; // 25 Menit
+const SESSION_TIMEOUT = 25 * 60 * 1e3;
 const CONFIG = {
   TIMEOUT: 45e3,
   USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -37,12 +38,10 @@ function parseFlags(input = "") {
     let key = match[1].toLowerCase();
     let rawVal = match[2];
     let val = true;
-
     if (["q", "query"].includes(key)) key = "query";
     if (["song", "id", "songid"].includes(key)) key = "id";
-
     if (rawVal !== undefined) {
-      if ((rawVal.startsWith('"') && rawVal.endsWith('"')) || (rawVal.startsWith("'") && rawVal.endsWith("'"))) {
+      if (rawVal.startsWith('"') && rawVal.endsWith('"') || rawVal.startsWith("'") && rawVal.endsWith("'")) {
         rawVal = rawVal.slice(1, -1);
       }
       if (rawVal === "true") val = true;
@@ -54,27 +53,22 @@ function parseFlags(input = "") {
   }
   const cleanPrompt = input.replace(flagRegex, "").trim();
   return {
-    flags,
-    cleanPrompt
+    flags: flags,
+    cleanPrompt: cleanPrompt
   };
 }
 
-// Rekursif parser DOM Genius untuk mengekstrak lirik teks asli
 function extractLyricsDom(node) {
   if (!node) return "";
   if (typeof node === "string") return node;
   if (Array.isArray(node)) return node.map(extractLyricsDom).join("");
-  
   if (node.tag === "br") return "\n";
-  if (node.tag === "dfp-unit" || node.tag === "dfp-kv") return ""; // Skip ads
-
+  if (node.tag === "dfp-unit" || node.tag === "dfp-kv") return "";
   if (Array.isArray(node.children)) {
     return node.children.map(extractLyricsDom).join("");
   }
   return "";
 }
-
-// Render HTML Canvas Lirik ke Gambar (Menggunakan multi-versi html2img Wudysoft)
 async function renderHtmlToImage(htmlContent) {
   const rawApi = global.bot?.api?.wudysoft || "";
   const cleanApi = rawApi.replace(/^https?:\/\//i, "").replace(/\/+$/, "");
@@ -120,23 +114,16 @@ async function renderHtmlToImage(htmlContent) {
   };
 }
 
-// Template HTML Spotify/Genius Style Lyrics Canvas Card
 function generateLyricsCanvasHtml(song, lyricsText) {
   const coverUrl = song.song_art_image_url || song.header_image_url || "https://images.genius.com/e7de8aadc81bfe774a7bb5393c29044d.1000x1000x1.png";
   const title = (song.title || "Unknown Title").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const artist = (song.artist_names || "Unknown Artist").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const formattedLyrics = lyricsText
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .split("\n")
-    .map(line => {
-      if (line.startsWith("[") && line.endsWith("]")) {
-        return `<div class="section-tag">${line}</div>`;
-      }
-      return line.trim() ? `<div class="line">${line}</div>` : `<div class="spacer"></div>`;
-    })
-    .join("");
-
+  const formattedLyrics = lyricsText.replace(/</g, "&lt;").replace(/>/g, "&gt;").split("\n").map(line => {
+    if (line.startsWith("[") && line.endsWith("]")) {
+      return `<div class="section-tag">${line}</div>`;
+    }
+    return line.trim() ? `<div class="line">${line}</div>` : `<div class="spacer"></div>`;
+  }).join("");
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -248,11 +235,11 @@ function generateLyricsCanvasHtml(song, lyricsText) {
 </body>
 </html>`;
 }
-
-// Request API Lyrics v13
 async function requestLyrics(params = {}) {
-  const { data } = await axios.get(API_URL, {
-    params,
+  const {
+    data
+  } = await axios.get(API_URL, {
+    params: params,
     headers: {
       "User-Agent": CONFIG.USER_AGENT
     },
@@ -288,7 +275,6 @@ function recordSession(chatId, messageId, lastQuery, lastSongId, songTitle) {
   s.expireTime = Date.now() + SESSION_TIMEOUT;
   saveDB();
 }
-
 export default {
   name: "lyrics",
   aliases: ["lirik", "genius", "lyric", "liriklagu"],
@@ -296,66 +282,51 @@ export default {
   category: "Search",
   limit: true,
   example: "lyrics Adele Hello\nlyrics --id 2332455\nBalas pesan bot untuk mencari lagu terkait.",
-
-  before: async (msg, { sock, ctx }) => {
+  before: async (msg, {
+    sock,
+    ctx
+  }) => {
     try {
       const chatId = ctx?.id || msg?.key?.remoteJid;
       if (!chatId) return;
       initDB();
       if (!global.db.geniusLyrics[chatId]) return;
-
       const isFromMe = Boolean(msg?.key?.fromMe || ctx?.isFromMe);
       if (isFromMe) return;
-
       const sessionData = global.db.geniusLyrics[chatId];
       if (Date.now() > sessionData.expireTime) {
         delete global.db.geniusLyrics[chatId];
         saveDB();
         return;
       }
-
       const quotedStanzaId = ctx?.quoted?.id || msg?.message?.extendedTextMessage?.contextInfo?.stanzaId;
-      const isQuoting = quotedStanzaId && (
-        quotedStanzaId === sessionData.lastMsgId ||
-        (Array.isArray(sessionData.msgIds) && sessionData.msgIds.includes(quotedStanzaId))
-      );
-
+      const isQuoting = quotedStanzaId && (quotedStanzaId === sessionData.lastMsgId || Array.isArray(sessionData.msgIds) && sessionData.msgIds.includes(quotedStanzaId));
       if (!isQuoting) return;
-
       const userText = (ctx?.text || ctx?.query || msg?.message?.conversation || msg?.message?.extendedTextMessage?.text || "").trim();
       const prefixList = [".", "#", "!", "/", ctx?.prefix].filter(Boolean);
       if (prefixList.some(p => userText.startsWith(p))) return;
       if (!userText) return;
-
-      // Jika user mereply dengan nomor ID lagu
       if (/^\d+$/.test(userText.trim())) {
         if (typeof ctx?.react === "function") await ctx.react("⏳");
-        const songDetail = await requestLyrics({ action: "detail", id: userText.trim() });
+        const songDetail = await requestLyrics({
+          action: "detail",
+          id: userText.trim()
+        });
         const song = songDetail?.result;
         if (!song) return;
-
         const lyricsText = extractLyricsDom(song.lyrics?.dom).trim() || "Lirik tidak tersedia.";
-        
-        // Render Canvas Card
         const html = generateLyricsCanvasHtml(song, lyricsText);
-        const { url: canvasUrl, buffer: canvasBuffer } = await renderHtmlToImage(html);
+        const {
+          url: canvasUrl,
+          buffer: canvasBuffer
+        } = await renderHtmlToImage(html);
         const thumbUrl = canvasUrl || song.song_art_image_url || song.header_image_url;
-
-        const bodyText = `–  *G E N I U S  L Y R I C S*\n\n` +
-          `┌  ◦  *Judul* : ${song.full_title || song.title}\n` +
-          `├  ◦  *Artis* : ${song.artist_names || "-"}\n` +
-          `├  ◦  *Album* : ${song.album?.name || "-"}\n` +
-          `├  ◦  *Rilis* : ${song.release_date_for_display || "-"}\n` +
-          `└  ◦  *Link* : ${song.url || "-"}\n\n` +
-          `───  *L I R I K*  ───\n\n` +
-          lyricsText;
-
+        const bodyText = `–  *G E N I U S  L Y R I C S*\n\n` + `┌  ◦  *Judul* : ${song.full_title || song.title}\n` + `├  ◦  *Artis* : ${song.artist_names || "-"}\n` + `├  ◦  *Album* : ${song.album?.name || "-"}\n` + `├  ◦  *Rilis* : ${song.release_date_for_display || "-"}\n` + `└  ◦  *Link* : ${song.url || "-"}\n\n` + `───  *L I R I K*  ───\n\n` + lyricsText;
         const buttons = [{
           name: "cta_copy",
           display_text: "📄 Salin Lirik",
           copy_code: lyricsText
         }];
-
         if (canvasUrl) {
           buttons.push({
             name: "cta_url",
@@ -363,7 +334,6 @@ export default {
             url: canvasUrl
           });
         }
-
         let sentMsg;
         if (typeof ctx.sendCta === "function") {
           sentMsg = await ctx.sendCta(bodyText, `_Genius Music Canvas_`, buttons, {
@@ -374,16 +344,25 @@ export default {
           sentMsg = await sock.sendMessage(ctx.id, {
             image: canvasBuffer,
             caption: bodyText
-          }, { quoted: msg });
+          }, {
+            quoted: msg
+          });
         } else if (thumbUrl) {
           sentMsg = await sock.sendMessage(ctx.id, {
-            image: { url: thumbUrl },
+            image: {
+              url: thumbUrl
+            },
             caption: bodyText
-          }, { quoted: msg });
+          }, {
+            quoted: msg
+          });
         } else {
-          sentMsg = await sock.sendMessage(ctx.id, { text: bodyText }, { quoted: msg });
+          sentMsg = await sock.sendMessage(ctx.id, {
+            text: bodyText
+          }, {
+            quoted: msg
+          });
         }
-
         const newMsgId = sentMsg?.key?.id;
         recordSession(chatId, newMsgId, sessionData.query, song.id, song.title);
         if (typeof ctx?.react === "function") await ctx.react("✨");
@@ -393,13 +372,11 @@ export default {
       console.error("[LYRICS BEFORE ERROR]:", e.message);
     }
   },
-
   execute: async (sock, ctx, msg) => {
     try {
       const chatId = ctx.id;
       const senderId = ctx.sender || ctx.author || msg.key?.participant || msg.key?.remoteJid || ctx.id;
       initDB(senderId, ctx.pushName);
-
       let rawText = ctx.args?.join(" ")?.trim() || "";
       if (!rawText && ctx.text) {
         const raw = ctx.text.trim();
@@ -408,11 +385,8 @@ export default {
           rawText = raw.slice(firstWord.length).trim();
         }
       }
-
       const prefix = ctx.prefix || ".";
       const quotedMsg = typeof simpleQuoted === "function" ? simpleQuoted(ctx) : msg;
-
-      // 1. Reset Sesi
       if (rawText === "--reset" || rawText === "--clear" || rawText === "reset" || rawText === "clear") {
         if (global.db.geniusLyrics[chatId]) {
           delete global.db.geniusLyrics[chatId];
@@ -421,43 +395,35 @@ export default {
         }
         return ctx.reply("ℹ️ Tidak ada sesi pencarian lirik yang aktif di percakapan ini.");
       }
-
-      const { flags, cleanPrompt } = parseFlags(rawText);
-
-      // 2. Action: DETAIL & CANVAS LIRIK (BY ID)
+      const {
+        flags,
+        cleanPrompt
+      } = parseFlags(rawText);
       if (flags.id || flags.song_id || /^\d+$/.test(cleanPrompt)) {
         await ctx.react("⏳");
         const songId = flags.id || flags.song_id || cleanPrompt;
-        const res = await requestLyrics({ action: "detail", id: songId });
+        const res = await requestLyrics({
+          action: "detail",
+          id: songId
+        });
         const song = res?.result;
-
         if (!song) {
           await ctx.react("❌");
           return ctx.reply("❌ Detail lagu dan lirik tidak ditemukan.");
         }
-
         const lyricsText = extractLyricsDom(song.lyrics?.dom).trim() || "Lirik teks tidak ditemukan atau lagu instrumental.";
-
-        // Render HTML Lirik ke Canvas Gambar
         const html = generateLyricsCanvasHtml(song, lyricsText);
-        const { url: canvasUrl, buffer: canvasBuffer } = await renderHtmlToImage(html);
+        const {
+          url: canvasUrl,
+          buffer: canvasBuffer
+        } = await renderHtmlToImage(html);
         const thumbUrl = canvasUrl || song.song_art_image_url || song.header_image_url;
-
-        const bodyText = `–  *G E N I U S  L Y R I C S*\n\n` +
-          `┌  ◦  *Judul* : ${song.full_title || song.title}\n` +
-          `├  ◦  *Artis* : ${song.artist_names || "-"}\n` +
-          `├  ◦  *Album* : ${song.album?.name || "-"}\n` +
-          `├  ◦  *Rilis* : ${song.release_date_for_display || "-"}\n` +
-          `└  ◦  *Link* : ${song.url || "-"}\n\n` +
-          `───  *L I R I K*  ───\n\n` +
-          lyricsText;
-
+        const bodyText = `–  *G E N I U S  L Y R I C S*\n\n` + `┌  ◦  *Judul* : ${song.full_title || song.title}\n` + `├  ◦  *Artis* : ${song.artist_names || "-"}\n` + `├  ◦  *Album* : ${song.album?.name || "-"}\n` + `├  ◦  *Rilis* : ${song.release_date_for_display || "-"}\n` + `└  ◦  *Link* : ${song.url || "-"}\n\n` + `───  *L I R I K*  ───\n\n` + lyricsText;
         const buttons = [{
           name: "cta_copy",
           display_text: "📄 Salin Lirik",
           copy_code: lyricsText
         }];
-
         if (canvasUrl) {
           buttons.push({
             name: "cta_url",
@@ -465,7 +431,6 @@ export default {
             url: canvasUrl
           });
         }
-
         let sentMsg;
         if (typeof ctx.sendCta === "function") {
           sentMsg = await ctx.sendCta(bodyText, `_Genius Music Canvas_`, buttons, {
@@ -476,23 +441,30 @@ export default {
           sentMsg = await sock.sendMessage(ctx.id, {
             image: canvasBuffer,
             caption: bodyText
-          }, { quoted: quotedMsg });
+          }, {
+            quoted: quotedMsg
+          });
         } else if (thumbUrl) {
           sentMsg = await sock.sendMessage(ctx.id, {
-            image: { url: thumbUrl },
+            image: {
+              url: thumbUrl
+            },
             caption: bodyText
-          }, { quoted: quotedMsg });
+          }, {
+            quoted: quotedMsg
+          });
         } else {
-          sentMsg = await sock.sendMessage(ctx.id, { text: bodyText }, { quoted: quotedMsg });
+          sentMsg = await sock.sendMessage(ctx.id, {
+            text: bodyText
+          }, {
+            quoted: quotedMsg
+          });
         }
-
         const sentMsgId = sentMsg?.key?.id;
         recordSession(chatId, sentMsgId, null, song.id, song.title);
         await ctx.react("✨");
         return;
       }
-
-      // 3. Action: PENCARIAN LAGU (CTA LIST PAGINATION)
       const searchQuery = flags.query || cleanPrompt;
       if (!searchQuery) {
         const guideText = `–  *G E N I U S  L Y R I C S*
@@ -513,25 +485,24 @@ Pencarian database lirik lagu resmi dari Genius.com dengan aesthetic visual canv
    ├ \`--id <song_id>\` (Lihat detail lirik)
    ├ \`--page <nomor>\` (Navigasi halaman)
    └ \`--reset\` (Hapus sesi obrolan)`;
-
-        return ctx.reply(guideText, { quoted: quotedMsg });
+        return ctx.reply(guideText, {
+          quoted: quotedMsg
+        });
       }
-
       await ctx.react("🔍");
-
-      const searchRes = await requestLyrics({ action: "search", query: searchQuery });
+      const searchRes = await requestLyrics({
+        action: "search",
+        query: searchQuery
+      });
       const rawResults = searchRes?.result || [];
       const songList = rawResults.map(item => item.result).filter(Boolean);
-
       if (!songList.length) {
         await ctx.react("❌");
         return ctx.reply(`❌ Tidak ditemukan lagu dengan query "${searchQuery}".`);
       }
-
       const page = Math.max(1, Number(flags.page) || 1);
       const totalPages = Math.ceil(songList.length / CONFIG.ITEMS_PER_PAGE) || 1;
       const pageItems = songList.slice((page - 1) * CONFIG.ITEMS_PER_PAGE, page * CONFIG.ITEMS_PER_PAGE);
-
       const rows = pageItems.map((song, idx) => {
         const globalIdx = (page - 1) * CONFIG.ITEMS_PER_PAGE + idx + 1;
         const title = (song.title || "Untitled").slice(0, 24);
@@ -542,9 +513,7 @@ Pencarian database lirik lagu resmi dari Genius.com dengan aesthetic visual canv
           description: `${artist} • ID: ${song.id}`.slice(0, 60)
         };
       });
-
       let baseCmd = `${prefix}lyrics ${searchQuery}`;
-
       const buttons = [{
         name: "single_select",
         buttonParamsJson: JSON.stringify({
@@ -555,7 +524,6 @@ Pencarian database lirik lagu resmi dari Genius.com dengan aesthetic visual canv
           }]
         })
       }];
-
       if (page > 1) {
         buttons.push({
           name: "quick_reply",
@@ -574,13 +542,7 @@ Pencarian database lirik lagu resmi dari Genius.com dengan aesthetic visual canv
           })
         });
       }
-
-      const bodyText = `–  *G E N I U S  -  S E A R C H*\n\n` +
-        `┌  ◦  *Query* : "${searchQuery}"\n` +
-        `├  ◦  *Ditemukan* : ${songList.length} Lagu\n` +
-        `└  ◦  *Halaman* : ${page} / ${totalPages}\n\n` +
-        `_Pilih lagu dari menu di bawah untuk membuka lirik dan generate image canvas:_`;
-
+      const bodyText = `–  *G E N I U S  -  S E A R C H*\n\n` + `┌  ◦  *Query* : "${searchQuery}"\n` + `├  ◦  *Ditemukan* : ${songList.length} Lagu\n` + `└  ◦  *Halaman* : ${page} / ${totalPages}\n\n` + `_Pilih lagu dari menu di bawah untuk membuka lirik dan generate image canvas:_`;
       const options = {
         params: {
           bottom_sheet: {
@@ -592,7 +554,6 @@ Pencarian database lirik lagu resmi dari Genius.com dengan aesthetic visual canv
         },
         quoted: quotedMsg
       };
-
       let sentMsg;
       if (typeof ctx.sendCta === "function") {
         sentMsg = await ctx.sendCta(bodyText, "", buttons, options);
@@ -603,10 +564,8 @@ Pencarian database lirik lagu resmi dari Genius.com dengan aesthetic visual canv
         }
         sentMsg = await ctx.reply(fallback);
       }
-
       const sentMsgId = sentMsg?.key?.id;
       recordSession(chatId, sentMsgId, searchQuery);
-
       await ctx.react("✨");
     } catch (error) {
       console.error("[Lyrics Error]:", error?.message || error);

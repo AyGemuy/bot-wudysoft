@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Katana Slash 512</title>
+  <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    body,
+    html {
+      height: 100%;
+      background: #1a1612;
+      display: grid;
+      place-items: center;
+      overflow: hidden
+    }
+
+    .stage {
+      position: relative;
+      width: 512px;
+      height: 512px;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 50%, #f5efe4 0, #e8dfcf 100%);
+      border-radius: 4px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, .5), inset 0 0 40px rgba(120, 90, 60, .1);
+      isolation: isolate
+    }
+
+    .stage::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      opacity: .18;
+      mix-blend-mode: multiply;
+      z-index: 1;
+      pointer-events: none
+    }
+
+    .stage::after {
+      content: '斬';
+      position: absolute;
+      bottom: 28px;
+      right: 28px;
+      width: 56px;
+      height: 56px;
+      display: grid;
+      place-items: center;
+      background: #c9302c;
+      color: #f5efe4;
+      font-family: 'Shippori Mincho', serif;
+      font-size: 28px;
+      border-radius: 3px;
+      z-index: 3;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, .2);
+      opacity: .9
+    }
+
+    .word {
+      position: absolute;
+      top: 50%;
+      font-family: 'Shippori Mincho', serif;
+      font-weight: 800;
+      white-space: nowrap;
+      line-height: .9;
+      z-index: 5;
+      will-change: transform
+    }
+
+    .word-left {
+      left: 50%;
+      transform: translate(-100%, -50%)
+    }
+
+    .word-right {
+      left: 50%;
+      transform: translate(0, -50%)
+    }
+
+    .fly {
+      display: inline-block;
+      will-change: transform, opacity, filter
+    }
+
+    .stage.run .word-left .fly {
+      animation: flyL .55s cubic-bezier(.55, 0, .35, 1) forwards
+    }
+
+    .stage.run .word-right .fly {
+      animation: flyR .55s cubic-bezier(.55, 0, .35, 1) forwards
+    }
+
+    @keyframes flyL {
+      0% {
+        transform: translate(0, -512px);
+        filter: blur(6px);
+        opacity: 0
+      }
+
+      30% {
+        opacity: 1
+      }
+
+      100% {
+        transform: translate(0, 0);
+        filter: blur(0);
+        opacity: 1
+      }
+    }
+
+    @keyframes flyR {
+      0% {
+        transform: translate(0, 512px);
+        filter: blur(6px);
+        opacity: 0
+      }
+
+      30% {
+        opacity: 1
+      }
+
+      100% {
+        transform: translate(0, 0);
+        filter: blur(0);
+        opacity: 1
+      }
+    }
+
+    .word-text {
+      display: inline-block;
+      color: #1a1612;
+      text-shadow: 1px 1px 0 rgba(100, 80, 60, .25);
+      will-change: transform, filter
+    }
+
+    .word-left .word-text {
+      transform-origin: center 50%
+    }
+
+    .word-right .word-text {
+      transform-origin: center 50%
+    }
+
+    .stage.impact .word-left .word-text {
+      animation: splitTop .7s cubic-bezier(.34, 1.56, .64, 1) forwards
+    }
+
+    .stage.impact .word-right .word-text {
+      animation: splitBottom .7s cubic-bezier(.34, 1.56, .64, 1) forwards
+    }
+
+    @keyframes splitTop {
+      0% {
+        transform: translateY(0) rotate(0) scale(1)
+      }
+
+      25% {
+        transform: translateY(0) rotate(0) scale(1.08);
+        filter: brightness(1.5)
+      }
+
+      100% {
+        transform: translateY(-38px) rotate(-4deg) scale(1);
+        filter: brightness(1);
+        opacity: .35
+      }
+    }
+
+    @keyframes splitBottom {
+      0% {
+        transform: translateY(0) rotate(0) scale(1)
+      }
+
+      25% {
+        transform: translateY(0) rotate(0) scale(1.08);
+        filter: brightness(1.5)
+      }
+
+      100% {
+        transform: translateY(38px) rotate(4deg) scale(1);
+        filter: brightness(1);
+        opacity: .35
+      }
+    }
+
+    .slash {
+      position: absolute;
+      top: 50%;
+      left: -50px;
+      right: -50px;
+      height: 3px;
+      background: linear-gradient(90deg, transparent 0, rgba(255, 255, 255, .9) 15%, #fff 50%, rgba(255, 255, 255, .9) 85%, transparent 100%);
+      transform: translateY(-50%) scaleX(0);
+      transform-origin: left center;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 20;
+      box-shadow: 0 0 30px #fff, 0 0 60px rgba(200, 220, 255, .8);
+      filter: blur(.5px)
+    }
+
+    .stage.impact .slash {
+      animation: slashSweep .5s cubic-bezier(.7, 0, .3, 1) forwards
+    }
+
+    @keyframes slashSweep {
+      0% {
+        transform: translateY(-50%) scaleX(0) rotate(-2deg);
+        opacity: 0
+      }
+
+      15% {
+        opacity: 1
+      }
+
+      60% {
+        transform: translateY(-50%) scaleX(1) rotate(-2deg);
+        opacity: 1
+      }
+
+      100% {
+        transform: translateY(-50%) scaleX(1) rotate(-2deg);
+        opacity: 0
+      }
+    }
+
+    .slash-2 {
+      position: absolute;
+      top: 50%;
+      left: -50px;
+      right: -50px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(200, 220, 255, .7), transparent);
+      transform: translateY(-50%) scaleX(0);
+      transform-origin: left center;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 20
+    }
+
+    .stage.impact .slash-2 {
+      animation: slashSweep .45s cubic-bezier(.7, 0, .3, 1) 50ms forwards
+    }
+
+    .stage.impact {
+      animation: katanaShake .35s cubic-bezier(.36, .07, .19, .97)
+    }
+
+    @keyframes katanaShake {
+
+      0%,
+      100% {
+        transform: translate(0, 0)
+      }
+
+      30% {
+        transform: translate(3px, -2px) rotate(.3deg)
+      }
+
+      60% {
+        transform: translate(-3px, 2px) rotate(-.3deg)
+      }
+    }
+
+    .flash {
+      position: absolute;
+      inset: 0;
+      background: #fff;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 50;
+      mix-blend-mode: overlay
+    }
+
+    .stage.impact .flash {
+      animation: flash .15s ease-out
+    }
+
+    @keyframes flash {
+      0% {
+        opacity: 0
+      }
+
+      50% {
+        opacity: .9
+      }
+
+      100% {
+        opacity: 0
+      }
+    }
+
+    .inkline {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 50%;
+      height: 0;
+      background: linear-gradient(90deg, transparent, #1a1612 5%, #1a1612 95%, transparent);
+      transform: translateY(-50%);
+      opacity: 0;
+      z-index: 8
+    }
+
+    .stage.impact .inkline {
+      animation: inkDraw .7s ease-out forwards
+    }
+
+    @keyframes inkDraw {
+      0% {
+        height: 0;
+        opacity: 0
+      }
+
+      20% {
+        height: 2px;
+        opacity: 1
+      }
+
+      100% {
+        height: 1px;
+        opacity: .6
+      }
+    }
+
+    #fx {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 30
+    }
+  </style>
+</head>
+
+<body>
+  <div id="kalimat-src" data-text="{{TEXT}}" hidden></div>
+  <div class="stage" id="stage">
+    <div class="word word-left">
+      <div class="fly"><span class="word-text" id="textLeft"></span></div>
+    </div>
+    <div class="word word-right">
+      <div class="fly"><span class="word-text" id="textRight"></span></div>
+    </div><canvas id="fx" width="512" height="512"></canvas>
+    <div class="slash"></div>
+    <div class="slash-2"></div>
+    <div class="inkline"></div>
+    <div class="flash"></div>
+  </div>
+  <script>
+    ! function() { var t = document.getElementById("kalimat-src"),
+        e = (t && t.dataset.text || "BLADE RUNNER").trim() || "BLADE RUNNER",
+        n = document.getElementById("stage"),
+        a = document.getElementById("fx").getContext("2d"),
+        i = document.querySelector(".word-left"),
+        o = document.querySelector(".word-right"),
+        r = i.querySelector(".fly"),
+        l = o.querySelector(".fly"),
+        c = document.getElementById("textLeft"),
+        s = document.getElementById("textRight"),
+        f = document.createElement("canvas").getContext("2d");
+
+      function h() { var t = function(t) { var e = String(t).trim().split(/\s+/).filter(Boolean); if (!e.length) return ["", ""]; if (1 === e.length) { var n = e[0]; if (n.length < 2) return [n, n]; var a = Math.ceil(n.length / 2); return [n.slice(0, a), n.slice(a)] } if (2 === e.length) return [e[0], e[1]]; for (var i = 1, o = 1 / 0, r = 1; r < e.length; r++) { var l = e.slice(0, r).join("").length,
+              c = e.slice(r).join("").length,
+              s = Math.abs(l - c);
+            s < o && (o = s, i = r) } return [e.slice(0, i).join(" "), e.slice(i).join(" ")] }(e);
+        c.textContent = t[0], s.textContent = t[1]; var n = function(t, e) { if (!t && !e) return 175;
+          f.font = '800 100px "Shippori Mincho", serif'; var n = t ? f.measureText(t).width || 1 : 0,
+            a = e ? f.measureText(e).width || 1 : 0; return Math.min(46e3 / (n + a || 1), 175) }(t[0], t[1]);
+        i.style.fontSize = n + "px", o.style.fontSize = n + "px" } var d = [];
+
+      function m() { n.classList.add("impact"), setTimeout(function() {! function(t, e) { for (var n = 0; n < 100; n++) { var a = (Math.random() - .5) * Math.PI * 1.2,
+                i = 20 * Math.random() + 3;
+              d.push({ x: t + 200 * (Math.random() - .5), y: e + 8 * (Math.random() - .5), vx: Math.cos(a) * i, vy: Math.sin(a) * i * .7, life: 1, decay: .012 + .014 * Math.random(), size: 3 + 9 * Math.random(), shrink: .975 }) } for (var o = 0; o < 60; o++) { var r = Math.random() * Math.PI * 2,
+                l = 24 * Math.random() + 6;
+              d.push({ x: t + 300 * (Math.random() - .5), y: e + 20 * (Math.random() - .5), vx: Math.cos(r) * l, vy: Math.sin(r) * l - 3, life: 1, decay: .02 + .025 * Math.random(), size: 1 + 2.5 * Math.random(), shrink: .96 }) } }(256, 256) }, 100) }
+
+      function u() { n.classList.remove("impact", "run"), d = [], a.clearRect(0, 0, 512, 512), [r, l].forEach(function(t) { t.style.animation = "none", t.offsetWidth, t.style.animation = "" }), requestAnimationFrame(function() { n.classList.add("run"); var t = function() { r.removeEventListener("animationend", t), m(), setTimeout(u, 3600) };
+          r.addEventListener("animationend", t, { once: !0 }) }) }
+
+      function v() { h(), u() }! function t() { a.clearRect(0, 0, 512, 512); for (var e = d.length - 1; e >= 0; e--) { var n = d[e];
+          n.x += n.vx, n.y += n.vy, n.vx *= .94, n.vy *= .94, n.vy += .35, n.life -= n.decay, n.size *= n.shrink, n.life <= 0 || n.size < .5 ? d.splice(e, 1) : (a.globalAlpha = n.life, a.fillStyle = "#1a1612", a.beginPath(), a.arc(n.x, n.y, n.size, 0, 7), a.fill(), n.size > 3 && (a.globalAlpha = .3 * n.life, a.fillStyle = "#ffffff", a.beginPath(), a.arc(n.x - .3 * n.size, n.y - .3 * n.size, .3 * n.size, 0, 7), a.fill())) } a.globalAlpha = 1, requestAnimationFrame(t) }(), document.fonts && document.fonts.load ? document.fonts.load('800 100px "Shippori Mincho"').then(v).catch(v) : v() }()
+  </script>
+</body>
+
+</html>

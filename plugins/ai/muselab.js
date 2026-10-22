@@ -1,14 +1,17 @@
 import axios from "axios";
 import db from "../../data/db.js";
-import { upload } from "../../lib/upload.js";
-import { simpleQuoted } from "../../lib/quoted.js";
-
+import {
+  upload
+} from "../../lib/upload.js";
+import {
+  simpleQuoted
+} from "../../lib/quoted.js";
 const API_URL = `${global.bot?.api?.wudysoft}/api/ai/muselab`;
-const SESSION_TIMEOUT = 25 * 60 * 1e3; // 25 Menit
+const SESSION_TIMEOUT = 25 * 60 * 1e3;
 const CONFIG = {
-  TIMEOUT: 18e4, // 180 detik
-  POLL_INTERVAL: 4e3, // 4 detik tiap iterasi cek status
-  MAX_POLL_ATTEMPTS: 45, // ~180 detik
+  TIMEOUT: 18e4,
+  POLL_INTERVAL: 4e3,
+  MAX_POLL_ATTEMPTS: 45,
   USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
   ITEMS_PER_PAGE: 8
 };
@@ -40,16 +43,14 @@ function parseFlags(input = "") {
     let key = match[1].toLowerCase();
     let rawVal = match[2];
     let val = true;
-
     if (["video", "i2v", "tovideo"].includes(key)) key = "is_video";
     if (["tpl", "template"].includes(key)) key = "unique_id";
     if (["ratio", "ar"].includes(key)) key = "aspect_ratio";
     if (["img", "image"].includes(key)) key = "media";
     if (["dur", "time"].includes(key)) key = "duration";
     if (["res"].includes(key)) key = "resolution";
-
     if (rawVal !== undefined) {
-      if ((rawVal.startsWith('"') && rawVal.endsWith('"')) || (rawVal.startsWith("'") && rawVal.endsWith("'"))) {
+      if (rawVal.startsWith('"') && rawVal.endsWith('"') || rawVal.startsWith("'") && rawVal.endsWith("'")) {
         rawVal = rawVal.slice(1, -1);
       }
       if (rawVal === "true") val = true;
@@ -61,18 +62,17 @@ function parseFlags(input = "") {
   }
   const cleanPrompt = input.replace(flagRegex, "").trim();
   return {
-    flags,
-    cleanPrompt
+    flags: flags,
+    cleanPrompt: cleanPrompt
   };
 }
-
-// Request API dengan auto recovery & refresh session bila state rusak/expired
 async function requestMuseLab(params = {}, chatId = null) {
   let session = chatId && global.db.muselabAi?.[chatId] ? global.db.muselabAi[chatId] : null;
   let currentState = params.state || session?.state || undefined;
-
-  const runRequest = async (stateVal) => {
-    const qParams = { ...params };
+  const runRequest = async stateVal => {
+    const qParams = {
+      ...params
+    };
     if (stateVal) qParams.state = stateVal;
     return await axios.get(API_URL, {
       params: qParams,
@@ -82,9 +82,10 @@ async function requestMuseLab(params = {}, chatId = null) {
       timeout: CONFIG.TIMEOUT
     });
   };
-
   try {
-    const { data } = await runRequest(currentState);
+    const {
+      data
+    } = await runRequest(currentState);
     if (!data?.status || data?.status === "error") {
       throw new Error(data?.error || data?.message || "Gagal memproses permintaan ke MuseLab AI.");
     }
@@ -98,7 +99,9 @@ async function requestMuseLab(params = {}, chatId = null) {
     const errMsg = err.response?.data?.error || err.response?.data?.message || err.message || "";
     if (currentState && /sesi|auth|state|token|koin tidak mencukupi|point/i.test(errMsg)) {
       if (global.db.muselabAi[chatId]) global.db.muselabAi[chatId].state = null;
-      const { data } = await runRequest(undefined);
+      const {
+        data
+      } = await runRequest(undefined);
       if (data?.status && data?.state && chatId) {
         global.db.muselabAi[chatId].state = data.state;
         saveDB();
@@ -108,8 +111,6 @@ async function requestMuseLab(params = {}, chatId = null) {
     throw new Error(errMsg || "Gagal menghubungi API MuseLab.");
   }
 }
-
-// Polling Helper untuk menunggu proses pembuatan video/gambar
 async function pollTaskStatus(taskId, state, serviceType, chatId) {
   for (let i = 1; i <= CONFIG.MAX_POLL_ATTEMPTS; i++) {
     await new Promise(r => setTimeout(r, CONFIG.POLL_INTERVAL));
@@ -119,7 +120,6 @@ async function pollTaskStatus(taskId, state, serviceType, chatId) {
       service_type: serviceType,
       state: state
     }, chatId);
-
     if (res?.status === "completed") {
       return res;
     }
@@ -159,7 +159,6 @@ function recordSession(chatId, messageId, returnedState, lastMedia, templateId, 
   s.expireTime = Date.now() + SESSION_TIMEOUT;
   saveDB();
 }
-
 export default {
   name: "muselab",
   aliases: ["muselabai", "mlai", "muse"],
@@ -167,41 +166,32 @@ export default {
   category: "AI",
   limit: true,
   example: "muselab anime cyberpunk --video (Kirim/balas gambar)\nBalas/reply media hasil bot untuk mentransformasi ulang.",
-
-  before: async (msg, { sock, ctx }) => {
+  before: async (msg, {
+    sock,
+    ctx
+  }) => {
     try {
       const chatId = ctx?.id || msg?.key?.remoteJid;
       if (!chatId) return;
       initDB();
       if (!global.db.muselabAi[chatId]) return;
-
       const isFromMe = Boolean(msg?.key?.fromMe || ctx?.isFromMe);
       if (isFromMe) return;
-
       const sessionData = global.db.muselabAi[chatId];
       if (Date.now() > sessionData.expireTime) {
         delete global.db.muselabAi[chatId];
         saveDB();
         return;
       }
-
       const quotedStanzaId = ctx?.quoted?.id || msg?.message?.extendedTextMessage?.contextInfo?.stanzaId;
-      const isQuotingAi = quotedStanzaId && (
-        quotedStanzaId === sessionData.lastMsgId ||
-        (Array.isArray(sessionData.msgIds) && sessionData.msgIds.includes(quotedStanzaId))
-      );
-
+      const isQuotingAi = quotedStanzaId && (quotedStanzaId === sessionData.lastMsgId || Array.isArray(sessionData.msgIds) && sessionData.msgIds.includes(quotedStanzaId));
       if (!isQuotingAi) return;
-
       const userText = (ctx?.text || ctx?.query || msg?.message?.conversation || msg?.message?.extendedTextMessage?.text || "").trim();
       const prefixList = [".", "#", "!", "/", ctx?.prefix].filter(Boolean);
       if (prefixList.some(p => userText.startsWith(p))) return;
-
       const isMedia = ctx?.isMedia || ctx?.quoted?.isMedia;
       if (!userText && !isMedia) return;
-
       if (typeof ctx?.react === "function") await ctx.react("🎨");
-
       let uploadedMediaUrl = null;
       if (isMedia && typeof ctx.download === "function") {
         const buffer = await ctx.download();
@@ -212,21 +202,20 @@ export default {
           }
         }
       }
-
       const inputImage = uploadedMediaUrl || sessionData.last_media;
       if (!inputImage) return;
-
-      const { flags, cleanPrompt } = parseFlags(userText);
+      const {
+        flags,
+        cleanPrompt
+      } = parseFlags(userText);
       const isVideoGen = flags.is_video === true || String(flags.is_video) === "true";
       const targetTemplate = flags.unique_id || (!cleanPrompt && !isVideoGen ? sessionData.template_id : null);
-
       let actionType = "image_to_image";
       const queryParams = {
         image: inputImage,
         prompt: cleanPrompt || "Enhance subject into aesthetic artwork",
         ...flags
       };
-
       if (isVideoGen) {
         actionType = "image_to_video";
         queryParams.duration = String(flags.duration || "4");
@@ -236,36 +225,21 @@ export default {
         queryParams.unique_id = targetTemplate;
       }
       queryParams.action = actionType;
-
       const taskRes = await requestMuseLab(queryParams, chatId);
       const taskId = taskRes.task_id;
       if (!taskId) throw new Error(taskRes.message || "Gagal menginisiasi task.");
-
-      const completedTask = await pollTaskStatus(
-        taskId,
-        taskRes.state,
-        taskRes.service_type || (isVideoGen ? "videogen" : "aiGeneral"),
-        chatId
-      );
-
+      const completedTask = await pollTaskStatus(taskId, taskRes.state, taskRes.service_type || (isVideoGen ? "videogen" : "aiGeneral"), chatId);
       const resultImages = completedTask.images || [];
       const resultVideos = completedTask.videos || [];
       const outputUrl = resultVideos[0] || resultImages[0];
       if (!outputUrl) throw new Error("Gagal menerima hasil media dari MuseLab.");
-
       const isVideo = Boolean(resultVideos.length > 0);
-      const bodyText = `–  *M U S E L A B  A I*\n\n` +
-        `┌  ◦  *Prompt* : ${queryParams.prompt}\n` +
-        `├  ◦  *Mode* : ${isVideo ? "Image to Video (Reply)" : "Image to Image (Reply)"}\n` +
-        `├  ◦  *Biaya Koin* : ${taskRes.cost_point ?? "-"} Pts\n` +
-        `└  ◦  *Sisa Koin* : ${taskRes.remaining_points ?? "-"} 🪙`;
-
+      const bodyText = `–  *M U S E L A B  A I*\n\n` + `┌  ◦  *Prompt* : ${queryParams.prompt}\n` + `├  ◦  *Mode* : ${isVideo ? "Image to Video (Reply)" : "Image to Image (Reply)"}\n` + `├  ◦  *Biaya Koin* : ${taskRes.cost_point ?? "-"} Pts\n` + `└  ◦  *Sisa Koin* : ${taskRes.remaining_points ?? "-"} 🪙`;
       const buttons = [{
         name: "cta_copy",
         display_text: "📄 Salin Prompt",
         copy_code: queryParams.prompt
       }];
-
       let sentMsg;
       if (typeof ctx.sendCta === "function" && !isVideo) {
         sentMsg = await ctx.sendCta(bodyText, "", buttons, {
@@ -274,32 +248,36 @@ export default {
         });
       } else if (isVideo) {
         sentMsg = await sock.sendMessage(ctx.id, {
-          video: { url: outputUrl },
+          video: {
+            url: outputUrl
+          },
           caption: bodyText
-        }, { quoted: msg });
+        }, {
+          quoted: msg
+        });
       } else {
         sentMsg = await sock.sendMessage(ctx.id, {
-          image: { url: outputUrl },
+          image: {
+            url: outputUrl
+          },
           caption: bodyText
-        }, { quoted: msg });
+        }, {
+          quoted: msg
+        });
       }
-
       const newMsgId = sentMsg?.key?.id;
       recordSession(chatId, newMsgId, taskRes.state || sessionData.state, outputUrl, sessionData.template_id, sessionData.template_title);
-
       if (typeof ctx?.react === "function") await ctx.react("✨");
       return true;
     } catch (e) {
       console.error("[MUSELAB BEFORE ERROR]:", e.message);
     }
   },
-
   execute: async (sock, ctx, msg) => {
     try {
       const chatId = ctx.id;
       const senderId = ctx.sender || ctx.author || msg.key?.participant || msg.key?.remoteJid || ctx.id;
       initDB(senderId, ctx.pushName);
-
       let rawText = ctx.args?.join(" ")?.trim() || "";
       if (!rawText && ctx.text) {
         const raw = ctx.text.trim();
@@ -308,11 +286,8 @@ export default {
           rawText = raw.slice(firstWord.length).trim();
         }
       }
-
       const prefix = ctx.prefix || ".";
       const quotedMsg = typeof simpleQuoted === "function" ? simpleQuoted(ctx) : msg;
-
-      // 1. Reset Sesi
       if (rawText === "--reset" || rawText === "--clear" || rawText === "reset" || rawText === "clear") {
         if (global.db.muselabAi[chatId]) {
           delete global.db.muselabAi[chatId];
@@ -321,26 +296,20 @@ export default {
         }
         return ctx.reply("ℹ️ Tidak ada sesi aktif di percakapan ini.");
       }
-
-      const { flags, cleanPrompt } = parseFlags(rawText);
+      const {
+        flags,
+        cleanPrompt
+      } = parseFlags(rawText);
       const existingSession = global.db.muselabAi[chatId];
-
-      // 2. Profile / Sisa Saldo Koin
       if (flags.profile || cleanPrompt.toLowerCase() === "profile") {
         await ctx.react("⏳");
-        const res = await requestMuseLab({ action: "profile" }, chatId);
+        const res = await requestMuseLab({
+          action: "profile"
+        }, chatId);
         recordSession(chatId, null, res.state);
-
         await ctx.react("✨");
-        return ctx.reply(
-          `–  *M U S E L A B  P R O F I L E*\n\n` +
-          `┌  ◦  *User ID* : \`${res.user_id}\`\n` +
-          `├  ◦  *Points Balance* : ${res.available_points} 🪙\n` +
-          `└  ◦  *Code ID* : \`${res.code_id}\``
-        );
+        return ctx.reply(`–  *M U S E L A B  P R O F I L E*\n\n` + `┌  ◦  *User ID* : \`${res.user_id}\`\n` + `├  ◦  *Points Balance* : ${res.available_points} 🪙\n` + `└  ◦  *Code ID* : \`${res.code_id}\``);
       }
-
-      // 3. Claim Koin Reward Harian
       if (flags.claim || cleanPrompt.toLowerCase() === "claim") {
         await ctx.react("⏳");
         const res = await requestMuseLab({
@@ -348,29 +317,16 @@ export default {
           code_type: flags.type || "all"
         }, chatId);
         recordSession(chatId, null, res.state);
-
         await ctx.react("✨");
         return ctx.reply(`🎉 *Sukses klaim koin!* Total didapat: +${res.total_claimed || 0} Pts. Saldo saat ini: *${res.current_points}* 🪙`);
       }
-
-      // 4. Set Template Pilihan
       if (flags.settemplate) {
         const uId = String(flags.settemplate).trim();
         const tTitle = flags.name || uId;
-
         recordSession(chatId, null, existingSession?.state, null, uId, tTitle);
-
         await ctx.react("✅");
-        return ctx.reply(
-          `–  *M U S E L A B  A I*\n\n` +
-          `┌  ◦  *Preset Disimpan* : Template Preset\n` +
-          `├  ◦  *Title* : ${tTitle}\n` +
-          `└  ◦  *Unique ID* : \`${uId}\`\n\n` +
-          `_Kirim atau balas foto dengan perintah \`${prefix}muselab\` untuk menerapkan template ini._`
-        );
+        return ctx.reply(`–  *M U S E L A B  A I*\n\n` + `┌  ◦  *Preset Disimpan* : Template Preset\n` + `├  ◦  *Title* : ${tTitle}\n` + `└  ◦  *Unique ID* : \`${uId}\`\n\n` + `_Kirim atau balas foto dengan perintah \`${prefix}muselab\` untuk menerapkan template ini._`);
       }
-
-      // 5. CTA Pagination List (Templates)
       if (flags.templates || flags.list || flags.search || rawText.startsWith("--list") || flags.page) {
         await ctx.react("⏳");
         const res = await requestMuseLab({
@@ -378,7 +334,6 @@ export default {
           pageIndex: 1,
           pageSize: 100
         }, chatId);
-
         const modules = res.data?.records || [];
         let allTemplates = [];
         for (const mod of modules) {
@@ -390,40 +345,33 @@ export default {
             }
           }
         }
-
-        const searchQuery = flags.search || flags.query || (!flags.page && cleanPrompt) || "";
+        const searchQuery = flags.search || flags.query || !flags.page && cleanPrompt || "";
         let matchedTemplates = allTemplates;
         if (searchQuery && searchQuery !== "true") {
           const kw = searchQuery.toLowerCase();
           matchedTemplates = allTemplates.filter(t => (t.title || "").toLowerCase().includes(kw) || (t.uniqueId || "").toLowerCase().includes(kw));
         }
-
         if (!matchedTemplates.length) {
           await ctx.react("❌");
           return ctx.reply(`❌ Template tidak ditemukan dengan kata kunci "${searchQuery}".`);
         }
-
         const page = Math.max(1, Number(flags.page) || 1);
         const totalPages = Math.ceil(matchedTemplates.length / CONFIG.ITEMS_PER_PAGE) || 1;
         const pageItems = matchedTemplates.slice((page - 1) * CONFIG.ITEMS_PER_PAGE, page * CONFIG.ITEMS_PER_PAGE);
-
         const rows = pageItems.map((item, idx) => {
           const globalIdx = (page - 1) * CONFIG.ITEMS_PER_PAGE + idx + 1;
           const uId = item.uniqueId;
           const title = item.title || uId;
           const desc = item.description ? item.description.slice(0, 45) : `ID: ${uId}`;
-
           return {
             title: `${globalIdx}. ${title}`.slice(0, 24),
             id: `${prefix}muselab --settemplate "${uId}" --name "${title}"`,
             description: `${desc} • ID: ${uId}`.slice(0, 60)
           };
         });
-
         let baseCmd = `${prefix}muselab`;
         if (searchQuery && searchQuery !== "true") baseCmd += ` --search "${searchQuery}"`;
         else baseCmd += ` --list`;
-
         const buttons = [{
           name: "single_select",
           buttonParamsJson: JSON.stringify({
@@ -434,7 +382,6 @@ export default {
             }]
           })
         }];
-
         if (page > 1) {
           buttons.push({
             name: "quick_reply",
@@ -453,13 +400,7 @@ export default {
             })
           });
         }
-
-        const bodyText = `–  *M U S E L A B  -  T E M P L A T E S*\n\n` +
-          `┌  ◦  *Total Template* : ${matchedTemplates.length}\n` +
-          `├  ◦  *Halaman* : ${page} / ${totalPages}\n` +
-          `└  ◦  *Engine* : MuseLab Material v2.0\n\n` +
-          `_Pilih template yang ingin digunakan dari menu di bawah:_`;
-
+        const bodyText = `–  *M U S E L A B  -  T E M P L A T E S*\n\n` + `┌  ◦  *Total Template* : ${matchedTemplates.length}\n` + `├  ◦  *Halaman* : ${page} / ${totalPages}\n` + `└  ◦  *Engine* : MuseLab Material v2.0\n\n` + `_Pilih template yang ingin digunakan dari menu di bawah:_`;
         const options = {
           params: {
             bottom_sheet: {
@@ -471,7 +412,6 @@ export default {
           },
           quoted: quotedMsg
         };
-
         if (typeof ctx.sendCta === "function") {
           await ctx.sendCta(bodyText, "", buttons, options);
         } else {
@@ -481,12 +421,9 @@ export default {
           }
           await ctx.reply(fallback);
         }
-
         await ctx.react("✅");
         return;
       }
-
-      // 6. Generate Mode
       const isMedia = ctx.isMedia || ctx.quoted?.isMedia;
       if (!isMedia && !flags.media) {
         const activeTpl = existingSession?.template_title || existingSession?.template_id || "None (Default I2I)";
@@ -515,12 +452,11 @@ Generator visual canggih untuk Restyle Foto, Animasi Video & AI Templates.
    ├ \`--profile\` (Cek sisa saldo poin)
    ├ \`--claim\` (Klaim koin gratis)
    └ \`--reset\` (Hapus sesi obrolan)`;
-
-        return ctx.reply(guideText, { quoted: quotedMsg });
+        return ctx.reply(guideText, {
+          quoted: quotedMsg
+        });
       }
-
       await ctx.react("🎨");
-
       let uploadedMediaUrl = null;
       if (isMedia) {
         const buffer = await ctx.download();
@@ -531,23 +467,19 @@ Generator visual canggih untuk Restyle Foto, Animasi Video & AI Templates.
           }
         }
       }
-
       const inputImage = uploadedMediaUrl || flags.media || null;
       if (!inputImage) {
         await ctx.react("❌");
         return ctx.reply("❌ Gagal memproses atau mengunggah file media gambar.");
       }
-
       const isVideoGen = flags.is_video === true || String(flags.is_video) === "true";
       const chosenTemplate = flags.unique_id || (!cleanPrompt && !isVideoGen ? existingSession?.template_id : null);
-
       let actionType = "image_to_image";
       const queryParams = {
         image: inputImage,
         prompt: cleanPrompt || "Enhance subject, high quality aesthetic artwork",
         ...flags
       };
-
       if (isVideoGen) {
         actionType = "image_to_video";
         queryParams.duration = String(flags.duration || "4");
@@ -557,36 +489,21 @@ Generator visual canggih untuk Restyle Foto, Animasi Video & AI Templates.
         queryParams.unique_id = chosenTemplate;
       }
       queryParams.action = actionType;
-
       const taskRes = await requestMuseLab(queryParams, chatId);
       const taskId = taskRes.task_id;
       if (!taskId) throw new Error(taskRes.message || "Gagal menginisiasi task pada server.");
-
-      const completedTask = await pollTaskStatus(
-        taskId,
-        taskRes.state,
-        taskRes.service_type || (isVideoGen ? "videogen" : "aiGeneral"),
-        chatId
-      );
-
+      const completedTask = await pollTaskStatus(taskId, taskRes.state, taskRes.service_type || (isVideoGen ? "videogen" : "aiGeneral"), chatId);
       const resultImages = completedTask.images || [];
       const resultVideos = completedTask.videos || [];
       const outputUrl = resultVideos[0] || resultImages[0];
       if (!outputUrl) throw new Error("Server tidak mengembalikan URL output media.");
-
       const isVideo = Boolean(resultVideos.length > 0);
-      const bodyText = `–  *M U S E L A B  A I*\n\n` +
-        `┌  ◦  *Action* : ${actionType}\n` +
-        `├  ◦  *Task ID* : \`${taskId}\`\n` +
-        `├  ◦  *Biaya Koin* : ${taskRes.cost_point ?? "-"} Pts\n` +
-        `└  ◦  *Sisa Saldo* : ${taskRes.remaining_points ?? "-"} 🪙`;
-
+      const bodyText = `–  *M U S E L A B  A I*\n\n` + `┌  ◦  *Action* : ${actionType}\n` + `├  ◦  *Task ID* : \`${taskId}\`\n` + `├  ◦  *Biaya Koin* : ${taskRes.cost_point ?? "-"} Pts\n` + `└  ◦  *Sisa Saldo* : ${taskRes.remaining_points ?? "-"} 🪙`;
       const buttons = [{
         name: "cta_copy",
         display_text: "📄 Salin Prompt",
         copy_code: queryParams.prompt
       }];
-
       let sentMsg;
       if (typeof ctx.sendCta === "function" && !isVideo) {
         sentMsg = await ctx.sendCta(bodyText, "", buttons, {
@@ -595,26 +512,25 @@ Generator visual canggih untuk Restyle Foto, Animasi Video & AI Templates.
         });
       } else if (isVideo) {
         sentMsg = await sock.sendMessage(ctx.id, {
-          video: { url: outputUrl },
+          video: {
+            url: outputUrl
+          },
           caption: bodyText
-        }, { quoted: quotedMsg });
+        }, {
+          quoted: quotedMsg
+        });
       } else {
         sentMsg = await sock.sendMessage(ctx.id, {
-          image: { url: outputUrl },
+          image: {
+            url: outputUrl
+          },
           caption: bodyText
-        }, { quoted: quotedMsg });
+        }, {
+          quoted: quotedMsg
+        });
       }
-
       const sentMsgId = sentMsg?.key?.id;
-      recordSession(
-        chatId,
-        sentMsgId,
-        taskRes.state || existingSession?.state,
-        outputUrl,
-        chosenTemplate || existingSession?.template_id,
-        existingSession?.template_title
-      );
-
+      recordSession(chatId, sentMsgId, taskRes.state || existingSession?.state, outputUrl, chosenTemplate || existingSession?.template_id, existingSession?.template_title);
       await ctx.react("✨");
     } catch (error) {
       console.error("[MuseLab AI Error]:", error?.message || error);

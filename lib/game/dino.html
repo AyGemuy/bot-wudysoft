@@ -1,902 +1,680 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="id">
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-  <title>Dino Bot — Endless Runner</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+  <meta name="theme-color" content="#05070a">
+  <title>SxcWaMd Dino Run</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
+    *,
+    ::after,
+    ::before {
       box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
+      -webkit-tap-highlight-color: transparent
     }
 
     body,
     html {
-      height: 100%;
-      width: 100%;
-      overflow: hidden;
-      overscroll-behavior: none;
-      background: #0b141a;
-      touch-action: none;
+      margin: 0;
+      padding: 0
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      color: #e9edef;
-      user-select: none;
-      -webkit-user-select: none;
-      position: fixed;
-      inset: 0;
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: clamp(10px, 2.2vw, 24px);
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: #eaf2ff;
+      background: radial-gradient(1200px 700px at 15% -10%, rgba(34, 197, 94, .22), transparent 62%), radial-gradient(1000px 700px at 88% 0, rgba(56, 189, 248, .18), transparent 60%), radial-gradient(900px 800px at 50% 120%, rgba(168, 85, 247, .16), transparent 62%), #05070a;
+      background-attachment: fixed;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      position: relative
     }
 
-    canvas {
+    body::before {
+      content: "";
+      position: fixed;
+      inset: -25vmax;
+      z-index: -1;
+      pointer-events: none;
+      background: radial-gradient(38vmax 38vmax at 18% 14%, rgba(52, 211, 153, .3), transparent 60%), radial-gradient(34vmax 34vmax at 82% 20%, rgba(56, 189, 248, .24), transparent 60%), radial-gradient(40vmax 40vmax at 50% 92%, rgba(168, 85, 247, .22), transparent 62%);
+      filter: blur(28px);
+      animation: drift 26s ease-in-out infinite alternate
+    }
+
+    @keyframes drift {
+      0% {
+        transform: translate3d(-1.5%, 0, 0) scale(1)
+      }
+
+      100% {
+        transform: translate3d(1.5%, -2%, 0) scale(1.1)
+      }
+    }
+
+    .glass {
+      background: linear-gradient(158deg, rgba(255, 255, 255, .11), rgba(255, 255, 255, .028) 46%, rgba(255, 255, 255, .07));
+      border: 1px solid rgba(255, 255, 255, .13);
+      border-radius: 20px;
+      backdrop-filter: blur(22px) saturate(175%);
+      -webkit-backdrop-filter: blur(22px) saturate(175%);
+      box-shadow: 0 18px 46px rgba(0, 0, 0, .52), inset 0 1px 0 rgba(255, 255, 255, .22), inset 0 -1px 0 rgba(255, 255, 255, .05)
+    }
+
+    .app {
+      width: min(100%, 880px);
+      display: flex;
+      flex-direction: column;
+      gap: clamp(9px, 1.5vw, 15px);
+      margin: auto
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: clamp(9px, 1.5vw, 15px) clamp(12px, 2vw, 20px);
+      border-radius: 22px
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: clamp(9px, 1.6vw, 13px);
+      min-width: 0
+    }
+
+    .logo {
+      flex: none;
+      width: clamp(38px, 7.5vw, 50px);
+      height: clamp(38px, 7.5vw, 50px);
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      font-size: clamp(19px, 3.8vw, 26px);
+      background: linear-gradient(140deg, #4ade80, #22d3ee);
+      box-shadow: 0 10px 30px rgba(34, 197, 94, .45), inset 0 1px 0 rgba(255, 255, 255, .55)
+    }
+
+    .brand-txt {
+      min-width: 0
+    }
+
+    .brand-txt h1 {
+      margin: 0;
+      font-size: clamp(13px, 2.4vw, 18px);
+      font-weight: 800;
+      letter-spacing: .2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis
+    }
+
+    .brand-txt p {
+      margin: 2px 0 0;
+      font-size: clamp(9.5px, 1.6vw, 12px);
+      color: #93a3b8;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis
+    }
+
+    .status {
+      flex: none;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 13px;
+      border-radius: 999px;
+      font-size: clamp(9px, 1.5vw, 11px);
+      font-weight: 800;
+      letter-spacing: .12em;
+      color: #c9d6e6;
+      background: rgba(255, 255, 255, .06);
+      border: 1px solid rgba(255, 255, 255, .12);
+      white-space: nowrap
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #38bdf8;
+      box-shadow: 0 0 10px #38bdf8;
+      animation: pulse 1.6s ease-in-out infinite
+    }
+
+    .status.ready .dot {
+      background: #38bdf8;
+      box-shadow: 0 0 10px #38bdf8
+    }
+
+    .status.play .dot {
+      background: #22c55e;
+      box-shadow: 0 0 12px #22c55e
+    }
+
+    .status.over .dot {
+      background: #ef4444;
+      box-shadow: 0 0 12px #ef4444;
+      animation: none
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1)
+      }
+
+      50% {
+        opacity: .35;
+        transform: scale(.72)
+      }
+    }
+
+    .stage {
+      position: relative;
+      padding: clamp(5px, 1vw, 9px);
+      border-radius: 26px;
+      overflow: hidden
+    }
+
+    .stage::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      border-radius: 26px;
+      background: linear-gradient(140deg, rgba(255, 255, 255, .16), transparent 32%, transparent 70%, rgba(255, 255, 255, .08));
+      mix-blend-mode: overlay
+    }
+
+    #gameCanvas {
       display: block;
+      width: 100%;
+      aspect-ratio: 16/9;
+      border-radius: 20px;
+      background: #0a0e17;
+      touch-action: none
+    }
+
+    .hud {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: clamp(7px, 1.3vw, 12px)
+    }
+
+    .stat {
+      padding: clamp(8px, 1.4vw, 13px) 6px;
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      text-align: center
+    }
+
+    .stat-label {
+      font-size: clamp(8px, 1.5vw, 10px);
+      font-weight: 800;
+      letter-spacing: .16em;
+      color: #8b9cb2;
+      text-transform: uppercase
+    }
+
+    .stat strong {
+      font-size: clamp(14px, 3.2vw, 22px);
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: .02em;
+      color: #7ef2b0;
+      text-shadow: 0 0 20px rgba(52, 211, 153, .55);
+      line-height: 1.15
+    }
+
+    .stat:nth-child(2) strong {
+      color: #7dd3fc;
+      text-shadow: 0 0 20px rgba(56, 189, 248, .55)
+    }
+
+    .stat:nth-child(3) strong {
+      color: #fbd38d;
+      text-shadow: 0 0 20px rgba(248, 184, 0, .45)
+    }
+
+    .hint {
+      margin: 0;
+      padding: clamp(9px, 1.5vw, 13px) clamp(12px, 2vw, 18px);
+      border-radius: 16px;
+      font-size: clamp(10px, 1.7vw, 12.5px);
+      line-height: 1.55;
+      color: #a9b8cc;
+      text-align: center
+    }
+
+    .hint kbd {
+      display: inline-block;
+      padding: 1px 7px;
+      margin: 0 1px;
+      border-radius: 7px;
+      background: rgba(255, 255, 255, .1);
+      border: 1px solid rgba(255, 255, 255, .16);
+      box-shadow: 0 1px 0 rgba(0, 0, 0, .35);
+      font-family: inherit;
+      font-size: .92em;
+      font-weight: 700;
+      color: #e6eefb
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1.55fr;
+      gap: clamp(8px, 1.3vw, 12px)
+    }
+
+    .ctrl {
+      position: relative;
+      min-height: clamp(52px, 8.5vh, 68px);
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, .15);
+      color: #fff;
+      font-family: inherit;
+      font-weight: 800;
+      font-size: clamp(11.5px, 2.1vw, 14.5px);
+      letter-spacing: .04em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
       touch-action: none;
-      width: 100vw;
-      height: 100vh;
+      overflow: hidden;
+      background: linear-gradient(158deg, rgba(255, 255, 255, .13), rgba(255, 255, 255, .035));
+      backdrop-filter: blur(16px) saturate(165%);
+      -webkit-backdrop-filter: blur(16px) saturate(165%);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, .42), inset 0 1px 0 rgba(255, 255, 255, .24);
+      transition: transform .1s ease, box-shadow .22s ease, filter .22s ease
+    }
+
+    .ctrl span {
+      position: relative;
+      z-index: 1
+    }
+
+    .ctrl::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(160deg, rgba(255, 255, 255, .22), transparent 55%);
+      opacity: .6;
+      pointer-events: none
+    }
+
+    .ctrl.jump {
+      border-color: rgba(255, 255, 255, .3);
+      background: linear-gradient(140deg, #4ade80, #22c55e 42%, #0ea5e9 100%);
+      box-shadow: 0 14px 34px rgba(34, 197, 94, .42), inset 0 1px 0 rgba(255, 255, 255, .55)
+    }
+
+    .ctrl:active {
+      transform: translateY(2px) scale(.985);
+      filter: brightness(1.08)
+    }
+
+    @media (hover:hover) {
+      .ctrl:hover {
+        filter: brightness(1.12)
+      }
+
+      .ctrl.jump:hover {
+        box-shadow: 0 18px 42px rgba(34, 197, 94, .55), inset 0 1px 0 rgba(255, 255, 255, .6)
+      }
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(3, 5, 9, .68);
+      backdrop-filter: blur(14px) saturate(130%);
+      -webkit-backdrop-filter: blur(14px) saturate(130%)
+    }
+
+    .overlay.show {
+      display: flex;
+      animation: fadeIn .22s ease
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0
+      }
+
+      to {
+        opacity: 1
+      }
+    }
+
+    .modal {
+      width: min(94vw, 400px);
+      padding: clamp(22px, 4vw, 30px);
+      border-radius: 26px;
+      text-align: center;
+      animation: pop .3s cubic-bezier(.2, .9, .3, 1.2)
+    }
+
+    @keyframes pop {
+      from {
+        transform: translateY(14px) scale(.94);
+        opacity: 0
+      }
+
+      to {
+        transform: none;
+        opacity: 1
+      }
+    }
+
+    .modalIcon {
+      width: 74px;
+      height: 74px;
+      margin: 0 auto 12px;
+      border-radius: 24px;
+      display: grid;
+      place-items: center;
+      font-size: 36px;
+      background: linear-gradient(140deg, rgba(239, 68, 68, .32), rgba(168, 85, 247, .26));
+      border: 1px solid rgba(255, 255, 255, .16);
+      box-shadow: 0 14px 40px rgba(239, 68, 68, .3), inset 0 1px 0 rgba(255, 255, 255, .28)
+    }
+
+    .modal h2 {
+      margin: 0 0 6px;
+      font-size: clamp(19px, 4vw, 24px);
+      letter-spacing: .06em;
+      font-weight: 800
+    }
+
+    .modal .final {
+      margin: 0 0 4px;
+      font-size: clamp(12px, 2.2vw, 14px);
+      color: #a9b8cc
+    }
+
+    .modal .final b {
+      color: #7ef2b0;
+      font-variant-numeric: tabular-nums;
+      font-size: 1.25em
+    }
+
+    .modal .best {
+      margin: 0 0 20px;
+      font-size: clamp(10px, 1.8vw, 12px);
+      color: #7dd3fc;
+      letter-spacing: .08em;
+      font-weight: 700
+    }
+
+    .btn-restart {
+      width: 100%;
+      min-height: 52px;
+      border: none;
+      border-radius: 16px;
+      font-family: inherit;
+      font-weight: 800;
+      font-size: clamp(13px, 2.4vw, 15px);
+      letter-spacing: .05em;
+      color: #fff;
+      cursor: pointer;
+      background: linear-gradient(140deg, #4ade80, #22c55e 40%, #0ea5e9);
+      box-shadow: 0 16px 38px rgba(34, 197, 94, .45), inset 0 1px 0 rgba(255, 255, 255, .5);
+      transition: transform .1s ease, filter .2s ease
+    }
+
+    .btn-restart:active {
+      transform: scale(.975);
+      filter: brightness(1.1)
+    }
+
+    @media (max-width:420px) {
+      .topbar {
+        border-radius: 18px
+      }
+
+      .hint {
+        display: none
+      }
+
+      .brand-txt p {
+        display: none
+      }
+    }
+
+    @media (max-height:640px) {
+      .hint {
+        display: none
+      }
+
+      .ctrl {
+        min-height: 48px
+      }
     }
   </style>
 </head>
 
 <body>
-  <canvas id="game"></canvas>
-
+  <div class="app">
+    <header class="topbar glass">
+      <div class="brand">
+        <div class="logo">🦖</div>
+        <div class="brand-txt">
+          <h1>SxcWaMd Dino Run</h1>
+          <p>Lompat kaktus &amp; elak burung purba</p>
+        </div>
+      </div>
+      <div class="status ready" id="statusBox"><span class="dot"></span><span id="statusLabel">SIAP</span></div>
+    </header>
+    <div class="stage glass"><canvas id="gameCanvas" width="640" height="360"></canvas></div>
+    <div class="hud">
+      <div class="stat glass"><span class="stat-label">Skor</span> <strong id="scoreVal">00000</strong></div>
+      <div class="stat glass"><span class="stat-label">Terbaik</span> <strong id="highScoreVal">00000</strong></div>
+      <div class="stat glass"><span class="stat-label">Kecepatan</span> <strong id="speedVal">1.0×</strong></div>
+    </div>
+    <p class="hint glass"><kbd>Spasi</kbd> / <kbd>↑</kbd> lompat &nbsp;•&nbsp; <kbd>↓</kbd> unduk &nbsp;•&nbsp; di HP tap layar untuk lompat</p>
+    <div class="controls"><button class="ctrl glass" id="btnDuck" aria-label="Unduk">🔽 <span>UNDUK</span></button> <button class="ctrl jump" id="btnJump" aria-label="Lompat">🔼 <span>LOMPAT</span></button></div>
+  </div>
+  <div class="overlay" id="overlay">
+    <div class="modal glass">
+      <div class="modalIcon">💀</div>
+      <h2>GAME OVER</h2>
+      <p class="final">Skor akhir: <b id="finalScoreDesc">0</b></p>
+      <p class="best" id="bestDesc">REKOR: 0</p><button class="btn-restart" id="btnRestart">🔄 MAIN LAGI</button>
+    </div>
+  </div>
   <script>
-    const canvas = document.getElementById("game");
-    const ctx = canvas.getContext("2d");
-    
-    let W = 0, H = 0, groundY = 0;
-    
-    // State Game
-    const game = { 
-      phase: "menu", // menu, playing, over
-      lives: 3, 
-      distance: 0, 
-      coins: 0, 
-      timeLeft: 30, 
-      speed: 6.5, 
-      groundOffset: 0, 
-      groundOffset2: 0, 
-      player: { bottomY: 0, vy: 0, onGround: true, legPhase: 0, runCycle: 0, invincible: 0, squash: 0, w: 66, h: 76 }, 
-      obstacles: [], 
-      coinsList: [], 
-      particles: [], 
-      floaties: [], 
-      dust: [], 
-      clouds: [], 
-      hills: [], 
-      spawnTimer: 0, 
-      coinTimer: 0, 
-      shake: 0, 
-      flash: 0, 
-      flashColor: "rgba(6,207,156,.35)",
-      win: false
-    };
-
-    const clamp = (t, e, a) => Math.max(e, Math.min(a, t));
-    const rand = (t, e) => t + Math.random() * (e - t);
-
-    // UI Hitbox untuk Tombol Main Lagi
-    let btnRestart = { x: 0, y: 0, w: 180, h: 50 };
-
-    // ==========================================
-    // RESIZE & LAYOUT
-    // ==========================================
-    function resize() {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      W = window.innerWidth;
-      H = window.innerHeight;
-      
-      canvas.width = W * dpr;
-      canvas.height = H * dpr;
-      canvas.style.width = W + 'px';
-      canvas.style.height = H + 'px';
-      
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      
-      groundY = H - Math.max(220, .26 * H);
-      const scale = clamp(W / 1200, .72, 1.1);
-      game.player.w = Math.round(66 * scale);
-      game.player.h = Math.round(76 * scale);
-
-      if (game.phase === "menu" || game.phase === "over") {
-        game.player.bottomY = groundY;
-      }
-
-      buildHills();
-      buildClouds();
-
-      btnRestart.x = W / 2 - btnRestart.w / 2;
-      btnRestart.y = H / 2 + 50;
-
-      draw();
-    }
-
-    window.addEventListener("resize", resize);
-    window.addEventListener("orientationchange", () => setTimeout(resize, 200));
-
-    function buildHills() { 
-      game.hills = []; 
-      for (let i = 0; i < 6; i++) 
-        game.hills.push({ x: i / 6 * W * 1.4 - 100, w: rand(200, 380), h: rand(60, 130), speed: rand(.18, .28) }) 
-    }
-
-    function buildClouds() { 
-      game.clouds = []; 
-      for (let i = 0; i < 5; i++) 
-        game.clouds.push({ x: rand(0, W), y: rand(70, .55 * groundY), w: rand(70, 130), h: rand(14, 22), speed: rand(.15, .35), alpha: rand(.05, .12) }) 
-    }
-
-    // ==========================================
-    // AUDIO (Web Audio API)
-    // ==========================================
-    let audioCtx = null, masterGain = null;
-    function initAudio() {
-      if (audioCtx) return;
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (AudioContext) {
-        audioCtx = new AudioContext();
-        masterGain = audioCtx.createGain();
-        masterGain.gain.value = 0.35;
-        masterGain.connect(audioCtx.destination);
-      }
-    }
-
-    function sfxJump() {
-      if (!audioCtx) return;
-      const t = audioCtx.currentTime, o = audioCtx.createOscillator(), g = audioCtx.createGain();
-      o.type = "triangle"; o.frequency.setValueAtTime(420, t); o.frequency.exponentialRampToValueAtTime(760, t + .09);
-      g.gain.setValueAtTime(1e-4, t); g.gain.exponentialRampToValueAtTime(.22, t + .008); g.gain.exponentialRampToValueAtTime(1e-4, t + .14);
-      o.connect(g); g.connect(masterGain); o.start(t); o.stop(t + .16);
-    }
-
-    function sfxCoin() {
-      if (!audioCtx) return;
-      const t = audioCtx.currentTime;
-      [880, 1320].forEach((f, i) => {
-        const o = audioCtx.createOscillator(), g = audioCtx.createGain(), st = t + .05 * i;
-        o.type = "sine"; o.frequency.value = f;
-        g.gain.setValueAtTime(1e-4, st); g.gain.exponentialRampToValueAtTime(.16, st + .008); g.gain.exponentialRampToValueAtTime(1e-4, st + .13);
-        o.connect(g); g.connect(masterGain); o.start(st); o.stop(st + .15);
-      });
-    }
-
-    function sfxCrash() {
-      if (!audioCtx) return;
-      const t = audioCtx.currentTime, o = audioCtx.createOscillator(), f = audioCtx.createBiquadFilter(), g = audioCtx.createGain();
-      o.type = "sawtooth"; o.frequency.setValueAtTime(180, t); o.frequency.exponentialRampToValueAtTime(45, t + .32);
-      f.type = "lowpass"; f.frequency.value = 900;
-      g.gain.setValueAtTime(1e-4, t); g.gain.exponentialRampToValueAtTime(.28, t + .01); g.gain.exponentialRampToValueAtTime(1e-4, t + .36);
-      o.connect(f); f.connect(g); g.connect(masterGain); o.start(t); o.stop(t + .4);
-    }
-
-    // ==========================================
-    // PARTICLES & EFFECTS
-    // ==========================================
-    function spawnParticles(x, y, color, count = 12, scale = 1) {
-      for (let i = 0; i < count; i++) {
-        const angle = Math.random() * Math.PI * 2, speed = (1.4 + 4 * Math.random()) * scale;
-        game.particles.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 1.4, life: 1, size: 2 + 3.5 * Math.random(), color });
-      }
-    }
-
-    function spawnFloatText(x, y, text, color) { game.floaties.push({ x, y, text, color, life: 1 }) }
-    function spawnDust(x, y, dir = -1) { game.dust.push({ x, y, vx: dir * rand(1.5, 3.5), vy: -rand(.6, 2.2), life: 1, size: rand(3, 7) }) }
-
-    function updateParticles(dt) {
-      for (let i = game.particles.length - 1; i >= 0; i--) {
-        const p = game.particles[i];
-        p.x += p.vx * dt; p.y += p.vy * dt; p.vy += .24 * dt; p.vx *= .985; p.life -= .028 * dt;
-        if (p.life <= 0) game.particles.splice(i, 1);
-      }
-      for (let i = game.floaties.length - 1; i >= 0; i--) {
-        const f = game.floaties[i];
-        f.y -= 1.1 * dt; f.life -= .022 * dt;
-        if (f.life <= 0) game.floaties.splice(i, 1);
-      }
-      for (let i = game.dust.length - 1; i >= 0; i--) {
-        const d = game.dust[i];
-        d.x += d.vx * dt; d.y += d.vy * dt; d.vy += .16 * dt; d.vx *= .94; d.life -= .04 * dt;
-        if (d.life <= 0) game.dust.splice(i, 1);
-      }
-    }
-
-    // ==========================================
-    // GAME LOGIC
-    // ==========================================
-    function startGame() {
-      game.phase = "playing";
-      game.lives = 3;
-      game.distance = 0;
-      game.coins = 0;
-      game.timeLeft = 30;
-      game.speed = 6.5;
-      game.groundOffset = 0;
-      game.groundOffset2 = 0;
-      game.obstacles = [];
-      game.coinsList = [];
-      game.particles = [];
-      game.floaties = [];
-      game.dust = [];
-      game.spawnTimer = 1;
-      game.coinTimer = 1.2;
-      game.shake = 0;
-      game.flash = 0;
-      game.win = false;
-
-      const p = game.player;
-      p.bottomY = groundY; p.vy = 0; p.onGround = true; p.invincible = 0; p.squash = 0; p.legPhase = 0;
-    }
-
-    function endGame() {
-      game.phase = "over";
-      game.win = game.timeLeft <= 0;
-      if (game.win) {
-        spawnParticles(W/2, H/2, "#06cf9c", 40, 1.5);
-      } else {
-        game.shake = 20;
-        game.flash = 0.5;
-        game.flashColor = "rgba(241,92,109,.55)";
-        spawnParticles(W/2, H/2, "#f15c6d", 30, 1.5);
-      }
-    }
-
-    function doJump() {
-      if (game.phase === "menu") { startGame(); return; }
-      if (game.phase === "over") return;
-      
-      const p = game.player;
-      if (p.onGround) {
-        p.vy = -16; p.onGround = false; p.squash = -.28;
-        initAudio();
-        if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
-        sfxJump();
-        for (let i = 0; i < 6; i++) spawnDust(0.16 * W, groundY, -1);
-      }
-    }
-
-    function updatePlayer(dt) {
-      const p = game.player;
-      
-      if (!p.onGround) {
-        p.vy += 1 * dt;
-        p.bottomY += p.vy * dt;
-        if (p.bottomY >= groundY) {
-          p.bottomY = groundY; p.vy = 0; p.onGround = true; p.squash = .32;
-          for (let i = 0; i < 5; i++) spawnDust(0.16 * W, groundY, -1);
-        }
-      }
-
-      if (p.squash < 0) p.squash = Math.min(0, p.squash + .05 * dt);
-      if (p.squash > 0) p.squash = Math.max(0, p.squash - .05 * dt);
-
-      p.legPhase += .32 * dt * (game.speed / 6.5);
-      if (p.legPhase > Math.PI * 2) p.legPhase -= Math.PI * 2;
-      
-      if (p.invincible > 0) p.invincible = Math.max(0, p.invincible - dt / 60);
-    }
-
-    function updateWorld(dt) {
-      const elapsed = dt / 60;
-      const progress = 30 - game.timeLeft;
-      
-      game.speed = 6.5 + Math.min(8, .28 * progress);
-      const scroll = game.speed * dt;
-      
-      game.distance += game.speed * dt * .055;
-      game.groundOffset = (game.groundOffset + scroll) % 34;
-      game.groundOffset2 = (game.groundOffset2 + .55 * scroll) % 90;
-
-      // Update Backgrounds
-      for (const c of game.clouds) {
-        c.x -= c.speed * dt;
-        if (c.x + c.w < -20) { c.x = W + rand(20, 200); c.y = rand(70, .55 * groundY); c.w = rand(70, 130); c.h = rand(14, 22); c.alpha = rand(.05, .12); }
-      }
-      for (const h of game.hills) {
-        h.x -= h.speed * dt * (game.speed / 6.5);
-        if (h.x + h.w < -50) { h.x = W + rand(40, 260); h.w = rand(200, 380); h.h = rand(60, 130); }
-      }
-
-      // Spawn Obstacles
-      game.spawnTimer -= elapsed;
-      if (game.spawnTimer <= 0) {
-        spawnObstacle();
-        game.spawnTimer = clamp(.95 - .042 * (game.speed - 6.5), .68, 1.05) + rand(-.08, .22);
-      }
-
-      // Spawn Coins
-      game.coinTimer -= elapsed;
-      if (game.coinTimer <= 0) {
-        spawnCoin();
-        if (Math.random() < .3) spawnCoin();
-        game.coinTimer = rand(.7, 1.6);
-      }
-
-      // Update Obstacles & Coins
-      for (let i = game.obstacles.length - 1; i >= 0; i--) {
-        const obs = game.obstacles[i];
-        obs.x -= scroll;
-        if (obs.type === "bird") { obs.wingPhase += .28 * dt; obs.bob += .06 * dt; }
-        if (obs.x + obs.w < -40) game.obstacles.splice(i, 1);
-      }
-      for (let i = game.coinsList.length - 1; i >= 0; i--) {
-        const c = game.coinsList[i];
-        c.x -= scroll; c.phase += .09 * dt;
-        if (c.x + c.r < -40) game.coinsList.splice(i, 1);
-      }
-
-      // Timer
-      game.timeLeft -= elapsed;
-      if (game.timeLeft <= 0) { game.timeLeft = 0; endGame(); return; }
-
-      checkCollisions();
-    }
-
-    function spawnObstacle() {
-      let canSpawn = true;
-      for (const o of game.obstacles) {
-        if (o.x > W - 520) { canSpawn = false; break; }
-      }
-      
-      const r = Math.random();
-      let type = r < .18 && canSpawn && game.distance > 120 ? "bird" : r < .55 ? "cactus_small" : r < .82 ? "cactus_large" : "rock";
-      
-      let w, h, y;
-      if (type === "cactus_small") { w = clamp(.026 * W, 22, 34); h = clamp(.075 * H, 42, 62); y = groundY - h; }
-      else if (type === "cactus_large") { w = clamp(.034 * W, 30, 46); h = clamp(.11 * H, 62, 92); y = groundY - h; }
-      else if (type === "rock") { w = clamp(.042 * W, 38, 62); h = clamp(.055 * H, 32, 48); y = groundY - h; }
-      else if (type === "bird") { w = clamp(.038 * W, 34, 52); h = clamp(.045 * H, 26, 38); y = groundY - h - clamp(.1 * H, 70, 120); }
-      
-      game.obstacles.push({ type, x: W + 40, y, w, h, wingPhase: 0, bob: Math.random() * Math.PI * 2 });
-    }
-
-    function spawnCoin() {
-      const y = Math.random() < .55 ? groundY - clamp(.055 * H, 32, 50) : groundY - clamp(.16 * H, 100, 170);
-      game.coinsList.push({ x: W + 30, y, r: clamp(.011 * W, 11, 16), phase: Math.random() * Math.PI * 2 });
-    }
-
-    function checkCollisions() {
-      const p = game.player;
-      const px = .16 * W, pyTop = p.bottomY - p.h, pyBot = p.bottomY;
-      const hitX = px - .3 * p.w, hitY = pyTop + .12 * p.h;
-      const hitW = .6 * p.w, hitH = .86 * p.h;
-
-      if (p.invincible <= 0) {
-        for (let i = game.obstacles.length - 1; i >= 0; i--) {
-          const o = game.obstacles[i];
-          const ox = o.x + .14 * o.w, oy = o.y + .1 * o.h;
-          const ow = .72 * o.w, oh = .84 * o.h;
-          
-          if (hitX < ox + ow && hitX + hitW > ox && hitY < oy + oh && hitY + hitH > oy) {
-            game.obstacles.splice(i, 1);
-            crash();
-            return;
-          }
-        }
-      }
-
-      for (let i = game.coinsList.length - 1; i >= 0; i--) {
-        const c = game.coinsList[i];
-        const cx = px, cy = (pyTop + pyBot) / 2;
-        
-        if (Math.hypot(cx - c.x, cy - c.y) < .5 * p.w + c.r) {
-          game.coinsList.splice(i, 1);
-          game.coins++;
-          spawnParticles(c.x, c.y, "#ffb74d", 10, .85);
-          spawnFloatText(c.x, c.y - 10, "+1", "#ffb74d");
-          game.flash = .14;
-          game.flashColor = "rgba(255,183,77,.32)";
-          sfxCoin();
-        }
-      }
-    }
-
-    function crash() {
-      const p = game.player;
-      p.invincible = 1.5;
-      game.lives--;
-      game.shake = 16;
-      game.flash = .55;
-      game.flashColor = "rgba(241,92,109,.55)";
-      
-      const px = .16 * W, py = p.bottomY - p.h / 2;
-      spawnParticles(px, py, "#f15c6d", 26, 1.6);
-      spawnParticles(px, py, "#ffb74d", 10, 1.1);
-      spawnFloatText(px, py - 40, "CRASH!", "#f15c6d");
-      sfxCrash();
-
-      if (game.lives <= 0) endGame();
-    }
-
-    // ==========================================
-    // DRAWING
-    // ==========================================
-    function rr(x, y, w, h, r) { 
-      ctx.beginPath(); 
-      if (typeof ctx.roundRect === "function") ctx.roundRect(x, y, w, h, r); 
-      else {
-        r = Math.min(r, w/2, h/2);
-        ctx.moveTo(x+r, y); ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
-        ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
-        ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r);
-        ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y); ctx.closePath();
-      }
-    }
-
-    function drawDino(x, bottomY, w, h, legPhase, jumping, squash, isGhost) {
-      const sw = w * (1 - .55 * squash);
-      const sh = h * (1 + .55 * squash);
-      const dx = x - sw / 2;
-      const dy = bottomY - sh;
-      const bodyH = .52 * sh;
-      const bellyY = dy + .3 * sh;
-      
-      const cMain = "#06cf9c", cDark = "#008069", cEye = "#0b141a";
-
-      ctx.save();
-      
-      // Bayangan
-      if (!jumping) {
-        ctx.fillStyle = "rgba(0,0,0,.22)";
-        ctx.beginPath(); ctx.ellipse(x, groundY + 3, .45 * sw, 5, 0, 0, Math.PI*2); ctx.fill();
-      }
-
-      // Ekor
-      ctx.fillStyle = cMain;
-      ctx.beginPath(); ctx.moveTo(dx + .1 * sw, bellyY + .1 * bodyH); ctx.lineTo(dx - .24 * sw, bellyY + .42 * bodyH); ctx.lineTo(dx + .1 * sw, bellyY + .94 * bodyH); ctx.closePath(); ctx.fill();
-
-      // Badan bawah
-      ctx.fillStyle = cMain; rr(dx + .06 * sw, bellyY, .72 * sw, bodyH, 8); ctx.fill();
-      ctx.fillStyle = "rgba(255,255,255,.14)"; rr(dx + .14 * sw, bellyY + .15 * bodyH, .42 * sw, .26 * bodyH, 5); ctx.fill();
-
-      // Kepala
-      const headW = .56 * sw, headH = .42 * sh;
-      const hx = dx + .36 * sw, hy = dy + .02 * sh;
-      ctx.fillStyle = cMain; rr(dx + .42 * sw, bellyY - .05 * sh, .28 * sw, .34 * sh, 5); ctx.fill();
-      rr(hx, hy, headW, headH, 8); ctx.fill();
-      rr(hx + .62 * headW, hy + .42 * headH, .42 * headW, .42 * headH, 5); ctx.fill();
-
-      // Mata
-      if (isGhost) {
-        ctx.strokeStyle = cEye; ctx.lineWidth = Math.max(1.5, .028 * sw);
-        ctx.beginPath(); ctx.moveTo(hx + .56 * headW, hy + .36 * headH); ctx.lineTo(hx + .8 * headW, hy + .36 * headH); ctx.stroke();
-      } else {
-        ctx.fillStyle = cEye; ctx.beginPath(); ctx.arc(hx + .68 * headW, hy + .36 * headH, Math.max(2, .045 * sw), 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = "rgba(255,255,255,.7)"; ctx.beginPath(); ctx.arc(hx + .71 * headW, hy + .3 * headH, Math.max(.8, .016 * sw), 0, Math.PI*2); ctx.fill();
-      }
-
-      // Punggung
-      ctx.fillStyle = cDark;
-      for (let i = 0; i < 3; i++) {
-        const sx = dx + sw * (.2 + .16 * i), sy = bellyY;
-        ctx.beginPath(); ctx.moveTo(sx, sy + 2); ctx.lineTo(sx + .06 * sw, sy - .055 * sh); ctx.lineTo(sx + .12 * sw, sy + 2); ctx.closePath(); ctx.fill();
-      }
-
-      // Kaki
-      ctx.fillStyle = cMain;
-      if (jumping) {
-        rr(dx + .22 * sw, bottomY - .2 * sh, .16 * sw, .2 * sh, 4); ctx.fill();
-        rr(dx + .48 * sw, bottomY - .16 * sh, .16 * sw, .16 * sh, 4); ctx.fill();
-      } else {
-        const swing = Math.sin(legPhase);
-        const a = .24 * sh + swing * sh * .05;
-        const b = .24 * sh - swing * sh * .05;
-        rr(dx + .22 * sw, bottomY - a, .15 * sw, a, 4); ctx.fill();
-        rr(dx + .48 * sw, bottomY - b, .15 * sw, b, 4); ctx.fill();
-        ctx.fillStyle = cDark;
-        rr(dx + .18 * sw, bottomY - 5, .22 * sw, 5, 2); ctx.fill();
-        rr(dx + .44 * sw, bottomY - 5, .22 * sw, 5, 2); ctx.fill();
-      }
-
-      // Tangan
-      ctx.fillStyle = cMain; rr(dx + .66 * sw, bellyY + .3 * bodyH, .18 * sw, .14 * sh, 4); ctx.fill();
-      ctx.restore();
-    }
-
-    function drawCactus(o, large) {
-      const { x, y, w, h } = o;
-      ctx.fillStyle = "#f15c6d";
-      rr(x + .3 * w, y, .4 * w, h, 6); ctx.fill();
-      ctx.fillStyle = "#ff8a9a"; rr(x + .36 * w, y + 4, .1 * w, h - 8, 4); ctx.fill();
-      
-      const c1 = y + h * (large ? .28 : .32);
-      const c2 = y + h * (large ? .5 : .56);
-      
-      ctx.fillStyle = "#f15c6d";
-      rr(x, c1, .32 * w, .24 * w, 5); ctx.fill();
-      rr(x, c1 - .16 * h, .2 * w, .28 * h, 5); ctx.fill();
-      rr(x + .68 * w, c2, .32 * w, .24 * w, 5); ctx.fill();
-      rr(x + .8 * w, c2 - .2 * h, .2 * w, .32 * h, 5); ctx.fill();
-      
-      ctx.fillStyle = "#c5002f"; rr(x + .28 * w, y + h - 4, .44 * w, 4, 2); ctx.fill();
-    }
-
-    function drawRock(o) {
-      const { x, y, w, h } = o;
-      ctx.fillStyle = "#7986cb";
-      ctx.beginPath(); ctx.moveTo(x + .1 * w, y + h); ctx.lineTo(x, y + .62 * h); ctx.lineTo(x + .22 * w, y + .1 * h); ctx.lineTo(x + .55 * w, y); ctx.lineTo(x + .88 * w, y + .2 * h); ctx.lineTo(x + w, y + .7 * h); ctx.lineTo(x + .9 * w, y + h); ctx.closePath(); ctx.fill();
-      
-      ctx.fillStyle = "#a4aede";
-      ctx.beginPath(); ctx.moveTo(x + .3 * w, y + .16 * h); ctx.lineTo(x + .54 * w, y + .08 * h); ctx.lineTo(x + .42 * w, y + .42 * h); ctx.closePath(); ctx.fill();
-      
-      ctx.fillStyle = "#4a5685";
-      ctx.beginPath(); ctx.moveTo(x + .6 * w, y + .5 * h); ctx.lineTo(x + .95 * w, y + .6 * h); ctx.lineTo(x + .92 * w, y + .92 * h); ctx.lineTo(x + .7 * w, y + .85 * h); ctx.closePath(); ctx.fill();
-    }
-
-    function drawBird(o) {
-      const { x, y, w, h, wingPhase, bob } = o;
-      const color = "#e08c1e";
-      const offsetY = 3 * Math.sin(bob);
-      
-      ctx.save();
-      ctx.translate(x + w / 2, y + h / 2 + offsetY);
-      
-      const wing = .7 * Math.sin(wingPhase);
-      ctx.fillStyle = color;
-      ctx.beginPath(); ctx.moveTo(.1 * -w, 0); ctx.lineTo(.52 * -w, .55 * -h * wing - .2 * h); ctx.lineTo(.3 * -w, .1 * h); ctx.closePath(); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(.1 * w, 0); ctx.lineTo(.52 * w, .55 * -h * wing - .2 * h); ctx.lineTo(.3 * w, .1 * h); ctx.closePath(); ctx.fill();
-      
-      ctx.fillStyle = "#ffb74d";
-      ctx.beginPath(); ctx.ellipse(0, 0, .3 * w, .32 * h, 0, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(.24 * w, .1 * -h, .2 * h, 0, Math.PI*2); ctx.fill();
-      
-      ctx.fillStyle = color;
-      ctx.beginPath(); ctx.moveTo(.4 * w, .1 * -h); ctx.lineTo(.56 * w, .04 * -h); ctx.lineTo(.4 * w, 0); ctx.closePath(); ctx.fill();
-      
-      ctx.fillStyle = "#0b141a";
-      ctx.beginPath(); ctx.arc(.26 * w, .14 * -h, Math.max(1.4, .055 * h), 0, Math.PI*2); ctx.fill();
-      ctx.restore();
-    }
-
-    function drawCoin(x, y, r, phase) {
-      const scaleX = .72 + .28 * Math.abs(Math.sin(phase));
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.shadowColor = "rgba(255,183,77,.85)";
-      ctx.shadowBlur = 20;
-      ctx.scale(scaleX, 1);
-      
-      const grad = ctx.createRadialGradient(-.3*r, -.3*r, .1*r, 0, 0, r);
-      grad.addColorStop(0, "#ffe082"); grad.addColorStop(.6, "#ffb74d"); grad.addColorStop(1, "#e08c1e");
-      
-      ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2); ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = "rgba(255,255,255,.6)"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, 0, .65*r, 0, Math.PI*2); ctx.stroke();
-      ctx.fillStyle = "rgba(255,255,255,.85)"; ctx.beginPath(); ctx.arc(0, 0, .2*r, 0, Math.PI*2); ctx.fill();
-      ctx.restore();
-    }
-
-    function drawUI() {
-      // Kiri Atas: Nyawa & Jarak & Koin
-      ctx.save();
-      ctx.fillStyle = "rgba(11, 20, 26, 0.75)";
-      ctx.beginPath(); ctx.roundRect(20, 20, 240, 44, 14); ctx.fill();
-      
-      ctx.font = 'bold 16px -apple-system, sans-serif';
-      ctx.textAlign = "left";
-      ctx.textBaseline = "middle";
-      
-      // Nyawa
-      ctx.fillStyle = "#f15c6d";
-      ctx.fillText("❤️".repeat(Math.max(0, game.lives)) + "🖤".repeat(Math.max(0, 3 - game.lives)), 32, 43);
-      
-      // Jarak
-      ctx.fillStyle = "#ffb74d";
-      ctx.fillText(`${Math.floor(game.distance)}m`, 130, 43);
-      
-      // Koin
-      ctx.fillStyle = "#06cf9c";
-      ctx.fillText(`🪙 ${game.coins}`, 200, 43);
-      ctx.restore();
-
-      // Timer Bar (Tengah Atas)
-      if (game.phase === "playing") {
-        const pct = clamp(game.timeLeft / 30, 0, 1);
-        const barW = Math.min(300, W * 0.4);
-        const barX = (W - barW) / 2;
-        const barY = 30;
-        
-        ctx.fillStyle = "rgba(255,255,255,.1)";
-        ctx.beginPath(); ctx.roundRect(barX, barY, barW, 6, 3); ctx.fill();
-        
-        const grad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
-        grad.addColorStop(0, "#f15c6d"); grad.addColorStop(0.5, "#ffb74d"); grad.addColorStop(1, "#06cf9c");
-        ctx.fillStyle = grad;
-        ctx.beginPath(); ctx.roundRect(barX, barY, barW * pct, 6, 3); ctx.fill();
-      }
-
-      // Countdown Merah jika sisa waktu <= 5 detik
-      if (game.phase === "playing" && game.timeLeft <= 5) {
-        const alpha = .35 + .35 * Math.sin(Date.now() / 80);
-        ctx.font = '800 110px -apple-system, sans-serif';
-        ctx.fillStyle = `rgba(241,92,109,${alpha})`;
-        ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.shadowColor = "rgba(241,92,109,.9)"; ctx.shadowBlur = 40;
-        ctx.fillText(Math.ceil(game.timeLeft), W / 2, H * 0.3);
-        ctx.shadowBlur = 0;
-      }
-    }
-
-    function drawOverlay() {
-      if (game.phase !== "menu" && game.phase !== "over") return;
-      
-      ctx.save();
-      ctx.fillStyle = "rgba(11, 20, 26, 0.85)";
-      ctx.fillRect(0, 0, W, H);
-      
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      
-      if (game.phase === "menu") {
-        ctx.font = "64px -apple-system, sans-serif";
-        ctx.fillText("🦖", W / 2, H / 2 - 80);
-        
-        ctx.fillStyle = "#e9edef";
-        ctx.font = "bold 28px -apple-system, sans-serif";
-        ctx.fillText("DINO BOT", W / 2, H / 2 - 10);
-        
-        ctx.fillStyle = "#8696a0";
-        ctx.font = "15px -apple-system, sans-serif";
-        ctx.fillText("Ketuk layar untuk mulai berlari", W / 2, H / 2 + 30);
-      } else {
-        const isWin = game.win;
-        ctx.font = "64px -apple-system, sans-serif";
-        ctx.fillText(isWin ? "🏆" : "💥", W / 2, H / 2 - 80);
-        
-        ctx.fillStyle = isWin ? "#06cf9c" : "#f15c6d";
-        ctx.font = "bold 32px -apple-system, sans-serif";
-        ctx.fillText(isWin ? "SELAMAT!" : "GAME OVER", W / 2, H / 2 - 10);
-        
-        ctx.fillStyle = "#e9edef";
-        ctx.font = "18px -apple-system, sans-serif";
-        ctx.fillText(`Jarak: ${Math.floor(game.distance)}m · Koin: ${game.coins}`, W / 2, H / 2 + 30);
-        
-        // Tombol Main Lagi
-        ctx.beginPath();
-        ctx.roundRect(btnRestart.x, btnRestart.y, btnRestart.w, btnRestart.h, 16);
-        ctx.fillStyle = "#00a884";
-        ctx.fill();
-        
-        ctx.fillStyle = "#0b141a";
-        ctx.font = "bold 16px -apple-system, sans-serif";
-        ctx.fillText("MAIN LAGI", W / 2, btnRestart.y + btnRestart.h / 2 + 1);
-      }
-      ctx.restore();
-    }
-
-    function draw() {
-      ctx.save();
-      
-      // Efek Guncangan
-      if (game.shake > 0) {
-        ctx.translate(rand(-game.shake, game.shake), rand(-game.shake, game.shake));
-      }
-      
-      ctx.clearRect(-20, -20, W + 40, H + 40);
-      
-      // Background Gradient
-      const bg = ctx.createLinearGradient(0, 0, 0, H);
-      bg.addColorStop(0, "#0d1a21"); bg.addColorStop(0.55, "#0b141a"); bg.addColorStop(1, "#060d12");
-      ctx.fillStyle = bg; ctx.fillRect(-20, -20, W + 40, H + 40);
-
-      // Efek Cahaya Tengah
-      const glow = ctx.createRadialGradient(W/2, H*0.35, 0, W/2, H*0.35, W*0.9);
-      glow.addColorStop(0, "rgba(6,207,156,.055)"); glow.addColorStop(1, "rgba(6,207,156,0)");
-      ctx.fillStyle = glow; ctx.fillRect(-20, -20, W + 40, groundY + 20);
-
-      // Bintang-bintang
-      ctx.fillStyle = "rgba(255,255,255,.15)";
-      for (let i = 0; i < 40; i++) {
-        const sx = (137 * i + 23) % W;
-        const sy = (79 * i + 11) % (H * 0.5);
-        ctx.fillRect(sx, sy, 1.4, 1.4);
-      }
-
-      // Bulan
-      const mx = W * 0.82, my = H * 0.18;
-      const moonGlow = ctx.createRadialGradient(mx, my, 0, mx, my, 120);
-      moonGlow.addColorStop(0, "rgba(255,255,255,.12)"); moonGlow.addColorStop(1, "rgba(255,255,255,0)");
-      ctx.fillStyle = moonGlow; ctx.beginPath(); ctx.arc(mx, my, 120, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = "rgba(255,255,255,.28)"; ctx.beginPath(); ctx.arc(mx, my, 26, 0, Math.PI*2); ctx.fill();
-
-      // Awan
-      for (const c of game.clouds) {
-        ctx.fillStyle = `rgba(200,220,240,${c.alpha})`;
-        ctx.beginPath(); ctx.ellipse(c.x + c.w/2, c.y, c.w/2, c.h/2, 0, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.ellipse(c.x + c.w*.35, c.y - c.h*.3, c.w*.3, c.h*.55, 0, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.ellipse(c.x + c.w*.65, c.y - c.h*.2, c.w*.25, c.h*.5, 0, 0, Math.PI*2); ctx.fill();
-      }
-
-      // Bukit
-      for (const h of game.hills) {
-        ctx.fillStyle = "rgba(6,207,156,.045)";
-        ctx.beginPath(); ctx.moveTo(h.x, groundY); ctx.quadraticCurveTo(h.x + h.w*.5, groundY - h.h*1.6, h.x + h.w, groundY); ctx.closePath(); ctx.fill();
-      }
-
-      // Tanah
-      const groundGrad = ctx.createLinearGradient(0, groundY, 0, H);
-      groundGrad.addColorStop(0, "rgba(6,207,156,.10)"); groundGrad.addColorStop(1, "rgba(6,207,156,.01)");
-      ctx.fillStyle = groundGrad; ctx.fillRect(-20, groundY, W + 40, H - groundY + 20);
-
-      // Garis Tanah
-      ctx.strokeStyle = "rgba(6,207,156,.75)"; ctx.lineWidth = 2.5;
-      ctx.shadowColor = "rgba(6,207,156,.8)"; ctx.shadowBlur = 14;
-      ctx.beginPath(); ctx.moveTo(-20, groundY); ctx.lineTo(W + 20, groundY); ctx.stroke();
-      ctx.shadowBlur = 0;
-
-      // Garis Dashed
-      ctx.strokeStyle = "rgba(6,207,156,.30)"; ctx.lineWidth = 2;
-      ctx.setLineDash([10, 24]); ctx.lineDashOffset = -game.groundOffset;
-      ctx.beginPath(); ctx.moveTo(-20, groundY + 10); ctx.lineTo(W + 20, groundY + 10); ctx.stroke();
-      ctx.setLineDash([]);
-
-      // Debu Tanah
-      ctx.fillStyle = "rgba(6,207,156,.22)";
-      for (let i = 0; i < 30; i++) {
-        const dx = (97 * i + -1 * game.groundOffset2) % (W + 100) - 50;
-        const dy = groundY + 22 + (i % 3) * 14;
-        ctx.fillRect(dx, dy, 3, 2);
-      }
-
-      // Efek Kecepatan (Motion Lines)
-      if (game.phase === "playing" && game.speed > 8) {
-        const intensity = (game.speed - 8) / 6;
-        ctx.strokeStyle = `rgba(6,207,156,${.1 * intensity})`;
-        ctx.lineWidth = 1.5;
-        for (let i = 0; i < 8; i++) {
-          const ly = H * 0.15 + (71 * i) % (H * 0.8);
-          const lx = W - ((performance.now() * game.speed * 0.6 + 140 * i) % (W + 200));
-          ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(lx + 90 * intensity, ly); ctx.stroke();
-        }
-      }
-
-      // Game Objects
-      for (const c of game.coinsList) drawCoin(c.x, c.y, c.r, c.phase);
-      for (const o of game.obstacles) {
-        if (o.type === "cactus_small") drawCactus(o, false);
-        else if (o.type === "cactus_large") drawCactus(o, true);
-        else if (o.type === "rock") drawRock(o);
-        else if (o.type === "bird") drawBird(o);
-      }
-
-      // Player (Dino)
-      const p = game.player;
-      const px = 0.16 * W;
-      const isGhost = p.invincible > 0 && Math.floor(14 * p.invincible) % 2 === 0;
-      
-      if (game.phase === "menu" || game.phase === "over") {
-        drawDino(px, groundY, p.w, p.h, 0, false, 0, false);
-      } else {
-        if (isGhost) {
-          ctx.save(); ctx.globalAlpha = 0.4; drawDino(px, p.bottomY, p.w, p.h, p.legPhase, !p.onGround, p.squash, true); ctx.restore();
-        } else {
-          if (p.invincible <= 0) {
-            ctx.save(); ctx.shadowColor = "rgba(6,207,156,.55)"; ctx.shadowBlur = 26;
-            ctx.fillStyle = "#06cf9c"; rr(px - 0.4 * p.w, p.bottomY - 0.9 * p.h, 0.8 * p.w, 0.8 * p.h, 12); ctx.fill();
-            ctx.restore();
-          }
-          drawDino(px, p.bottomY, p.w, p.h, p.legPhase, !p.onGround, p.squash, false);
-        }
-      }
-
-      // Efek Partikel
-      for (const d of game.dust) {
-        ctx.globalAlpha = .5 * Math.max(0, d.life);
-        ctx.fillStyle = "#06cf9c"; ctx.beginPath(); ctx.arc(d.x, d.y, d.size * d.life, 0, Math.PI*2); ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-
-      for (const p of game.particles) {
-        ctx.globalAlpha = Math.max(0, p.life);
-        ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI*2); ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-
-      for (const f of game.floaties) {
-        ctx.globalAlpha = Math.max(0, f.life);
-        ctx.font = '800 22px -apple-system, sans-serif';
-        ctx.fillStyle = f.color; ctx.textAlign = "center";
-        ctx.shadowColor = f.color; ctx.shadowBlur = 16;
-        ctx.fillText(f.text, f.x, f.y);
-        ctx.shadowBlur = 0;
-      }
-      ctx.globalAlpha = 1;
-
-      // Flash Screen
-      if (game.flash > 0) {
-        ctx.fillStyle = game.flashColor.replace(/[\d.]+\)$/, (0.55 * game.flash) + ")");
-        ctx.fillRect(-20, -20, W + 40, H + 40);
-      }
-
-      ctx.restore();
-
-      // UI di atas segalanya
-      drawUI();
-      drawOverlay();
-    }
-
-    // ==========================================
-    // GAME LOOP
-    // ==========================================
-    let lastTime = performance.now();
-
-    function update(dt) {
-      if (game.phase === "playing") {
-        updatePlayer(dt);
-        updateWorld(dt);
-      } else {
-        // Idle animation
-        game.player.legPhase += .12 * dt;
-      }
-
-      if (game.shake > 0) game.shake = Math.max(0, game.shake - .7 * dt);
-      if (game.flash > 0) game.flash = Math.max(0, game.flash - .035 * dt);
-      
-      updateParticles(dt);
-    }
-
-    function loop(now) {
-      const dt = Math.min(2.5, (now - lastTime) / 16.667);
-      lastTime = now;
-      
-      update(dt);
-      draw();
-      
-      requestAnimationFrame(loop);
-    }
-
-    // ==========================================
-    // INPUT HANDLING
-    // ==========================================
-    function handlePointerDown(e) {
-      if (e.cancelable) e.preventDefault();
-      
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-
-      // Cek Klik Tombol Restart
-      if (game.phase === "over") {
-        if (x >= btnRestart.x && x <= btnRestart.x + btnRestart.w && 
-            y >= btnRestart.y && y <= btnRestart.y + btnRestart.h) {
-          startGame();
-          return;
-        }
-      }
-
-      // Kontrol Game
-      if (game.phase === "menu") {
-        startGame();
-      } else if (game.phase === "playing") {
-        doJump();
-      }
-    }
-
-    window.addEventListener("pointerdown", handlePointerDown, { passive: false });
-    
-    // Keyboard support (Spasi / Panah Atas)
-    window.addEventListener("keydown", (e) => {
-      if (["Space", "ArrowUp", "w", "W"].includes(e.code) || ["Space", "ArrowUp", "w", "W"].includes(e.key)) {
-        e.preventDefault();
-        if (game.phase === "menu") startGame();
-        else if (game.phase === "playing") doJump();
-      }
-    }, { passive: false });
-
-    // Mencegah context menu / zoom gestures
-    canvas.addEventListener("contextmenu", e => e.preventDefault());
-    document.addEventListener("gesturestart", e => e.preventDefault());
-    document.addEventListener("dblclick", e => e.preventDefault(), { passive: false });
-
-    // ==========================================
-    // INISIALISASI
-    // ==========================================
-    resize();
-    game.player.bottomY = groundY;
-    requestAnimationFrame(loop);
+    "use strict";
+    let audioCtx = null;
+
+    function initAudio() { try { audioCtx || (audioCtx = new(window.AudioContext || window.webkitAudioContext)), "suspended" === audioCtx.state && audioCtx.resume() } catch (t) {} }
+
+    function playSound(t) { if (audioCtx) try { const e = audioCtx.currentTime,
+          a = audioCtx.createOscillator(),
+          c = audioCtx.createGain();
+        a.connect(c), c.connect(audioCtx.destination), "jump" === t ? (a.type = "square", a.frequency.setValueAtTime(200, e), a.frequency.exponentialRampToValueAtTime(520, e + .11), c.gain.setValueAtTime(.055, e), c.gain.exponentialRampToValueAtTime(.001, e + .13), a.start(e), a.stop(e + .14)) : "score" === t ? (a.type = "sine", a.frequency.setValueAtTime(880, e), a.frequency.exponentialRampToValueAtTime(1320, e + .09), c.gain.setValueAtTime(.045, e), c.gain.exponentialRampToValueAtTime(.001, e + .13), a.start(e), a.stop(e + .14)) : "hit" === t ? (a.type = "sawtooth", a.frequency.setValueAtTime(160, e), a.frequency.linearRampToValueAtTime(28, e + .3), c.gain.setValueAtTime(.13, e), c.gain.exponentialRampToValueAtTime(.001, e + .3), a.start(e), a.stop(e + .3)) : "duck" === t && (a.type = "triangle", a.frequency.setValueAtTime(420, e), a.frequency.exponentialRampToValueAtTime(180, e + .08), c.gain.setValueAtTime(.04, e), c.gain.exponentialRampToValueAtTime(.001, e + .09), a.start(e), a.stop(e + .1)) } catch (t) {} }
+    const canvas = document.getElementById("gameCanvas"),
+      ctx = canvas.getContext("2d", { alpha: !1 }),
+      W = 640,
+      H = 360,
+      GROUND = 286;
+
+    function fitCanvas() { const t = canvas.getBoundingClientRect(),
+        e = Math.max(t.width || W, 1),
+        a = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(e * a), canvas.height = Math.round(e * (H / W) * a); const c = e / W * a;
+      ctx.setTransform(c, 0, 0, c, 0, 0), ctx.imageSmoothingEnabled = !0 }
+    const clamp = (t, e, a) => t < e ? e : t > a ? a : t,
+      lerp = (t, e, a) => t + (e - t) * a,
+      mixArr = (t, e, a) => [0 | lerp(t[0], e[0], a), 0 | lerp(t[1], e[1], a), 0 | lerp(t[2], e[2], a)],
+      rgb = t => "rgb(" + t[0] + "," + t[1] + "," + t[2] + ")";
+
+    function roundRect(t, e, a, c, i) { i = Math.min(i, a / 2, c / 2), ctx.beginPath(), ctx.moveTo(t + i, e), ctx.arcTo(t + a, e, t + a, e + c, i), ctx.arcTo(t + a, e + c, t, e + c, i), ctx.arcTo(t, e + c, t, e, i), ctx.arcTo(t, e, t + a, e, i), ctx.closePath() }
+    let state = "ready",
+      score = 0,
+      highScore = 0,
+      speed = 5.5,
+      time = 0,
+      spawnDist = 420,
+      groundScroll = 0,
+      hillScrollA = 0,
+      hillScrollB = 0,
+      scoreTick = 0,
+      lastShownScore = -1;
+    const particles = [];
+    class Dino { constructor() { this.x = 66, this.standW = 44, this.standH = 46, this.duckW = 54, this.duckH = 26, this.reset() } reset() { this.w = this.standW, this.h = this.standH, this.y = 286 - this.h, this.vy = 0, this.grounded = !0, this.ducking = !1, this.legPhase = 0, this.blink = 0, this.blinkTimer = 1.8 + 2.5 * Math.random() } get bottom() { return this.y + this.h } jump() { "over" !== state && this.grounded && (this.ducking && this.setDuck(!1), this.vy = -13.8, this.grounded = !1, playSound("jump"), spawnDust(this.x + .45 * this.w, 286, 9)) } releaseJump() { this.vy < -5.2 && (this.vy = -5.2) } setDuck(t) { if (this.ducking === t) return; const e = this.bottom;
+        this.ducking = t, this.w = t ? this.duckW : this.standW, this.h = t ? this.duckH : this.standH, this.y = e - this.h, t && this.grounded && playSound("duck") } update(t) { if (this.vy += .8 * t, this.y += this.vy * t, this.y + this.h >= 286 ? (this.grounded || spawnDust(this.x + .5 * this.w, 286, 7), this.y = 286 - this.h, this.vy = 0, this.grounded = !0) : this.grounded = !1, this.grounded) { const e = this.ducking ? .85 : .46;
+          this.legPhase += e * t * clamp(speed / 5.5, .7, 1.9) } this.blinkTimer -= t / 60, this.blinkTimer <= 0 && (this.blink = 1, this.blinkTimer = 2.2 + 3 * Math.random()), this.blink = Math.max(0, this.blink - .11 * t) } draw() { const t = 286 - this.bottom,
+          e = clamp(1 - t / 170, .32, 1);
+        ctx.save(), ctx.globalAlpha = .3 * e, ctx.fillStyle = "#000", ctx.beginPath(), ctx.ellipse(this.x + .5 * this.w, 290, 27 * e, 6 * e, 0, 0, 2 * Math.PI), ctx.fill(), ctx.restore(); const a = this.grounded ? .9 * Math.sin(2 * this.legPhase) : 0;
+        ctx.save(), ctx.translate(this.x, this.y + this.h + a), this.ducking ? this.drawDuck() : this.drawStand(), ctx.restore() } drawStand() { const t = this.legPhase,
+          e = this.grounded;
+        drawLeg(12, -19, t + Math.PI, e, "#0c6633"), drawLeg(24, -19, t, e, "#128a44"); const a = ctx.createLinearGradient(0, -46, 0, -12);
+        a.addColorStop(0, "#8ef7bd"), a.addColorStop(.42, "#39d47f"), a.addColorStop(1, "#0f6b36"), ctx.beginPath(), ctx.moveTo(-9, -19), ctx.quadraticCurveTo(2, -34, 15, -35), ctx.lineTo(23, -38), ctx.quadraticCurveTo(25, -46, 33, -45), ctx.quadraticCurveTo(41, -44, 45, -38), ctx.quadraticCurveTo(46, -35, 43, -34), ctx.lineTo(32, -33), ctx.quadraticCurveTo(28, -28, 25, -22), ctx.quadraticCurveTo(22, -16, 14, -15), ctx.quadraticCurveTo(2, -14, -9, -19), ctx.closePath(), ctx.fillStyle = a, ctx.fill(), ctx.lineWidth = 2, ctx.lineJoin = "round", ctx.strokeStyle = "rgba(3,32,17,.55)", ctx.stroke(), ctx.beginPath(), ctx.ellipse(15, -20, 8.5, 4.6, -.18, 0, 2 * Math.PI), ctx.fillStyle = "rgba(255,255,255,.17)", ctx.fill(), ctx.beginPath(), ctx.ellipse(31, -42.5, 6.5, 2.6, -.22, 0, 2 * Math.PI), ctx.fillStyle = "rgba(255,255,255,.20)", ctx.fill(), ctx.beginPath(), ctx.moveTo(28, -30), ctx.quadraticCurveTo(34, -28.5, 33.5, -23), ctx.lineWidth = 5, ctx.lineCap = "round", ctx.strokeStyle = "#15924b", ctx.stroke(), ctx.beginPath(), ctx.moveTo(43, -34.6), ctx.quadraticCurveTo(38, -32.6, 33, -33.6), ctx.lineWidth = 1.6, ctx.strokeStyle = "rgba(3,32,17,.5)", ctx.stroke(), ctx.beginPath(), ctx.arc(41, -38.5, .9, 0, 2 * Math.PI), ctx.fillStyle = "rgba(3,32,17,.55)", ctx.fill();
+        1 - this.blink > .2 ? (ctx.beginPath(), ctx.arc(37, -40, 2.7, 0, 2 * Math.PI), ctx.fillStyle = "#ffffff", ctx.fill(), ctx.beginPath(), ctx.arc(37.9, -40, 1.45, 0, 2 * Math.PI), ctx.fillStyle = "#08160f", ctx.fill(), ctx.beginPath(), ctx.arc(37.3, -40.7, .55, 0, 2 * Math.PI), ctx.fillStyle = "rgba(255,255,255,.9)", ctx.fill()) : (ctx.beginPath(), ctx.moveTo(34.5, -40), ctx.lineTo(39.5, -40), ctx.lineWidth = 1.8, ctx.strokeStyle = "#08160f", ctx.stroke()) } drawDuck() { const t = this.legPhase,
+          e = this.grounded;
+        drawLeg(16, -9, t + Math.PI, e, "#0c6633"), drawLeg(27, -9, t, e, "#128a44"); const a = ctx.createLinearGradient(0, -28, 0, -10);
+        a.addColorStop(0, "#8ef7bd"), a.addColorStop(.45, "#37cf7b"), a.addColorStop(1, "#0f6b36"), ctx.beginPath(), ctx.moveTo(-11, -14), ctx.quadraticCurveTo(2, -25, 20, -25), ctx.lineTo(30, -27), ctx.quadraticCurveTo(38, -28, 44, -25), ctx.quadraticCurveTo(52, -23, 53, -19), ctx.quadraticCurveTo(53, -16, 48, -16), ctx.lineTo(34, -15), ctx.quadraticCurveTo(24, -11, 12, -12), ctx.quadraticCurveTo(2, -12, -11, -14), ctx.closePath(), ctx.fillStyle = a, ctx.fill(), ctx.lineWidth = 2, ctx.lineJoin = "round", ctx.strokeStyle = "rgba(3,32,17,.55)", ctx.stroke(), ctx.beginPath(), ctx.ellipse(20, -16, 9, 3.4, -.12, 0, 2 * Math.PI), ctx.fillStyle = "rgba(255,255,255,.16)", ctx.fill(), ctx.beginPath(), ctx.arc(42, -22, 2.3, 0, 2 * Math.PI), ctx.fillStyle = "#ffffff", ctx.fill(), ctx.beginPath(), ctx.arc(42.8, -22, 1.2, 0, 2 * Math.PI), ctx.fillStyle = "#08160f", ctx.fill() } }
+
+    function drawLeg(t, e, a, c, i) { const o = Math.sin(a); let n, r;
+      c ? (n = t + 6.5 * o, r = 5.5 * -Math.max(0, o)) : (n = t + 4, r = -4), ctx.beginPath(), ctx.moveTo(t, e), ctx.quadraticCurveTo(t + 2.4 * o, .5 * (e + r), n, r), ctx.lineWidth = 6.5, ctx.lineCap = "round", ctx.strokeStyle = i, ctx.stroke() } class Obstacle { constructor(t) { this.type = t, this.dead = !1, "cactus" === t ? (this.w = 18 + 16 * Math.random(), this.h = 34 + 24 * Math.random(), this.y = 286 - this.h) : (this.w = 44, this.h = 26, this.phase = Math.random() * Math.PI * 2, this.y = Math.random() < .45 ? 220 : 180), this.x = 680 } update(t) { this.x -= speed * t, this.x + this.w < -40 && (this.dead = !0) } }
+
+    function spawnDust(t, e, a) { for (let c = 0; c < a; c++) particles.push({ x: t + 16 * (Math.random() - .5), y: e - 3 * Math.random(), vx: 3 * (Math.random() - .5) - 1.1, vy: 2.2 * -Math.random(), life: 1, decay: .022 + .03 * Math.random(), size: 1.4 + 2.4 * Math.random(), col: "rgba(190,235,215,1)" }) }
+
+    function spawnSpark(t, e) { for (let a = 0; a < 8; a++) { const a = Math.random() * Math.PI * 2,
+          c = 1 + 2.6 * Math.random();
+        particles.push({ x: t, y: e, vx: Math.cos(a) * c, vy: Math.sin(a) * c - 1, life: 1, decay: .028 + .03 * Math.random(), size: 1.2 + 1.8 * Math.random(), col: "rgba(126,242,176,1)" }) } }
+
+    function updateParticles(t) { for (let e = particles.length - 1; e >= 0; e--) { const a = particles[e];
+        a.x += a.vx * t, a.y += a.vy * t, a.vy += .13 * t, a.vx *= .985, a.life -= a.decay * t, a.life <= 0 && particles.splice(e, 1) } }
+
+    function drawParticles() { for (const t of particles) ctx.globalAlpha = clamp(t.life, 0, 1), ctx.fillStyle = t.col, ctx.beginPath(), ctx.arc(t.x, t.y, t.size * t.life, 0, 2 * Math.PI), ctx.fill();
+      ctx.globalAlpha = 1 }
+    let dino = new Dino,
+      obstacles = [];
+    const stars = Array.from({ length: 66 }, () => ({ x: Math.random() * W, y: 176 * Math.random(), r: .4 + 1.25 * Math.random(), p: Math.random() * Math.PI * 2 })),
+      clouds = [{ x: 180, y: 62, s: 1, sp: .34 }, { x: 430, y: 104, s: .72, sp: .24 }, { x: 620, y: 48, s: .55, sp: .3 }];
+
+    function resetGame() { state = "ready", score = 0, speed = 5.5, spawnDist = 460, obstacles = [], particles.length = 0, scoreTick = 0, dino.reset(), document.getElementById("overlay").classList.remove("show"), setStatus("ready", "SIAP"), updateHUD(!0) }
+
+    function startGame() { "ready" === state && (state = "playing", setStatus("play", "MAIN")) }
+
+    function endGame() { state = "over", playSound("hit"), setStatus("over", "GAME OVER"); const t = Math.floor(score);
+      t > highScore && (highScore = t), document.getElementById("finalScoreDesc").textContent = t, document.getElementById("bestDesc").textContent = "REKOR: " + highScore, document.getElementById("overlay").classList.add("show"), updateHUD(!0) }
+
+    function setStatus(t, e) { document.getElementById("statusBox").className = "status " + t, document.getElementById("statusLabel").textContent = e }
+
+    function getNightFactor() { const t = score / 700 % 2,
+        e = t < 1 ? t : 2 - t; return e * e * (3 - 2 * e) }
+
+    function update(t) { if (time += t, "over" !== state) { if ("playing" === state) { speed = 5.5 + Math.min(score / 160, 8), score += .145 * t; const e = Math.floor(score);
+          Math.floor(e / 100) > scoreTick && (scoreTick = Math.floor(e / 100), playSound("score"), spawnSpark(dino.x + .5 * dino.w, dino.y + .4 * dino.h)) } else speed = 5.5; if (groundScroll += speed * t, hillScrollA += .16 * speed * t, hillScrollB += .34 * speed * t, dino.update(t), "playing" === state && (spawnDist -= speed * t, spawnDist <= 0)) { const t = score > 220 && Math.random() < .32;
+          obstacles.push(new Obstacle(t ? "bird" : "cactus")), spawnDist = speed * (46 + 34 * Math.random()) } for (let e = obstacles.length - 1; e >= 0; e--) { const a = obstacles[e];
+          a.update(t), !a.dead && hits(dino, a) && endGame(), a.dead && obstacles.splice(e, 1) } for (const e of clouds) e.x -= speed * e.sp * .32 * t, e.x < -110 && (e.x = 730, e.y = 40 + 80 * Math.random());
+        updateParticles(t) } else updateParticles(t) }
+
+    function hits(t, e) { const a = t.x + (t.ducking ? 6 : 7),
+        c = t.w - (t.ducking ? 12 : 15),
+        i = t.y + 4,
+        o = t.h - 6,
+        n = e.x + ("cactus" === e.type ? 4 : 8),
+        r = e.w - ("cactus" === e.type ? 8 : 16),
+        s = e.y + ("cactus" === e.type ? 3 : 5),
+        l = e.h - ("cactus" === e.type ? 4 : 10); return a < n + r && a + c > n && i < s + l && i + o > s }
+
+    function render() { const t = getNightFactor();
+      drawSky(t), drawStars(t), drawCelestial(t), drawClouds(t), drawHills(t), drawGround(t); for (const t of obstacles) "cactus" === t.type ? drawCactus(t) : drawBird(t);
+      dino.draw(), drawParticles(); const e = ctx.createRadialGradient(320, 180, .35 * H, 320, 180, 342);
+      e.addColorStop(0, "rgba(0,0,0,0)"), e.addColorStop(1, "rgba(0,0,0,.42)"), ctx.fillStyle = e, ctx.fillRect(0, 0, W, H) }
+
+    function drawSky(t) { const e = mixArr([16, 27, 48], [4, 6, 14], t),
+        a = mixArr([38, 62, 96], [13, 18, 34], t),
+        c = ctx.createLinearGradient(0, 0, 0, 286);
+      c.addColorStop(0, rgb(e)), c.addColorStop(1, rgb(a)), ctx.fillStyle = c, ctx.fillRect(0, 0, W, 288) }
+
+    function drawStars(t) { if (!(t < .06)) { ctx.save(); for (const e of stars) { const a = .55 + .45 * Math.sin(.05 * time + e.p);
+          ctx.globalAlpha = t * a, ctx.fillStyle = "#e8f4ff", ctx.beginPath(), ctx.arc(e.x, e.y, e.r, 0, 2 * Math.PI), ctx.fill() } ctx.restore() } }
+
+    function drawCelestial(t) { const e = 320 + Math.cos(.0022 * time) * W * .33,
+        a = 88 - 26 * Math.sin(.0022 * time); if (t < .98) { ctx.save(), ctx.globalAlpha = 1 - t; const c = ctx.createRadialGradient(e, a, 4, e, a, 62);
+        c.addColorStop(0, "rgba(255,224,130,.95)"), c.addColorStop(.28, "rgba(255,196,80,.42)"), c.addColorStop(1, "rgba(255,170,60,0)"), ctx.fillStyle = c, ctx.beginPath(), ctx.arc(e, a, 62, 0, 2 * Math.PI), ctx.fill(), ctx.beginPath(), ctx.arc(e, a, 17, 0, 2 * Math.PI), ctx.fillStyle = "#ffe9a3", ctx.fill(), ctx.restore() } if (t > .02) { ctx.save(), ctx.globalAlpha = t; const c = W - e,
+          i = a + 6,
+          o = ctx.createRadialGradient(c, i, 4, c, i, 54);
+        o.addColorStop(0, "rgba(200,225,255,.85)"), o.addColorStop(.3, "rgba(150,190,255,.26)"), o.addColorStop(1, "rgba(120,160,255,0)"), ctx.fillStyle = o, ctx.beginPath(), ctx.arc(c, i, 54, 0, 2 * Math.PI), ctx.fill(), ctx.beginPath(), ctx.arc(c, i, 16, 0, 2 * Math.PI), ctx.fillStyle = "#e6eeff", ctx.fill(), ctx.fillStyle = "rgba(150,175,215,.35)", ctx.beginPath(), ctx.arc(c - 5, i - 4, 3.4, 0, 2 * Math.PI), ctx.fill(), ctx.beginPath(), ctx.arc(c + 5, i + 3, 2.4, 0, 2 * Math.PI), ctx.fill(), ctx.beginPath(), ctx.arc(c + 1, i + 8, 1.7, 0, 2 * Math.PI), ctx.fill(), ctx.restore() } }
+
+    function drawClouds(t) { ctx.save(), ctx.globalAlpha = .2 + .2 * (1 - t), ctx.fillStyle = "#ffffff"; for (const t of clouds) { const e = 16 * t.s;
+        ctx.beginPath(), ctx.arc(t.x, t.y, e, 0, 2 * Math.PI), ctx.arc(t.x + 1.05 * e, t.y - .4 * e, .82 * e, 0, 2 * Math.PI), ctx.arc(t.x + 2 * e, t.y + .05 * e, .66 * e, 0, 2 * Math.PI), ctx.arc(t.x + 1 * e, t.y + .45 * e, .86 * e, 0, 2 * Math.PI), ctx.fill() } ctx.restore() }
+
+    function hillLayer(t, e, a, c, i) { const o = (t % e + e) % e;
+      ctx.fillStyle = i, ctx.beginPath(), ctx.moveTo(-e - o, a + 200), ctx.lineTo(-e - o, a); for (let t = -e - o; t < W + e; t += e) ctx.quadraticCurveTo(t + .5 * e, a - c, t + e, a);
+      ctx.lineTo(W + e, a + 200), ctx.closePath(), ctx.fill() }
+
+    function drawHills(t) { const e = .045 + .035 * (1 - t);
+      hillLayer(hillScrollA, 250, 260, 46, "rgba(140,220,190," + e.toFixed(3) + ")"), hillLayer(hillScrollB, 175, 278, 30, "rgba(120,200,255," + (1.25 * e).toFixed(3) + ")") }
+
+    function drawGround(t) { const e = ctx.createLinearGradient(0, 286, 0, H);
+      e.addColorStop(0, "rgba(255,255,255,.085)"), e.addColorStop(1, "rgba(255,255,255,0)"), ctx.fillStyle = e, ctx.fillRect(0, 286, W, 74), ctx.save(), ctx.shadowColor = "rgba(52,211,153,.85)", ctx.shadowBlur = 14, ctx.strokeStyle = "rgba(126,242,176," + (.55 + .25 * (1 - t)).toFixed(2) + ")", ctx.lineWidth = 2, ctx.beginPath(), ctx.moveTo(0, 286), ctx.lineTo(W, 286), ctx.stroke(), ctx.restore(); const a = groundScroll % 44;
+      ctx.strokeStyle = "rgba(255,255,255,.10)", ctx.lineWidth = 2, ctx.lineCap = "round"; for (let t = -44; t < 684; t += 44) ctx.beginPath(), ctx.moveTo(t - a, 299), ctx.lineTo(t - a + 20, 299), ctx.stroke(); const c = 1.5 * groundScroll % 62;
+      ctx.strokeStyle = "rgba(255,255,255,.055)"; for (let t = -62; t < 702; t += 62) ctx.beginPath(), ctx.moveTo(t - c, 316), ctx.lineTo(t - c + 30, 316), ctx.stroke() }
+
+    function drawCactus(t) { const e = t.x,
+        a = t.y,
+        c = t.w,
+        i = t.h,
+        o = ctx.createLinearGradient(e, 0, e + c, 0);
+      o.addColorStop(0, "#3ee08a"), o.addColorStop(.45, "#17a44f"), o.addColorStop(1, "#0a5c2c"), ctx.fillStyle = o; const n = .42 * c,
+        r = e + .5 * (c - n);
+      roundRect(r, a, n, i, .45 * n), ctx.fill(); const s = .34 * c,
+        l = .48 * s,
+        d = a + .3 * i;
+      roundRect(e, d, .52 * c, s, l), ctx.fill(), roundRect(e, d - .24 * i, s, s + .24 * i, l), ctx.fill(); const x = a + .46 * i;
+      roundRect(e + .48 * c, x, .52 * c, s, l), ctx.fill(), roundRect(e + c - s, x - .28 * i, s, s + .28 * i, l), ctx.fill(), ctx.strokeStyle = "rgba(255,255,255,.18)", ctx.lineWidth = 1.6, ctx.lineCap = "round", ctx.beginPath(), ctx.moveTo(r + .34 * n, a + .13 * i), ctx.lineTo(r + .34 * n, a + .88 * i), ctx.stroke() }
+
+    function drawBird(t) { const e = t.x + .5 * t.w,
+        a = t.y + .5 * t.h,
+        c = Math.sin(.17 * time + t.phase);
+      ctx.save(), ctx.translate(e, a), ctx.beginPath(), ctx.moveTo(5, -1), ctx.quadraticCurveTo(-6, -13 - 9 * c, -19, -6 - 11 * c), ctx.quadraticCurveTo(-8, -2 - 3 * c, 5, 3), ctx.closePath(), ctx.fillStyle = "rgba(56,189,248,.42)", ctx.fill(); const i = ctx.createLinearGradient(0, -8, 0, 8);
+      i.addColorStop(0, "#8ee0fd"), i.addColorStop(1, "#0b7fc4"), ctx.beginPath(), ctx.ellipse(0, 0, 13, 6.5, -.07, 0, 2 * Math.PI), ctx.fillStyle = i, ctx.fill(), ctx.lineWidth = 1.5, ctx.strokeStyle = "rgba(2,32,60,.55)", ctx.stroke(), ctx.beginPath(), ctx.ellipse(-13, -4, 5.6, 5, 0, 0, 2 * Math.PI), ctx.fillStyle = "#5cc9f5", ctx.fill(), ctx.stroke(), ctx.beginPath(), ctx.moveTo(-17.5, -5.5), ctx.lineTo(-26, -2.5), ctx.lineTo(-17.5, .2), ctx.closePath(), ctx.fillStyle = "#f8b800", ctx.fill(), ctx.lineWidth = 1, ctx.strokeStyle = "rgba(120,80,0,.5)", ctx.stroke(), ctx.beginPath(), ctx.arc(-14, -5.5, 1.6, 0, 2 * Math.PI), ctx.fillStyle = "#062033", ctx.fill(), ctx.beginPath(), ctx.moveTo(3, 1), ctx.quadraticCurveTo(-5, 12 + 9 * c, -18, 8 + 11 * c), ctx.quadraticCurveTo(-7, 4 + 3 * c, 3, -2), ctx.closePath(), ctx.fillStyle = "rgba(146,224,253,.92)", ctx.fill(), ctx.lineWidth = 1.2, ctx.strokeStyle = "rgba(2,32,60,.45)", ctx.stroke(), ctx.restore() }
+
+    function updateHUD(t) { const e = Math.floor(score);
+      (t || e !== lastShownScore) && (lastShownScore = e, e > highScore && (highScore = e), document.getElementById("scoreVal").textContent = String(e).padStart(5, "0"), document.getElementById("highScoreVal").textContent = String(highScore).padStart(5, "0"), document.getElementById("speedVal").textContent = (speed / 5.5).toFixed(1) + "×") }
+    let lastT = 0;
+
+    function loop(t) { lastT || (lastT = t); let e = (t - lastT) / 16.6667;
+      lastT = t, (!isFinite(e) || e <= 0) && (e = 1), e = Math.min(e, 2.6), update(e), render(), updateHUD(!1), requestAnimationFrame(loop) }
+
+    function pressJump() { initAudio(), "over" !== state ? ("ready" === state && startGame(), dino.jump()) : resetGame() }
+
+    function releaseJump() { "over" !== state && dino.releaseJump() }
+
+    function pressDuck(t) { initAudio(), "over" !== state && dino.setDuck(t) } window.addEventListener("keydown", t => { const e = t.code; if ("Space" === e || "ArrowUp" === e || "KeyW" === e) { if (t.preventDefault(), t.repeat) return;
+        pressJump() } else if ("ArrowDown" === e || "KeyS" === e) { if (t.preventDefault(), t.repeat) return;
+        pressDuck(!0) } else "Enter" === e && "over" === state && (t.preventDefault(), resetGame()) }, { passive: !1 }), window.addEventListener("keyup", t => { const e = t.code; "Space" !== e && "ArrowUp" !== e && "KeyW" !== e || releaseJump(), "ArrowDown" !== e && "KeyS" !== e || pressDuck(!1) }), canvas.addEventListener("pointerdown", t => { t.preventDefault(), pressJump() }), canvas.addEventListener("pointerup", t => { t.preventDefault(), releaseJump() }), canvas.addEventListener("pointercancel", () => releaseJump());
+    const btnJump = document.getElementById("btnJump"),
+      btnDuck = document.getElementById("btnDuck");
+    btnJump.addEventListener("pointerdown", t => { t.preventDefault(), btnJump.setPointerCapture && btnJump.setPointerCapture(t.pointerId), pressJump() }), btnJump.addEventListener("pointerup", t => { t.preventDefault(), releaseJump() }), btnJump.addEventListener("pointercancel", () => releaseJump()), btnDuck.addEventListener("pointerdown", t => { t.preventDefault(), btnDuck.setPointerCapture && btnDuck.setPointerCapture(t.pointerId), pressDuck(!0) }), btnDuck.addEventListener("pointerup", t => { t.preventDefault(), pressDuck(!1) }), btnDuck.addEventListener("pointercancel", () => pressDuck(!1)), btnDuck.addEventListener("pointerleave", () => pressDuck(!1)), document.getElementById("btnRestart").addEventListener("click", () => { initAudio(), resetGame() }), window.ResizeObserver ? new ResizeObserver(() => fitCanvas()).observe(canvas) : window.addEventListener("resize", fitCanvas), window.addEventListener("orientationchange", () => setTimeout(fitCanvas, 150)), fitCanvas(), resetGame(), requestAnimationFrame(loop), window.addEventListener("load", fitCanvas), setTimeout(fitCanvas, 250)
   </script>
 </body>
+
 </html>

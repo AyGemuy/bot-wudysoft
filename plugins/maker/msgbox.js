@@ -1,18 +1,17 @@
 import axios from "axios";
-import { simpleQuoted } from "../../lib/quoted.js";
+import {
+  simpleQuoted
+} from "../../lib/quoted.js";
 
 function parseFlags(input = "") {
   const flags = {};
   const flagRegex = /--([a-zA-Z0-9_-]+)(?:[=\s]+("(?:\\"|[^"])*"|'(?:\\'|[^'])*'|[^\s]+))?/g;
   let match;
-
   while ((match = flagRegex.exec(input)) !== null) {
     let key = match[1];
     let rawVal = match[2];
     let val = true;
     const lowerKey = key.toLowerCase();
-
-    // Mapping alias flag & helper keys
     if (["t", "title", "judul"].includes(lowerKey)) key = "title";
     if (["b", "btn", "buttons", "tombol"].includes(lowerKey)) key = "buttons";
     if (["text", "msg", "message", "pesan"].includes(lowerKey)) key = "text";
@@ -25,9 +24,8 @@ function parseFlags(input = "") {
     if (["bartext", "bartextcolor"].includes(lowerKey)) key = "barText";
     if (["btntext", "buttontextcolor"].includes(lowerKey)) key = "btnText";
     if (["btnbg", "buttonbgcolor"].includes(lowerKey)) key = "btnBg";
-
     if (rawVal !== undefined) {
-      if ((rawVal.startsWith('"') && rawVal.endsWith('"')) || (rawVal.startsWith("'") && rawVal.endsWith("'"))) {
+      if (rawVal.startsWith('"') && rawVal.endsWith('"') || rawVal.startsWith("'") && rawVal.endsWith("'")) {
         rawVal = rawVal.slice(1, -1);
       }
       if (rawVal === "true") val = true;
@@ -37,14 +35,12 @@ function parseFlags(input = "") {
     }
     flags[key] = val;
   }
-
   const cleanPrompt = input.replace(flagRegex, "").trim();
   return {
     flags: flags,
     cleanPrompt: cleanPrompt
   };
 }
-
 export default {
   name: "msgbox",
   aliases: ["messagebox", "retrobox", "winbox"],
@@ -62,10 +58,8 @@ export default {
           rawText = raw.slice(firstWord.length).trim();
         }
       }
-
       const prefix = ctx.prefix || ".";
       const quotedMsg = typeof simpleQuoted === "function" ? simpleQuoted(ctx) : msg;
-
       if (!rawText) {
         return ctx.reply(`–  *W I N D O W S  M S G B O X*
 
@@ -86,19 +80,17 @@ Gunakan fitur ini untuk membuat dialog pop-up Windows retro.
    \`${prefix}msgbox chatbot --title Setuju --buttons gak;iy\`
    \`${prefix}msgbox "Simpan file ini?" --title "Konfirmasi" --buttons "Ya;Tidak;Batal" --winColor #008080\``);
       }
-
-      const { flags, cleanPrompt } = parseFlags(rawText);
+      const {
+        flags,
+        cleanPrompt
+      } = parseFlags(rawText);
       const text = flags.text || cleanPrompt;
       const title = flags.title || "Message";
       const buttons = flags.buttons || "OK";
-
       if (!text) {
         return ctx.reply("❌ Parameter teks/pesan tidak boleh kosong.");
       }
-
       await ctx.react?.("⏳");
-
-      // Payload lengkap yang didukung KobaltGen
       const payload = {
         text: text,
         title: title,
@@ -114,37 +106,30 @@ Gunakan fitur ini untuk membuat dialog pop-up Windows retro.
         btnBg: flags.btnBg || "#c0c0c0",
         ...flags
       };
-
       const endpoint = `${global.bot?.api?.wudysoft}/api/maker/message`;
-      
-      // Mengirim request dengan method POST dan JSON payload
       const response = await axios.post(endpoint, payload, {
         headers: {
           "Content-Type": "application/json",
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
         },
         responseType: "arraybuffer",
-        timeout: 30e3
+        timeout: 3e4
       });
-
       const buffer = response?.data;
       if (!buffer || !Buffer.isBuffer(buffer) || buffer.length === 0) {
         throw new Error("Gagal menerima gambar dari API.");
       }
-
       const captionText = `–  *W I N D O W S  M S G B O X*
 
 ┌  ◦  *Title* : ${title}
 │  ◦  *Message* : ${text}
 └  ◦  *Buttons* : ${String(buttons).split(";").join(" | ")}`;
-
       await sock.sendMessage(ctx.id, {
         image: Buffer.from(buffer),
         caption: captionText
       }, {
         quoted: quotedMsg
       });
-
       await ctx.react?.("✅");
     } catch (error) {
       await ctx.react?.("❌");

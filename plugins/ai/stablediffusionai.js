@@ -1,12 +1,15 @@
 import axios from "axios";
 import db from "../../data/db.js";
-import { upload } from "../../lib/upload.js";
-import { simpleQuoted } from "../../lib/quoted.js";
-
+import {
+  upload
+} from "../../lib/upload.js";
+import {
+  simpleQuoted
+} from "../../lib/quoted.js";
 const API_URL = `${global.bot?.api?.wudysoft}/api/ai/stable-ai`;
-const SESSION_TIMEOUT = 20 * 60 * 1e3; // 20 Menit
+const SESSION_TIMEOUT = 20 * 60 * 1e3;
 const CONFIG = {
-  TIMEOUT: 18e4, // 180 detik sesuai durasi polling antrean gambar
+  TIMEOUT: 18e4,
   USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
   ITEMS_PER_PAGE: 8
 };
@@ -38,13 +41,11 @@ function parseFlags(input = "") {
     let key = match[1].toLowerCase();
     let rawVal = match[2];
     let val = true;
-
     if (["ratio", "ar"].includes(key)) key = "aspect_ratio";
     if (["img", "image"].includes(key)) key = "media";
     if (["aid", "android"].includes(key)) key = "android_id";
-
     if (rawVal !== undefined) {
-      if ((rawVal.startsWith('"') && rawVal.endsWith('"')) || (rawVal.startsWith("'") && rawVal.endsWith("'"))) {
+      if (rawVal.startsWith('"') && rawVal.endsWith('"') || rawVal.startsWith("'") && rawVal.endsWith("'")) {
         rawVal = rawVal.slice(1, -1);
       }
       if (rawVal === "true") val = true;
@@ -56,14 +57,15 @@ function parseFlags(input = "") {
   }
   const cleanPrompt = input.replace(flagRegex, "").trim();
   return {
-    flags,
-    cleanPrompt
+    flags: flags,
+    cleanPrompt: cleanPrompt
   };
 }
-
 async function requestStableAi(params = {}) {
-  const { data } = await axios.get(API_URL, {
-    params,
+  const {
+    data
+  } = await axios.get(API_URL, {
+    params: params,
     headers: {
       "User-Agent": CONFIG.USER_AGENT
     },
@@ -104,7 +106,6 @@ function recordSession(chatId, messageId, androidId, lastImage, style, model) {
   s.expireTime = Date.now() + SESSION_TIMEOUT;
   saveDB();
 }
-
 export default {
   name: "stablediffusion",
   aliases: ["sdai", "stablediffusionai", "sdiffusion", "dalle4"],
@@ -112,41 +113,32 @@ export default {
   category: "AI",
   limit: true,
   example: "sdai anime cute cat in cyberpunk city --style Ghibli Anime\nBalas/reply gambar hasil bot untuk merestyled/transform ulang.",
-
-  before: async (msg, { sock, ctx }) => {
+  before: async (msg, {
+    sock,
+    ctx
+  }) => {
     try {
       const chatId = ctx?.id || msg?.key?.remoteJid;
       if (!chatId) return;
       initDB();
       if (!global.db.stableAi[chatId]) return;
-
       const isFromMe = Boolean(msg?.key?.fromMe || ctx?.isFromMe);
       if (isFromMe) return;
-
       const sessionData = global.db.stableAi[chatId];
       if (Date.now() > sessionData.expireTime) {
         delete global.db.stableAi[chatId];
         saveDB();
         return;
       }
-
       const quotedStanzaId = ctx?.quoted?.id || msg?.message?.extendedTextMessage?.contextInfo?.stanzaId;
-      const isQuotingAi = quotedStanzaId && (
-        quotedStanzaId === sessionData.lastMsgId ||
-        (Array.isArray(sessionData.msgIds) && sessionData.msgIds.includes(quotedStanzaId))
-      );
-
+      const isQuotingAi = quotedStanzaId && (quotedStanzaId === sessionData.lastMsgId || Array.isArray(sessionData.msgIds) && sessionData.msgIds.includes(quotedStanzaId));
       if (!isQuotingAi) return;
-
       const userText = (ctx?.text || ctx?.query || msg?.message?.conversation || msg?.message?.extendedTextMessage?.text || "").trim();
       const prefixList = [".", "#", "!", "/", ctx?.prefix].filter(Boolean);
       if (prefixList.some(p => userText.startsWith(p))) return;
-
       const isMedia = ctx?.isMedia || ctx?.quoted?.isMedia;
       if (!userText && !isMedia) return;
-
       if (typeof ctx?.react === "function") await ctx.react("🎨");
-
       let uploadedMediaUrl = null;
       if (isMedia && typeof ctx.download === "function") {
         const buffer = await ctx.download();
@@ -157,40 +149,29 @@ export default {
           }
         }
       }
-
-      // Jika mereply hasil gambar bot terdahulu tanpa kirim foto baru, gunakan gambar sebelumnya sebagai input restyle
       const inputImage = uploadedMediaUrl || sessionData.last_image;
       const isI2I = Boolean(inputImage);
-
       const queryParams = {
         action: "generate",
         prompt: userText || "Enhance and restyle into aesthetic artwork",
         android_id: sessionData.android_id || undefined,
         wait: "true",
-        ...(isI2I ? {
+        ...isI2I ? {
           image: inputImage,
           model: sessionData.model || "internal_actionfigure"
         } : {
           style: sessionData.style || "Ghibli Anime"
-        })
+        }
       };
-
       const data = await requestStableAi(queryParams);
       const outputUrl = data.output;
       if (!outputUrl) throw new Error("Gagal menerima hasil gambar.");
-
-      const bodyText = `–  *S T A B L E  D I F F U S I O N*\n\n` +
-        `┌  ◦  *Prompt* : ${queryParams.prompt}\n` +
-        `├  ◦  *Mode* : ${isI2I ? "Image to Image (Reply)" : "Text to Image"}\n` +
-        `├  ◦  *Preset* : ${isI2I ? queryParams.model : queryParams.style}\n` +
-        `└  ◦  *Job ID* : \`${data.job_id || "-"}\``;
-
+      const bodyText = `–  *S T A B L E  D I F F U S I O N*\n\n` + `┌  ◦  *Prompt* : ${queryParams.prompt}\n` + `├  ◦  *Mode* : ${isI2I ? "Image to Image (Reply)" : "Text to Image"}\n` + `├  ◦  *Preset* : ${isI2I ? queryParams.model : queryParams.style}\n` + `└  ◦  *Job ID* : \`${data.job_id || "-"}\``;
       const buttons = [{
         name: "cta_copy",
         display_text: "📄 Salin Prompt",
         copy_code: queryParams.prompt
       }];
-
       let sentMsg;
       if (typeof ctx.sendCta === "function") {
         sentMsg = await ctx.sendCta(bodyText, "", buttons, {
@@ -199,27 +180,27 @@ export default {
         });
       } else {
         sentMsg = await sock.sendMessage(ctx.id, {
-          image: { url: outputUrl },
+          image: {
+            url: outputUrl
+          },
           caption: bodyText
-        }, { quoted: msg });
+        }, {
+          quoted: msg
+        });
       }
-
       const newMsgId = sentMsg?.key?.id;
       recordSession(chatId, newMsgId, data.android_id || sessionData.android_id, outputUrl, sessionData.style, sessionData.model);
-
       if (typeof ctx?.react === "function") await ctx.react("✨");
       return true;
     } catch (e) {
       console.error("[STABLE DIFFUSION BEFORE ERROR]:", e.message);
     }
   },
-
   execute: async (sock, ctx, msg) => {
     try {
       const chatId = ctx.id;
       const senderId = ctx.sender || ctx.author || msg.key?.participant || msg.key?.remoteJid || ctx.id;
       initDB(senderId, ctx.pushName);
-
       let rawText = ctx.args?.join(" ")?.trim() || "";
       if (!rawText && ctx.text) {
         const raw = ctx.text.trim();
@@ -228,11 +209,8 @@ export default {
           rawText = raw.slice(firstWord.length).trim();
         }
       }
-
       const prefix = ctx.prefix || ".";
       const quotedMsg = typeof simpleQuoted === "function" ? simpleQuoted(ctx) : msg;
-
-      // 1. Reset Sesi
       if (rawText === "--reset" || rawText === "--clear" || rawText === "reset" || rawText === "clear") {
         if (global.db.stableAi[chatId]) {
           delete global.db.stableAi[chatId];
@@ -241,28 +219,22 @@ export default {
         }
         return ctx.reply("ℹ️ Tidak ada sesi aktif di percakapan ini.");
       }
-
-      const { flags, cleanPrompt } = parseFlags(rawText);
+      const {
+        flags,
+        cleanPrompt
+      } = parseFlags(rawText);
       const existingSession = global.db.stableAi[chatId];
       const activeAndroidId = flags.android_id || existingSession?.android_id || undefined;
-
-      // 2. Profile / Saldo Koin
       if (flags.profile || cleanPrompt.toLowerCase() === "profile") {
         await ctx.react("⏳");
-        const res = await requestStableAi({ action: "profile", android_id: activeAndroidId });
+        const res = await requestStableAi({
+          action: "profile",
+          android_id: activeAndroidId
+        });
         recordSession(chatId, null, res.android_id);
-
         await ctx.react("✨");
-        return ctx.reply(
-          `–  *S T A B L E  D I F F U S I O N  P R O F I L E*\n\n` +
-          `┌  ◦  *Android ID* : \`${res.android_id}\`\n` +
-          `├  ◦  *Coin Balance* : ${res.coin_balance} 🪙\n` +
-          `├  ◦  *Sisa Limit* : ${res.remaining_balance} / ${res.total_request_limit}\n` +
-          `└  ◦  *Status Premium* : ${res.is_premium ? "Aktif ✨" : "Tidak"}`
-        );
+        return ctx.reply(`–  *S T A B L E  D I F F U S I O N  P R O F I L E*\n\n` + `┌  ◦  *Android ID* : \`${res.android_id}\`\n` + `├  ◦  *Coin Balance* : ${res.coin_balance} 🪙\n` + `├  ◦  *Sisa Limit* : ${res.remaining_balance} / ${res.total_request_limit}\n` + `└  ◦  *Status Premium* : ${res.is_premium ? "Aktif ✨" : "Tidak"}`);
       }
-
-      // 3. Claim Koin Gratis
       if (flags.claim || cleanPrompt.toLowerCase() === "claim") {
         await ctx.react("⏳");
         const res = await requestStableAi({
@@ -271,49 +243,29 @@ export default {
           coins: flags.coins || 10
         });
         recordSession(chatId, null, res.android_id);
-
         await ctx.react("✨");
         return ctx.reply(`🎉 *Sukses klaim koin!* Saldo Anda saat ini: *${res.coin_balance}* 🪙`);
       }
-
-      // 4. Set Style / Model Manual
       if (flags.setstyle || flags.setmodel) {
         const isModel = Boolean(flags.setmodel);
         const targetVal = String(flags.setstyle || flags.setmodel).trim();
         const targetName = flags.name || targetVal;
-
-        recordSession(
-          chatId,
-          null,
-          activeAndroidId,
-          null,
-          isModel ? existingSession?.style : targetVal,
-          isModel ? targetVal : existingSession?.model
-        );
-
+        recordSession(chatId, null, activeAndroidId, null, isModel ? existingSession?.style : targetVal, isModel ? targetVal : existingSession?.model);
         await ctx.react("✅");
-        return ctx.reply(
-          `–  *S T A B L E  D I F F U S I O N*\n\n` +
-          `┌  ◦  *Preset Disimpan* : ${isModel ? "Image-to-Image Model" : "Text-to-Image Style"}\n` +
-          `├  ◦  *Nama* : ${targetName}\n` +
-          `└  ◦  *Value ID* : \`${targetVal}\`\n\n` +
-          `_Ketik \`${prefix}sdai <prompt>\` untuk mulai membuat gambar._`
-        );
+        return ctx.reply(`–  *S T A B L E  D I F F U S I O N*\n\n` + `┌  ◦  *Preset Disimpan* : ${isModel ? "Image-to-Image Model" : "Text-to-Image Style"}\n` + `├  ◦  *Nama* : ${targetName}\n` + `└  ◦  *Value ID* : \`${targetVal}\`\n\n` + `_Ketik \`${prefix}sdai <prompt>\` untuk mulai membuat gambar._`);
       }
-
-      // 5. CTA Pagination List (Styles / Models)
       if (flags.list || flags.models || flags.search || rawText.startsWith("--list") || flags.page) {
         await ctx.react("⏳");
         const isModel = flags.type === "model" || flags.iti === true || String(flags.iti) === "true";
-        const data = await requestStableAi({ action: "models" });
-
-        const rawList = isModel ? (data.image_to_image_models || []) : (data.text_to_image_styles || []);
+        const data = await requestStableAi({
+          action: "models"
+        });
+        const rawList = isModel ? data.image_to_image_models || [] : data.text_to_image_styles || [];
         if (!rawList.length) {
           await ctx.react("❌");
           return ctx.reply("❌ Tidak ada data model/style dari server.");
         }
-
-        const searchQuery = flags.search || flags.query || (!flags.page && cleanPrompt) || "";
+        const searchQuery = flags.search || flags.query || !flags.page && cleanPrompt || "";
         let matchedItems = rawList;
         if (searchQuery && searchQuery !== "true") {
           const kw = searchQuery.toLowerCase();
@@ -322,35 +274,29 @@ export default {
             return name.includes(kw);
           });
         }
-
         if (!matchedItems.length) {
           await ctx.react("❌");
           return ctx.reply(`❌ Data tidak ditemukan dengan query "${searchQuery}".`);
         }
-
         const page = Math.max(1, Number(flags.page) || 1);
         const totalPages = Math.ceil(matchedItems.length / CONFIG.ITEMS_PER_PAGE) || 1;
         const pageItems = matchedItems.slice((page - 1) * CONFIG.ITEMS_PER_PAGE, page * CONFIG.ITEMS_PER_PAGE);
-
         const rows = pageItems.map((item, idx) => {
           const globalIdx = (page - 1) * CONFIG.ITEMS_PER_PAGE + idx + 1;
           const valId = isModel ? item.actual_model_name : item.name;
           const displayName = item.display_name || valId;
           const isPrem = Boolean(isModel ? item.is_model_premium : item.is_style_premium);
           const cmdFlag = isModel ? `--setmodel "${valId}"` : `--setstyle "${valId}"`;
-
           return {
             title: `${globalIdx}. ${displayName}`.slice(0, 24),
             id: `${prefix}sdai ${cmdFlag} --name "${displayName}"`,
             description: `${isPrem ? "[👑 Premium] " : ""}ID: ${valId}`.slice(0, 60)
           };
         });
-
         let baseCmd = `${prefix}sdai`;
         if (isModel) baseCmd += ` --type model`;
         if (searchQuery && searchQuery !== "true") baseCmd += ` --search "${searchQuery}"`;
         else baseCmd += ` --list`;
-
         const buttons = [{
           name: "single_select",
           buttonParamsJson: JSON.stringify({
@@ -361,7 +307,6 @@ export default {
             }]
           })
         }];
-
         if (page > 1) {
           buttons.push({
             name: "quick_reply",
@@ -380,13 +325,7 @@ export default {
             })
           });
         }
-
-        const bodyText = `–  *S T A B L E  D I F F U S I O N  -  L I S T*\n\n` +
-          `┌  ◦  *Tipe* : ${isModel ? "Image-to-Image Models" : "Text-to-Image Styles"}\n` +
-          `├  ◦  *Total Item* : ${matchedItems.length}\n` +
-          `└  ◦  *Halaman* : ${page} / ${totalPages}\n\n` +
-          `_Pilih preset melalui tombol interaktif di bawah ini:_`;
-
+        const bodyText = `–  *S T A B L E  D I F F U S I O N  -  L I S T*\n\n` + `┌  ◦  *Tipe* : ${isModel ? "Image-to-Image Models" : "Text-to-Image Styles"}\n` + `├  ◦  *Total Item* : ${matchedItems.length}\n` + `└  ◦  *Halaman* : ${page} / ${totalPages}\n\n` + `_Pilih preset melalui tombol interaktif di bawah ini:_`;
         const options = {
           params: {
             bottom_sheet: {
@@ -398,7 +337,6 @@ export default {
           },
           quoted: quotedMsg
         };
-
         if (typeof ctx.sendCta === "function") {
           await ctx.sendCta(bodyText, "", buttons, options);
         } else {
@@ -408,17 +346,13 @@ export default {
           }
           await ctx.reply(fallback);
         }
-
         await ctx.react("✅");
         return;
       }
-
-      // 6. Generate Mode
       const isMedia = ctx.isMedia || ctx.quoted?.isMedia;
       if (!rawText && !isMedia) {
         const activeStyle = existingSession?.style || "Ghibli Anime";
         const activeModel = existingSession?.model || "internal_actionfigure";
-
         const guideText = `–  *S T A B L E  D I F F U S I O N  A I*
 
 Generator visual artistik berkualitas tinggi berbasis Stable Diffusion.
@@ -443,12 +377,11 @@ Generator visual artistik berkualitas tinggi berbasis Stable Diffusion.
    ├ \`--profile\` (Cek kuota koin)
    ├ \`--claim\` (Klaim koin bonus)
    └ \`--reset\` (Hapus sesi obrolan)`;
-
-        return ctx.reply(guideText, { quoted: quotedMsg });
+        return ctx.reply(guideText, {
+          quoted: quotedMsg
+        });
       }
-
       await ctx.react("🎨");
-
       let uploadedMediaUrl = null;
       if (isMedia) {
         const buffer = await ctx.download();
@@ -459,11 +392,9 @@ Generator visual artistik berkualitas tinggi berbasis Stable Diffusion.
           }
         }
       }
-
       const inputImage = uploadedMediaUrl || flags.media || null;
       const isI2I = Boolean(inputImage);
       const promptText = cleanPrompt || flags.prompt || (isI2I ? "Turn into artistic figure masterpiece" : "Masterpiece high quality artwork");
-
       const queryParams = {
         action: "generate",
         prompt: promptText,
@@ -471,30 +402,21 @@ Generator visual artistik berkualitas tinggi berbasis Stable Diffusion.
         wait: "true",
         ...flags
       };
-
       if (isI2I) {
         queryParams.image = inputImage;
         queryParams.model = flags.model || existingSession?.model || "internal_actionfigure";
       } else {
         queryParams.style = flags.style || existingSession?.style || "Ghibli Anime";
       }
-
       const data = await requestStableAi(queryParams);
       const outputUrl = data.output;
       if (!outputUrl) throw new Error("Server tidak mengembalikan URL output gambar.");
-
-      const bodyText = `–  *S T A B L E  D I F F U S I O N*\n\n` +
-        `┌  ◦  *Prompt* : ${promptText}\n` +
-        `├  ◦  *Mode* : ${isI2I ? "Image to Image" : "Text to Image"}\n` +
-        `├  ◦  *Preset* : ${isI2I ? queryParams.model : queryParams.style}\n` +
-        `└  ◦  *Job ID* : \`${data.job_id || "-"}\``;
-
+      const bodyText = `–  *S T A B L E  D I F F U S I O N*\n\n` + `┌  ◦  *Prompt* : ${promptText}\n` + `├  ◦  *Mode* : ${isI2I ? "Image to Image" : "Text to Image"}\n` + `├  ◦  *Preset* : ${isI2I ? queryParams.model : queryParams.style}\n` + `└  ◦  *Job ID* : \`${data.job_id || "-"}\``;
       const buttons = [{
         name: "cta_copy",
         display_text: "📄 Salin Prompt",
         copy_code: promptText
       }];
-
       let sentMsg;
       if (typeof ctx.sendCta === "function") {
         sentMsg = await ctx.sendCta(bodyText, "", buttons, {
@@ -503,21 +425,16 @@ Generator visual artistik berkualitas tinggi berbasis Stable Diffusion.
         });
       } else {
         sentMsg = await sock.sendMessage(ctx.id, {
-          image: { url: outputUrl },
+          image: {
+            url: outputUrl
+          },
           caption: bodyText
-        }, { quoted: quotedMsg });
+        }, {
+          quoted: quotedMsg
+        });
       }
-
       const sentMsgId = sentMsg?.key?.id;
-      recordSession(
-        chatId,
-        sentMsgId,
-        data.android_id || activeAndroidId,
-        outputUrl,
-        queryParams.style || existingSession?.style,
-        queryParams.model || existingSession?.model
-      );
-
+      recordSession(chatId, sentMsgId, data.android_id || activeAndroidId, outputUrl, queryParams.style || existingSession?.style, queryParams.model || existingSession?.model);
       await ctx.react("✨");
     } catch (error) {
       console.error("[Stable Diffusion AI Error]:", error?.message || error);

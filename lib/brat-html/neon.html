@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Neon Glitch Impact 512</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    :root {
+      --cyan: #00fff0;
+      --magenta: #ff00e5;
+      --white: #ffffff
+    }
+
+    body,
+    html {
+      height: 100%;
+      background: #03030a;
+      display: grid;
+      place-items: center;
+      font-family: system-ui, sans-serif;
+      overflow: hidden
+    }
+
+    .stage {
+      position: relative;
+      width: 512px;
+      height: 512px;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 55%, rgba(0, 255, 240, .08) 0, transparent 60%), radial-gradient(circle at 50% 45%, rgba(255, 0, 229, .06) 0, transparent 55%), linear-gradient(135deg, #08081a 0, #02020a 100%);
+      border-radius: 14px;
+      border: 1px solid rgba(0, 255, 240, .25);
+      box-shadow: 0 0 80px rgba(0, 255, 240, .15), 0 0 40px rgba(255, 0, 229, .1), inset 0 0 100px rgba(0, 255, 240, .04);
+      isolation: isolate
+    }
+
+    .stage::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: linear-gradient(rgba(0, 255, 240, .07) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 240, .07) 1px, transparent 1px);
+      background-size: 32px 32px;
+      animation: gridScroll 6s linear infinite;
+      pointer-events: none;
+      z-index: 1
+    }
+
+    @keyframes gridScroll {
+      0% {
+        background-position: 0 0
+      }
+
+      100% {
+        background-position: 0 32px
+      }
+    }
+
+    .stage::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(0deg, transparent 0, transparent 2px, rgba(0, 0, 0, .22) 2px, rgba(0, 0, 0, .22) 3px);
+      pointer-events: none;
+      z-index: 15;
+      animation: scanMove 8s linear infinite
+    }
+
+    @keyframes scanMove {
+      0% {
+        background-position: 0 0
+      }
+
+      100% {
+        background-position: 0 100px
+      }
+    }
+
+    .word {
+      position: absolute;
+      top: 50%;
+      font-family: Orbitron, 'Arial Black', sans-serif;
+      font-weight: 900;
+      letter-spacing: .02em;
+      white-space: nowrap;
+      line-height: 1;
+      will-change: transform;
+      z-index: 5
+    }
+
+    .word-left {
+      left: 50%;
+      transform: translate(-100%, -50%)
+    }
+
+    .word-right {
+      left: 50%;
+      transform: translate(0, -50%)
+    }
+
+    .fly {
+      display: inline-block;
+      will-change: transform
+    }
+
+    .stage.run .word-left .fly {
+      animation: flyLeft .5s cubic-bezier(.55, 0, .95, .55) forwards
+    }
+
+    .stage.run .word-right .fly {
+      animation: flyRight .5s cubic-bezier(.55, 0, .95, .55) forwards
+    }
+
+    @keyframes flyLeft {
+      0% {
+        transform: translate(-512px, 0);
+        filter: blur(3px)
+      }
+
+      70% {
+        filter: blur(1px)
+      }
+
+      100% {
+        transform: translate(14px, 0);
+        filter: blur(0)
+      }
+    }
+
+    @keyframes flyRight {
+      0% {
+        transform: translate(512px, 0);
+        filter: blur(3px)
+      }
+
+      70% {
+        filter: blur(1px)
+      }
+
+      100% {
+        transform: translate(-14px, 0);
+        filter: blur(0)
+      }
+    }
+
+    .word-text {
+      display: inline-block;
+      color: var(--white);
+      will-change: transform, filter, text-shadow
+    }
+
+    .word-left .word-text {
+      text-shadow: -2px 0 var(--magenta), 2px 0 var(--cyan), 0 0 8px var(--cyan), 0 0 18px var(--cyan), 0 0 36px var(--cyan), 0 0 60px rgba(0, 255, 240, .5)
+    }
+
+    .word-right .word-text {
+      text-shadow: -2px 0 var(--cyan), 2px 0 var(--magenta), 0 0 8px var(--magenta), 0 0 18px var(--magenta), 0 0 36px var(--magenta), 0 0 60px rgba(255, 0, 229, .5)
+    }
+
+    .stage.impact .word-text {
+      animation: neonPulse 2.4s ease-in-out infinite, recoil .4s ease-out
+    }
+
+    @keyframes recoil {
+      0% {
+        transform: scale(1.22)
+      }
+
+      45% {
+        transform: scale(.95)
+      }
+
+      100% {
+        transform: scale(1)
+      }
+    }
+
+    @keyframes neonPulse {
+
+      0%,
+      100% {
+        filter: brightness(1)
+      }
+
+      50% {
+        filter: brightness(1.5)
+      }
+    }
+
+    .stage.impact {
+      animation: shake .5s cubic-bezier(.36, .07, .19, .97), glitchShift .45s steps(5) 50ms
+    }
+
+    @keyframes shake {
+
+      0%,
+      100% {
+        transform: translate(0, 0)
+      }
+
+      10% {
+        transform: translate(-8px, 6px) rotate(-.5deg)
+      }
+
+      20% {
+        transform: translate(8px, -6px) rotate(.5deg)
+      }
+
+      30% {
+        transform: translate(-6px, 4px) rotate(-.3deg)
+      }
+
+      40% {
+        transform: translate(6px, -4px) rotate(.3deg)
+      }
+
+      55% {
+        transform: translate(-4px, 3px)
+      }
+
+      75% {
+        transform: translate(3px, -2px)
+      }
+
+      90% {
+        transform: translate(-1px, 1px)
+      }
+    }
+
+    @keyframes glitchShift {
+      0% {
+        filter: none
+      }
+
+      20% {
+        filter: hue-rotate(90deg) saturate(2) contrast(1.3)
+      }
+
+      40% {
+        filter: hue-rotate(-90deg) saturate(2) contrast(1.3)
+      }
+
+      60% {
+        filter: hue-rotate(180deg) saturate(2) contrast(1.5)
+      }
+
+      80% {
+        filter: hue-rotate(-40deg) saturate(1.6)
+      }
+
+      100% {
+        filter: none
+      }
+    }
+
+    .flash {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at center, #fff 0, rgba(0, 255, 240, .7) 20%, rgba(255, 0, 229, .4) 40%, transparent 70%);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 50;
+      mix-blend-mode: screen
+    }
+
+    .stage.impact .flash {
+      animation: flash .5s ease-out
+    }
+
+    @keyframes flash {
+      0% {
+        opacity: 0
+      }
+
+      8% {
+        opacity: 1
+      }
+
+      100% {
+        opacity: 0
+      }
+    }
+
+    .shockwave {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 40
+    }
+
+    .sw-cyan {
+      border: 4px solid var(--cyan);
+      box-shadow: 0 0 30px var(--cyan), inset 0 0 30px var(--cyan)
+    }
+
+    .sw-magenta {
+      border: 4px solid var(--magenta);
+      box-shadow: 0 0 30px var(--magenta), inset 0 0 30px var(--magenta);
+      animation-delay: 80ms !important
+    }
+
+    .stage.impact .sw-cyan,
+    .stage.impact .sw-magenta {
+      animation: shockwave 1s cubic-bezier(.2, .8, .4, 1) forwards
+    }
+
+    @keyframes shockwave {
+      0% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 1;
+        border-width: 10px
+      }
+
+      100% {
+        transform: translate(-50%, -50%) scale(30);
+        opacity: 0;
+        border-width: 1px
+      }
+    }
+
+    #fx {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 30
+    }
+
+    .vignette {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 20;
+      background: radial-gradient(ellipse at center, transparent 45%, rgba(0, 0, 0, .65) 100%)
+    }
+  </style>
+</head>
+
+<body>
+  <div id="kalimat-src" data-text="{{TEXT}}" hidden></div>
+  <div class="stage" id="stage">
+    <div class="word word-left">
+      <div class="fly"><span class="word-text" id="textLeft"></span></div>
+    </div>
+    <div class="word word-right">
+      <div class="fly"><span class="word-text" id="textRight"></span></div>
+    </div><canvas id="fx" width="512" height="512"></canvas>
+    <div class="shockwave sw-cyan"></div>
+    <div class="shockwave sw-magenta"></div>
+    <div class="flash"></div>
+    <div class="vignette"></div>
+  </div>
+  <script>
+    ! function() { var e = document.getElementById("kalimat-src"),
+        t = (e && e.dataset.text || "NEON GLITCH").trim() || "NEON GLITCH",
+        n = document.getElementById("stage"),
+        a = document.getElementById("fx").getContext("2d"),
+        o = document.querySelector(".word-left"),
+        i = document.querySelector(".word-right"),
+        r = o.querySelector(".fly"),
+        l = i.querySelector(".fly"),
+        s = document.getElementById("textLeft"),
+        c = document.getElementById("textRight"),
+        d = document.createElement("canvas").getContext("2d");
+
+      function f(e) { if (!e) return 190;
+        d.font = '900 100px "Orbitron", "Arial Black", sans-serif'; var t = d.measureText(e).width || 1; return Math.min(26e3 / t, 190) }
+
+      function h() { var e = function(e) { var t = String(e).trim().split(/\s+/).filter(Boolean); if (!t.length) return ["", ""]; if (1 === t.length) { var n = t[0],
+                a = Math.ceil(n.length / 2); return [n.slice(0, a), n.slice(a)] } if (2 === t.length) return [t[0], t[1]]; for (var o = 1, i = 1 / 0, r = 1; r < t.length; r++) { var l = t.slice(0, r).join("").length,
+                s = t.slice(r).join("").length,
+                c = Math.abs(l - s);
+              c < i && (i = c, o = r) } return [t.slice(0, o).join(" "), t.slice(o).join(" ")] }(t),
+          n = e[0],
+          a = e[1];
+        s.textContent = n, c.textContent = a; var r = Math.min(f(n), f(a));
+        o.style.fontSize = r + "px", i.style.fontSize = r + "px" } var m = [],
+        v = [],
+        u = [];
+
+      function y(e, t, n) { for (var a = [{ x: e, y: t }], o = 160 + 100 * Math.random(), i = 1; i <= 10; i++) { var r = i / 10,
+            l = 40 * (Math.random() - .5) * (1 - r),
+            s = n + Math.PI / 2,
+            c = e + Math.cos(n) * o * r + Math.cos(s) * l,
+            d = t + Math.sin(n) * o * r + Math.sin(s) * l;
+          a.push({ x: c, y: d }) } u.push({ points: a, life: 1, decay: .055 }) }
+
+      function g() { n.classList.add("impact"),
+          function(e, t) { for (var n = 0; n < 140; n++) { var a = Math.random() * Math.PI * 2,
+                o = 22 * Math.random() + 4,
+                i = Math.random() > .5;
+              m.push({ x: e, y: t, vx: Math.cos(a) * o, vy: Math.sin(a) * o, life: 1, decay: .018 + .02 * Math.random(), size: 1.5 + 2.5 * Math.random(), color: i ? [0, 255, 240] : [255, 0, 229] }) } for (var r = 0; r < 32; r++) { var l = Math.random() * Math.PI * 2,
+                s = 8 * Math.random() + 1,
+                c = Math.random() > .5;
+              v.push({ x: e, y: t, vx: Math.cos(l) * s, vy: Math.sin(l) * s, life: 1, decay: .014, size: 22 + 32 * Math.random(), color: c ? [0, 255, 240] : [255, 0, 229] }) } for (var d = 0; d < 10; d++) y(e, t, d / 10 * Math.PI * 2 + .4 * (Math.random() - .5)) }(256, 256) }
+
+      function x() { n.classList.remove("impact", "run"), m = [], v = [], u = [], a.clearRect(0, 0, 512, 512), [r, l].forEach(function(e) { e.style.animation = "none", e.offsetWidth, e.style.animation = "" }), requestAnimationFrame(function() { n.classList.add("run"); var e = function() { r.removeEventListener("animationend", e), g(), setTimeout(x, 3200) };
+          r.addEventListener("animationend", e, { once: !0 }) }) }
+
+      function p() { h(), x() }! function e() { a.clearRect(0, 0, 512, 512), a.globalCompositeOperation = "lighter", a.lineCap = "round", a.lineJoin = "round"; for (var t = u.length - 1; t >= 0; t--) { var n = u[t]; if (n.life -= n.decay, n.life <= 0) u.splice(t, 1);
+          else { a.strokeStyle = "rgba(0,255,240," + .5 * n.life + ")", a.lineWidth = 7, a.beginPath(), a.moveTo(n.points[0].x, n.points[0].y); for (var o = 1; o < n.points.length; o++) a.lineTo(n.points[o].x, n.points[o].y);
+            a.stroke(), a.strokeStyle = "rgba(255,255,255," + n.life + ")", a.lineWidth = 2, a.stroke() } } for (var i = v.length - 1; i >= 0; i--) { var r = v[i]; if (r.x += r.vx, r.y += r.vy, r.vx *= .94, r.vy *= .94, r.life -= r.decay, r.life <= 0) v.splice(i, 1);
+          else { var l = a.createRadialGradient(r.x, r.y, 0, r.x, r.y, r.size),
+              s = r.color;
+            l.addColorStop(0, "rgba(" + s[0] + "," + s[1] + "," + s[2] + "," + .7 * r.life + ")"), l.addColorStop(.5, "rgba(" + s[0] + "," + s[1] + "," + s[2] + "," + .3 * r.life + ")"), l.addColorStop(1, "rgba(" + s[0] + "," + s[1] + "," + s[2] + ",0)"), a.fillStyle = l, a.beginPath(), a.arc(r.x, r.y, r.size, 0, 7), a.fill() } } for (var c = m.length - 1; c >= 0; c--) { var d = m[c]; if (d.x += d.vx, d.y += d.vy, d.vx *= .965, d.vy *= .965, d.life -= d.decay, d.life <= 0) m.splice(c, 1);
+          else { var f = d.color;
+            a.strokeStyle = "rgba(" + f[0] + "," + f[1] + "," + f[2] + "," + d.life + ")", a.lineWidth = d.size, a.beginPath(), a.moveTo(d.x, d.y), a.lineTo(d.x - 2 * d.vx, d.y - 2 * d.vy), a.stroke(), a.fillStyle = "rgba(255,255,255," + d.life + ")", a.beginPath(), a.arc(d.x, d.y, .7 * d.size, 0, 7), a.fill() } } a.globalCompositeOperation = "source-over", requestAnimationFrame(e) }(), document.fonts && document.fonts.load ? document.fonts.load("900 100px Orbitron").then(p).catch(p) : p() }()
+  </script>
+</body>
+
+</html>

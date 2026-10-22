@@ -1,15 +1,15 @@
 import axios from "axios";
-import { simpleQuoted } from "../../lib/quoted.js";
-import { sendPTT } from "../../lib/audio.js";
-
+import {
+  simpleQuoted
+} from "../../lib/quoted.js";
+import {
+  sendPTT
+} from "../../lib/audio.js";
 const API_URL = `${global.bot?.api?.wudysoft}/api/search/kbbi/v4`;
 const ITEMS_PER_PAGE = 6;
 const CONFIG = {
-  
-  USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-  
+  USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 };
-
 
 function parseFlags(input = "") {
   const flags = {};
@@ -19,13 +19,11 @@ function parseFlags(input = "") {
     let key = match[1].toLowerCase();
     let rawVal = match[2];
     let val = true;
-
     if (["q", "kata", "word"].includes(key)) key = "query";
     if (["vn", "audio", "suara"].includes(key)) key = "is_audio";
     if (["card", "img", "image"].includes(key)) key = "is_canvas";
-
     if (rawVal !== undefined) {
-      if ((rawVal.startsWith('"') && rawVal.endsWith('"')) || (rawVal.startsWith("'") && rawVal.endsWith("'"))) {
+      if (rawVal.startsWith('"') && rawVal.endsWith('"') || rawVal.startsWith("'") && rawVal.endsWith("'")) {
         rawVal = rawVal.slice(1, -1);
       }
       if (rawVal === "true") val = true;
@@ -37,12 +35,10 @@ function parseFlags(input = "") {
   }
   const cleanPrompt = input.replace(flagRegex, "").trim();
   return {
-    flags,
-    cleanPrompt
+    flags: flags,
+    cleanPrompt: cleanPrompt
   };
 }
-
-// Render HTML Canvas Card KBBI ke Gambar via html2img Wudysoft
 async function renderHtmlToImage(htmlContent) {
   const rawApi = global.bot?.api?.wudysoft || "";
   const cleanApi = rawApi.replace(/^https?:\/\//i, "").replace(/\/+$/, "");
@@ -60,7 +56,7 @@ async function renderHtmlToImage(htmlContent) {
   for (const ver of versions) {
     try {
       const res = await axios.post(`${baseUrl}${ver}`, payload, {
-        headers,
+        headers: headers,
         timeout: 15e3
       });
       const imgUrl = res.data?.url || res.data?.result || (typeof res.data === "string" ? res.data : null);
@@ -75,7 +71,7 @@ async function renderHtmlToImage(htmlContent) {
         } catch {}
         return {
           url: imgUrl,
-          buffer
+          buffer: buffer
         };
       }
     } catch {
@@ -88,16 +84,13 @@ async function renderHtmlToImage(htmlContent) {
   };
 }
 
-// Template HTML Canvas Card KBBI
 function generateKbbiCanvasHtml(item) {
   const word = (item.kata_asli || "Kata").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const kelas = (Array.isArray(item.kelas_kata) && item.kelas_kata.length > 0 ? item.kelas_kata.join(", ") : "Peribahasa/Leksikon").toUpperCase();
   const def = (item.teks_definisi || "-").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  
   const contohHtml = (item.contoh_penggunaan || []).slice(0, 3).map(c => {
     return `<div class="contoh-item">• "${c.replace(/</g, "&lt;").replace(/>/g, "&gt;")}"</div>`;
   }).join("");
-
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -205,7 +198,7 @@ function generateKbbiCanvasHtml(item) {
     ${contohHtml ? `
       <div class="section-title">Contoh Penggunaan</div>
       ${contohHtml}
-    ` : ''}
+    ` : ""}
 
     <div class="footer">
       <span>Wudysoft KBBI Canvas Engine</span>
@@ -215,7 +208,6 @@ function generateKbbiCanvasHtml(item) {
 </body>
 </html>`;
 }
-
 export default {
   name: "kbbi",
   aliases: ["kamus", "artikata", "makna"],
@@ -223,14 +215,12 @@ export default {
   category: "Information",
   limit: true,
   example: "kbbi ubi\nkbbi merdeka --audio\nkbbi ada ubi ada talas --card",
-
   execute: async (sock, ctx, msg) => {
     const prefix = ctx.prefix || ".";
     const botName = global.bot?.name || "WudysoftBot";
     const footer = global.footer || global.bot?.footer || `_${botName}_`;
     const targetJid = ctx.chat || ctx.id;
     const quotedMsg = typeof simpleQuoted === "function" ? simpleQuoted(ctx) || msg : msg;
-
     try {
       let rawText = ctx.args?.join(" ")?.trim() || "";
       if (!rawText && ctx.text) {
@@ -240,10 +230,11 @@ export default {
           rawText = raw.slice(firstWord.length).trim();
         }
       }
-
-      const { flags, cleanPrompt } = parseFlags(rawText);
+      const {
+        flags,
+        cleanPrompt
+      } = parseFlags(rawText);
       const query = flags.query || cleanPrompt;
-
       if (!query) {
         const guideText = `–  *K B B I  E D I T I O N*
 
@@ -254,68 +245,49 @@ Cari arti kata resmi, peribahasa, kelas kata, hingga audio pelafalan lisan.
 └  ◦  *Dengan Visual Canvas* : \`${prefix}kbbi ada ubi ada talas --card\`
 
 ${footer}`;
-        return ctx.reply(guideText, { quoted: quotedMsg });
+        return ctx.reply(guideText, {
+          quoted: quotedMsg
+        });
       }
-
       await ctx.react("📖");
-
-      const { data } = await axios.get(API_URL, {
-        params: { query },
+      const {
+        data
+      } = await axios.get(API_URL, {
+        params: {
+          query: query
+        },
         headers: {
           "User-Agent": CONFIG.USER_AGENT
         },
         timeout: 35e3
       });
-
       const results = Array.isArray(data?.results) ? data.results : [];
       if (!data?.status || results.length === 0) {
         await ctx.react("❌");
-        return ctx.reply(
-          `–  *K B B I  N O T  F O U N D*\n\n` +
-          `┌  ◦  *Kata* : "${query}"\n` +
-          `└  ◦  *Status* : Leksikon tidak ditemukan di KBBI.\n\n` +
-          `${footer}`,
-          { quoted: quotedMsg }
-        );
+        return ctx.reply(`–  *K B B I  N O T  F O U N D*\n\n` + `┌  ◦  *Kata* : "${query}"\n` + `└  ◦  *Status* : Leksikon tidak ditemukan di KBBI.\n\n` + `${footer}`, {
+          quoted: quotedMsg
+        });
       }
-
-      // Ambil entri pertama atau entri index terpilih
       const selectedIndex = flags.index !== undefined ? Number(flags.index) - 1 : 0;
       const targetItem = results[selectedIndex] || results[0];
-
-      // Format Teks Tampilan Neoxr
       const kata = targetItem.kata_asli || query;
-      const kelasKata = Array.isArray(targetItem.kelas_kata) && targetItem.kelas_kata.length > 0
-        ? targetItem.kelas_kata.join(", ").toUpperCase()
-        : "Peribahasa/Ungkapan";
+      const kelasKata = Array.isArray(targetItem.kelas_kata) && targetItem.kelas_kata.length > 0 ? targetItem.kelas_kata.join(", ").toUpperCase() : "Peribahasa/Ungkapan";
       const definisi = targetItem.teks_definisi || "-";
-
-      let output = `–  *K A M U S  B E S A R  B A H A S A  I N D O N E S I A*\n\n` +
-        `┌  ◦  *Entri* : ${kata.toUpperCase()}\n` +
-        `├  ◦  *Kelas Kata* : ${kelasKata}\n` +
-        `└  ◦  *Ditemukan* : ${results.length} Makna\n\n` +
-        `┌  ◦  *D E F I N I S I* :\n` +
-        definisi.split("\n").map(l => l ? `│  ${l}` : "│").join("\n") + "\n" +
-        `└  ◦\n\n`;
-
+      let output = `–  *K A M U S  B E S A R  B A H A S A  I N D O N E S I A*\n\n` + `┌  ◦  *Entri* : ${kata.toUpperCase()}\n` + `├  ◦  *Kelas Kata* : ${kelasKata}\n` + `└  ◦  *Ditemukan* : ${results.length} Makna\n\n` + `┌  ◦  *D E F I N I S I* :\n` + definisi.split("\n").map(l => l ? `│  ${l}` : "│").join("\n") + "\n" + `└  ◦\n\n`;
       if (Array.isArray(targetItem.contoh_penggunaan) && targetItem.contoh_penggunaan.length > 0) {
-        output += `┌  ◦  *C O N T O H  P E N G G U N A A N* :\n` +
-          targetItem.contoh_penggunaan.slice(0, 4).map(c => `│  • "${c}"`).join("\n") + "\n" +
-          `└  ◦\n\n`;
+        output += `┌  ◦  *C O N T O H  P E N G G U N A A N* :\n` + targetItem.contoh_penggunaan.slice(0, 4).map(c => `│  • "${c}"`).join("\n") + "\n" + `└  ◦\n\n`;
       }
-
       output += `${footer}`;
-
-      // Render Visual Canvas Card
       const html = generateKbbiCanvasHtml(targetItem);
-      const { url: canvasUrl, buffer: canvasBuffer } = await renderHtmlToImage(html);
-
+      const {
+        url: canvasUrl,
+        buffer: canvasBuffer
+      } = await renderHtmlToImage(html);
       const buttons = [{
         name: "cta_copy",
         display_text: "📄 Salin Definisi",
         copy_code: definisi
       }];
-
       if (canvasUrl) {
         buttons.push({
           name: "cta_url",
@@ -323,28 +295,23 @@ ${footer}`;
           url: canvasUrl
         });
       }
-
-      // Jika ada lebih dari 1 hasil makna, buat menu Single-Select CTA
       if (results.length > 1) {
         const rows = results.slice(0, ITEMS_PER_PAGE).map((item, idx) => ({
           title: `${idx + 1}. ${item.kata_asli}`.slice(0, 24),
           id: `${prefix}kbbi ${query} --index ${idx + 1}`,
           description: (item.teks_definisi || "").slice(0, 55)
         }));
-
         buttons.push({
           name: "single_select",
           buttonParamsJson: JSON.stringify({
             title: `LIHAT MAKNA LAIN (${results.length})`,
             sections: [{
               title: `VARIASI ARTI: "${query.toUpperCase()}"`,
-              rows
+              rows: rows
             }]
           })
         });
       }
-
-      // Kirim pesan dengan CTA atau Fallback
       if (typeof ctx.sendCta === "function") {
         await ctx.sendCta(output, "", buttons, {
           media: canvasUrl || null,
@@ -354,12 +321,16 @@ ${footer}`;
         await sock.sendMessage(targetJid, {
           image: canvasBuffer,
           caption: output
-        }, { quoted: quotedMsg });
+        }, {
+          quoted: quotedMsg
+        });
       } else {
-        await sock.sendMessage(targetJid, { text: output }, { quoted: quotedMsg });
+        await sock.sendMessage(targetJid, {
+          text: output
+        }, {
+          quoted: quotedMsg
+        });
       }
-
-      // Kirim Audio Pelafalan (Voice Note/PTT) bila diminta flag --audio atau --vn
       const audioUrl = targetItem.audio?.url_alternatif_tts;
       if ((flags.is_audio || flags.vn) && audioUrl) {
         try {
@@ -368,7 +339,6 @@ ${footer}`;
           console.error("[KBBI Audio Error]:", audioErr.message);
         }
       }
-
       await ctx.react("✅");
     } catch (error) {
       console.error("[KBBI Error]:", error);

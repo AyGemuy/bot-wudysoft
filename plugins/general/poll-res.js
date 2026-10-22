@@ -6,30 +6,28 @@ import {
   areJidsSameUser,
   proto
 } from "@whiskeysockets/baileys";
-import { createHash } from "crypto";
+import {
+  createHash
+} from "crypto";
 import chalk from "chalk";
-
 const sha256 = buf => createHash("sha256").update(buf).digest();
-
 export default {
   name: "pollresponse",
   aliases: ["pollresp", "onpoll"],
   description: "Merespons dan mengeksekusi pilihan vote polling WhatsApp secara otomatis",
   category: "Handler",
   execute: async () => {},
-
-  before: async (m, { sock, ctx }) => {
+  before: async (m, {
+    sock,
+    ctx
+  }) => {
     try {
       const content = normalizeMessageContent(m.message || ctx.message);
       if (!content || !content.pollUpdateMessage) return;
-
       const creationMsgKey = content.pollUpdateMessage.pollCreationMessageKey;
       if (!creationMsgKey?.id) return;
-
       const chatId = ctx.chat || ctx.id || m.key?.remoteJid;
       if (!chatId) return;
-
-      // 1. Ambil pesan asli polling dari memory store
       let pollMsg = null;
       const cached = global.msgStore?.get(creationMsgKey.id);
       if (cached) {
@@ -38,21 +36,14 @@ export default {
           message: cached.rawMessage || cached.message || cached.msg?.message
         };
       }
-
       if (!pollMsg?.message) {
-        const storeMessages = global.store?.messages?.[chatId]?.array || 
-                              Object.values(global.store?.messages?.[chatId] || {});
+        const storeMessages = global.store?.messages?.[chatId]?.array || Object.values(global.store?.messages?.[chatId] || {});
         pollMsg = storeMessages.find(item => creationMsgKey.id === item?.key?.id);
       }
-
       if (!pollMsg?.message) return;
-
       const pollCreation = pollMsg.message;
-
-      // 2. Kumpulkan kandidat Creator & Voter (Dukungan LID & PN)
       const myPn = jidNormalizedUser(sock.authState?.creds?.me?.id || sock.user?.id || "");
-      const myLid = sock.authState?.creds?.me?.lid ? jidNormalizedUser(sock.authState.creds.me.lid) : (sock.user?.lid ? jidNormalizedUser(sock.user.lid) : null);
-
+      const myLid = sock.authState?.creds?.me?.lid ? jidNormalizedUser(sock.authState.creds.me.lid) : sock.user?.lid ? jidNormalizedUser(sock.user.lid) : null;
       const creatorSet = new Set();
       if (pollMsg.key?.participant && !pollMsg.key.participant.endsWith("@g.us")) creatorSet.add(jidNormalizedUser(pollMsg.key.participant));
       if (pollMsg.participant && !pollMsg.participant.endsWith("@g.us")) creatorSet.add(jidNormalizedUser(pollMsg.participant));
@@ -60,7 +51,6 @@ export default {
       if (myPn) creatorSet.add(myPn);
       if (myLid) creatorSet.add(myLid);
       if (!chatId.endsWith("@g.us")) creatorSet.add(jidNormalizedUser(chatId));
-
       const voterSet = new Set();
       const rawVoter = m.key?.participant || m.key?.remoteJid || ctx.sender;
       if (rawVoter && !rawVoter.endsWith("@g.us")) voterSet.add(jidNormalizedUser(rawVoter));
@@ -68,8 +58,6 @@ export default {
         if (myPn) voterSet.add(myPn);
         if (myLid) voterSet.add(myLid);
       }
-
-      // Resolusi LID <-> PN via Signal Repository
       if (typeof sock.signalRepository?.lidMapping?.getPNForLID === "function") {
         for (const jid of [...creatorSet]) {
           if (jid.endsWith("@lid")) {
@@ -90,70 +78,40 @@ export default {
           }
         }
       }
-
-      // 3. Ambil messageSecret
-      const pollEncKey = pollCreation.messageContextInfo?.messageSecret || 
-                         pollCreation.pollCreationMessage?.messageContextInfo?.messageSecret ||
-                         pollCreation.pollCreationMessageV2?.messageContextInfo?.messageSecret ||
-                         pollCreation.pollCreationMessageV3?.messageContextInfo?.messageSecret;
-
+      const pollEncKey = pollCreation.messageContextInfo?.messageSecret || pollCreation.pollCreationMessage?.messageContextInfo?.messageSecret || pollCreation.pollCreationMessageV2?.messageContextInfo?.messageSecret || pollCreation.pollCreationMessageV3?.messageContextInfo?.messageSecret;
       if (!pollEncKey) return;
-
-      // 4. Dekripsi Vote
       const voteMsg = decryptPollVote(content.pollUpdateMessage.vote, {
         pollCreatorJids: [...creatorSet],
         pollMsgId: creationMsgKey.id,
-        pollEncKey,
+        pollEncKey: pollEncKey,
         voterJids: [...voterSet]
       });
-
       if (!voteMsg) return;
-
       const selectedOptions = voteMsg.selectedOptions || [];
-      if (!selectedOptions.length) return; // Unvote
-
-      // ── 5. CARI OPSI TERBARU YANG BARU SAJA DIKLIK (ANTI-STUCK OPSI 1) ──
-      const optionsList = pollCreation.pollCreationMessage?.options || 
-                          pollCreation.pollCreationMessageV2?.options || 
-                          pollCreation.pollCreationMessageV3?.options || [];
-
-      // Catat riwayat vote voter ini di memory agar tahu opsi baru mana yang diklik
+      if (!selectedOptions.length) return;
+      const optionsList = pollCreation.pollCreationMessage?.options || pollCreation.pollCreationMessageV2?.options || pollCreation.pollCreationMessageV3?.options || [];
       if (cached) cached.voterHistory = cached.voterHistory || new Map();
       const voterKey = [...voterSet][0] || ctx.sender;
       const prevVotes = cached?.voterHistory?.get(voterKey) || [];
       const currentVotes = selectedOptions.map(b => Buffer.from(b).toString("hex"));
-
       if (cached) cached.voterHistory.set(voterKey, currentVotes);
-
-      // Cari hash opsi yang baru ditambahkan (atau ambil yang terakhir diklik)
       const targetHash = currentVotes.find(h => !prevVotes.includes(h)) || currentVotes[currentVotes.length - 1];
-
-      // Cocokkan hash dengan opsi asli polling
       const matchedOpt = optionsList.find(opt => {
         const hashHex = sha256(Buffer.from(opt.optionName || "")).toString("hex");
         return hashHex === targetHash;
       });
-
       let responseText = matchedOpt?.optionName || "";
-
-      // 6. Cek pemetaan custom (global.pollMappings) jika ada
       if (global.pollMappings?.[creationMsgKey.id]) {
         const mapped = global.pollMappings[creationMsgKey.id].options?.find(o => o.name === responseText);
         if (mapped?.id || mapped?.cmd) {
           responseText = mapped.id || mapped.cmd;
         }
       }
-
       if (!responseText) return;
-
-      // Log Simpel
       const voterNum = [...voterSet].find(j => j.endsWith("@s.whatsapp.net"))?.split("@")[0] || ctx.senderNumber || "User";
       console.log(chalk.gray(`[ POLL ] `) + chalk.cyan(`@${voterNum}`) + chalk.gray(` memilih: `) + chalk.greenBright.bold(`"${responseText}"`));
-
-      // 7. Bentuk pesan virtual dan teruskan ke pipeline bot
       const activeVoter = [...voterSet][0] || ctx.sender;
       const isFromMe = areJidsSameUser(activeVoter, sock.user?.id);
-
       const fakeMsg = await generateWAMessage(chatId, {
         text: responseText,
         mentions: [activeVoter]
@@ -161,21 +119,18 @@ export default {
         userJid: sock.user.id,
         quoted: m
       });
-
       fakeMsg.key.fromMe = isFromMe;
       fakeMsg.key.id = `${creationMsgKey.id}_${Date.now()}`;
       fakeMsg.pushName = ctx.pushName || m.pushName || "User";
       if (ctx.isGroup) {
         fakeMsg.key.participant = fakeMsg.participant = activeVoter;
       }
-
       if (sock.ev?.emit) {
         sock.ev.emit("messages.upsert", {
           messages: [proto.WebMessageInfo.create(fakeMsg)],
           type: "notify"
         });
       }
-
       return true;
     } catch (_) {}
   }

@@ -1,26 +1,63 @@
 import axios from "axios";
-import { simpleQuoted } from "../../lib/quoted.js";
-
+import {
+  simpleQuoted
+} from "../../lib/quoted.js";
 const V17_URL = `${global.bot?.api?.wudysoft}/api/tools/cek-resi/v17`;
 const V18_URL = `${global.bot?.api?.wudysoft}/api/tools/cek-resi/v18`;
 const ITEMS_PER_PAGE = 8;
-
-// Fallback daftar ekspedisi populer di Indonesia
-const POPULAR_COURIERS = [
-  { name: "J&T Express", format: "jnt", desc: "J&T Express Standard & EZ" },
-  { name: "JNE Express", format: "jne", desc: "Jalur Nugraha Ekakurir (REG/YES/OKE)" },
-  { name: "SiCepat Ekspres", format: "sicepat", desc: "SiCepat REG, SIUNTUNG & BEST" },
-  { name: "AnterAja", format: "anteraja", desc: "AnterAja Reguler & Next Day" },
-  { name: "Shopee Xpress (SPX)", format: "spx", desc: "Shopee Express Standard & Hemat" },
-  { name: "Ninja Xpress", format: "ninja", desc: "Ninja Van Logistics Indonesia" },
-  { name: "ID Express", format: "ide", desc: "ID Express Service Standard" },
-  { name: "Pos Indonesia", format: "pos", desc: "Pos Kilat Khusus & Pos Express" },
-  { name: "Wahana Express", format: "wahana", desc: "Wahana Prestasi Logistik" },
-  { name: "TIKI", format: "tiki", desc: "Titipan Kilat (REG/ONS/TDS)" },
-  { name: "Lion Parcel", format: "lion", desc: "Lion Parcel (ONEPACK/REGPACK)" },
-  { name: "Paxel", format: "paxel", desc: "Paxel Same Day Delivery" },
-  { name: "SAP Express", format: "sap", desc: "Satria Antaran Prima" }
-];
+const POPULAR_COURIERS = [{
+  name: "J&T Express",
+  format: "jnt",
+  desc: "J&T Express Standard & EZ"
+}, {
+  name: "JNE Express",
+  format: "jne",
+  desc: "Jalur Nugraha Ekakurir (REG/YES/OKE)"
+}, {
+  name: "SiCepat Ekspres",
+  format: "sicepat",
+  desc: "SiCepat REG, SIUNTUNG & BEST"
+}, {
+  name: "AnterAja",
+  format: "anteraja",
+  desc: "AnterAja Reguler & Next Day"
+}, {
+  name: "Shopee Xpress (SPX)",
+  format: "spx",
+  desc: "Shopee Express Standard & Hemat"
+}, {
+  name: "Ninja Xpress",
+  format: "ninja",
+  desc: "Ninja Van Logistics Indonesia"
+}, {
+  name: "ID Express",
+  format: "ide",
+  desc: "ID Express Service Standard"
+}, {
+  name: "Pos Indonesia",
+  format: "pos",
+  desc: "Pos Kilat Khusus & Pos Express"
+}, {
+  name: "Wahana Express",
+  format: "wahana",
+  desc: "Wahana Prestasi Logistik"
+}, {
+  name: "TIKI",
+  format: "tiki",
+  desc: "Titipan Kilat (REG/ONS/TDS)"
+}, {
+  name: "Lion Parcel",
+  format: "lion",
+  desc: "Lion Parcel (ONEPACK/REGPACK)"
+}, {
+  name: "Paxel",
+  format: "paxel",
+  desc: "Paxel Same Day Delivery"
+}, {
+  name: "SAP Express",
+  format: "sap",
+  desc: "Satria Antaran Prima"
+}];
 
 function parseResiFlags(rawStr) {
   const rest = {};
@@ -32,7 +69,7 @@ function parseResiFlags(rawStr) {
     let val = match[2] || match[3] || true;
     if (typeof val === "string") {
       val = val.trim();
-      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      if (val.startsWith('"') && val.endsWith('"') || val.startsWith("'") && val.endsWith("'")) {
         val = val.slice(1, -1);
       }
     }
@@ -40,12 +77,10 @@ function parseResiFlags(rawStr) {
     cleanText = cleanText.replace(match[0], "");
   }
   return {
-    rest,
+    rest: rest,
     cleanText: cleanText.trim()
   };
 }
-
-// Render HTML Canvas Tracking ke Gambar via html2img Wudysoft
 async function renderHtmlToImage(htmlContent) {
   const rawApi = global.bot?.api?.wudysoft || "";
   const cleanApi = rawApi.replace(/^https?:\/\//i, "").replace(/\/+$/, "");
@@ -63,7 +98,7 @@ async function renderHtmlToImage(htmlContent) {
   for (const ver of versions) {
     try {
       const res = await axios.post(`${baseUrl}${ver}`, payload, {
-        headers,
+        headers: headers,
         timeout: 15e3
       });
       const imgUrl = res.data?.url || res.data?.result || (typeof res.data === "string" ? res.data : null);
@@ -78,7 +113,7 @@ async function renderHtmlToImage(htmlContent) {
         } catch {}
         return {
           url: imgUrl,
-          buffer
+          buffer: buffer
         };
       }
     } catch {
@@ -91,11 +126,16 @@ async function renderHtmlToImage(htmlContent) {
   };
 }
 
-// Template HTML Resi Canvas Card
-function generateResiCanvasHtml({ resi, courier, status, service, receiver, history = [] }) {
+function generateResiCanvasHtml({
+  resi,
+  courier,
+  status,
+  service,
+  receiver,
+  history = []
+}) {
   const isDelivered = /delivered|terkirim|selesai|sampai/i.test(status);
   const statusColor = isDelivered ? "#10b981" : "#3b82f6";
-
   const timelineHtml = history.slice(0, 7).map((h, i) => {
     const isLatest = i === 0;
     const time = h.datetime || h.waktu || "-";
@@ -111,7 +151,6 @@ function generateResiCanvasHtml({ resi, courier, status, service, receiver, hist
       </div>
     `;
   }).join("");
-
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -301,7 +340,6 @@ function generateResiCanvasHtml({ resi, courier, status, service, receiver, hist
 </body>
 </html>`;
 }
-
 export default {
   name: "cekresi",
   aliases: ["resi", "track"],
@@ -309,25 +347,25 @@ export default {
   category: "Tools",
   limit: true,
   example: "resi 11004324915349 (Pilih kurir via tombol)\nresi anteraja 11004324915349\nresi --list (Daftar ekspedisi)",
-
   execute: async (sock, ctx, msg) => {
     const prefix = ctx.prefix || ".";
     const botName = global.bot?.name || "WudysoftBot";
     const footer = global.footer || global.bot?.footer || `_${botName}_`;
     const targetJid = ctx.chat || ctx.id;
     const quotedMsg = typeof simpleQuoted === "function" ? simpleQuoted(ctx) || msg : msg;
-
     try {
       let rawText = (ctx.query || "").trim();
-      const { rest, cleanText } = parseResiFlags(rawText);
-
+      const {
+        rest,
+        cleanText
+      } = parseResiFlags(rawText);
       let expedisi = rest.exp || rest.expedisi || rest.courier || "";
       let resi = rest.resi || rest.no || "";
-
-      // Ambil daftar kurir dari server v17 (fallback ke POPULAR_COURIERS)
       let availableCouriers = POPULAR_COURIERS;
       try {
-        const v17ListRes = await axios.get(`${V17_URL}?action=list`, { timeout: 8e3 });
+        const v17ListRes = await axios.get(`${V17_URL}?action=list`, {
+          timeout: 8e3
+        });
         if (Array.isArray(v17ListRes.data?.couriers) && v17ListRes.data.couriers.length > 0) {
           availableCouriers = v17ListRes.data.couriers.map(c => ({
             name: c.name,
@@ -336,8 +374,6 @@ export default {
           }));
         }
       } catch {}
-
-      // Jika user hanya mengirim nomor resi (misal: .resi 123456789)
       const parts = cleanText.split(/\s+/).filter(Boolean);
       if (!expedisi && !resi) {
         if (parts.length === 1 && /^[a-zA-Z0-9_-]{5,}$/.test(parts[0])) {
@@ -349,26 +385,19 @@ export default {
       } else if (!resi && parts.length >= 1) {
         resi = parts[0];
       }
-
-      // 1. MENU CTA PEMILIHAN KURIR (Jika belum memilih kurir atau mengetik --list / --couriers)
-      if (rest.list || rest.couriers || (!expedisi && resi) || !cleanText) {
+      if (rest.list || rest.couriers || !expedisi && resi || !cleanText) {
         const page = Math.max(1, Number(rest.page) || 1);
         const totalPages = Math.ceil(availableCouriers.length / ITEMS_PER_PAGE) || 1;
         const pageItems = availableCouriers.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
-
         const rows = pageItems.map((c, idx) => {
           const globalIdx = (page - 1) * ITEMS_PER_PAGE + idx + 1;
-          const cmdAction = resi
-            ? `${prefix}resi ${c.format} ${resi}`
-            : `${prefix}resi --exp ${c.format}`;
-
+          const cmdAction = resi ? `${prefix}resi ${c.format} ${resi}` : `${prefix}resi --exp ${c.format}`;
           return {
             title: `${globalIdx}. ${c.name}`.slice(0, 24),
             id: cmdAction,
             description: `${c.desc || c.name} • [${c.format}]`.slice(0, 60)
           };
         });
-
         const baseCmd = resi ? `${prefix}resi ${resi}` : `${prefix}resi --list`;
         const buttons = [{
           name: "single_select",
@@ -380,7 +409,6 @@ export default {
             }]
           })
         }];
-
         if (page > 1) {
           buttons.push({
             name: "quick_reply",
@@ -399,19 +427,7 @@ export default {
             })
           });
         }
-
-        const bodyText = resi
-          ? `– *P I L I H  E K S P E D I S I*\n\n` +
-            `┌ ◦ *Nomor Resi* : \`${resi}\`\n` +
-            `├ ◦ *Total Kurir* : ${availableCouriers.length} Layanan\n` +
-            `└ ◦ *Halaman* : ${page} / ${totalPages}\n\n` +
-            `_Silakan pilih kurir ekspedisi dari menu tombol di bawah untuk melacak paket Anda:_`
-          : `– *C E K  R E S I  -  K U R I R*\n\n` +
-            `┌ ◦ *Format* : \`${prefix}resi <ekspedisi> <no_resi>\`\n` +
-            `├ ◦ *Contoh* : \`${prefix}resi jnt 11004324915349\`\n` +
-            `└ ◦ *Total Kurir* : ${availableCouriers.length} Ekspedisi\n\n` +
-            `_Pilih kurir di bawah ini:_`;
-
+        const bodyText = resi ? `– *P I L I H  E K S P E D I S I*\n\n` + `┌ ◦ *Nomor Resi* : \`${resi}\`\n` + `├ ◦ *Total Kurir* : ${availableCouriers.length} Layanan\n` + `└ ◦ *Halaman* : ${page} / ${totalPages}\n\n` + `_Silakan pilih kurir ekspedisi dari menu tombol di bawah untuk melacak paket Anda:_` : `– *C E K  R E S I  -  K U R I R*\n\n` + `┌ ◦ *Format* : \`${prefix}resi <ekspedisi> <no_resi>\`\n` + `├ ◦ *Contoh* : \`${prefix}resi jnt 11004324915349\`\n` + `└ ◦ *Total Kurir* : ${availableCouriers.length} Ekspedisi\n\n` + `_Pilih kurir di bawah ini:_`;
         const options = {
           params: {
             bottom_sheet: {
@@ -423,7 +439,6 @@ export default {
           },
           quoted: quotedMsg
         };
-
         if (typeof ctx.sendCta === "function") {
           return await ctx.sendCta(bodyText, footer, buttons, options);
         } else {
@@ -434,28 +449,23 @@ export default {
           return await ctx.reply(fallback);
         }
       }
-
-      // 2. PROSES CEK RESI
       await ctx.react("⏳");
-
       let courierFormat = null;
       let useV17 = false;
       let v17Data = null;
       let v18Data = null;
-
-      const matchV17 = availableCouriers.find(c =>
-        c.format.toLowerCase() === expedisi.toLowerCase() ||
-        c.name.toLowerCase().includes(expedisi.toLowerCase())
-      );
+      const matchV17 = availableCouriers.find(c => c.format.toLowerCase() === expedisi.toLowerCase() || c.name.toLowerCase().includes(expedisi.toLowerCase()));
       if (matchV17) {
         courierFormat = matchV17.format;
         useV17 = true;
       }
-
       if (useV17 && courierFormat) {
         try {
           const v17Check = await axios.get(`${V17_URL}?action=check`, {
-            params: { expedisi: courierFormat, resi },
+            params: {
+              expedisi: courierFormat,
+              resi: resi
+            },
             timeout: 3e4
           });
           if (v17Check.data && v17Check.data.success) {
@@ -467,10 +477,12 @@ export default {
           useV17 = false;
         }
       }
-
       if (!useV17) {
         const v18Check = await axios.get(`${V18_URL}?action=check`, {
-          params: { expedisi, resi },
+          params: {
+            expedisi: expedisi,
+            resi: resi
+          },
           timeout: 3e4
         });
         v18Data = v18Check.data;
@@ -478,8 +490,6 @@ export default {
           throw new Error(v18Data?.pesan || "Gagal melacak resi. Pastikan nomor resi dan kurir sudah sesuai.");
         }
       }
-
-      // Normalisasi Data Pelacakan
       let summaryData = {};
       if (useV17 && v17Data) {
         summaryData = {
@@ -501,12 +511,11 @@ export default {
           history: v18Data.history || []
         };
       }
-
-      // Render Visual Canvas Tracking Card
       const html = generateResiCanvasHtml(summaryData);
-      const { url: canvasUrl, buffer: canvasBuffer } = await renderHtmlToImage(html);
-
-      // Susun Format Teks WhatsApp
+      const {
+        url: canvasUrl,
+        buffer: canvasBuffer
+      } = await renderHtmlToImage(html);
       let historyStr = "";
       if (Array.isArray(summaryData.history) && summaryData.history.length > 0) {
         historyStr = summaryData.history.map(h => {
@@ -516,22 +525,12 @@ export default {
           return `• [${time}] ${desc}${loc}`;
         }).join("\n");
       }
-
-      const bodyText = `– *C E K  R E S I*\n\n` +
-        `┌ ◦ *Waybill* : ${summaryData.resi}\n` +
-        `│ ◦ *Courier* : ${summaryData.courier}\n` +
-        `│ ◦ *Service* : ${summaryData.service}\n` +
-        `│ ◦ *Receiver* : ${summaryData.receiver}\n` +
-        `└ ◦ *Status* : ${summaryData.status}\n\n` +
-        (historyStr ? `*Riwayat Perjalanan:*\n${historyStr}\n\n` : "") +
-        `${footer}`;
-
+      const bodyText = `– *C E K  R E S I*\n\n` + `┌ ◦ *Waybill* : ${summaryData.resi}\n` + `│ ◦ *Courier* : ${summaryData.courier}\n` + `│ ◦ *Service* : ${summaryData.service}\n` + `│ ◦ *Receiver* : ${summaryData.receiver}\n` + `└ ◦ *Status* : ${summaryData.status}\n\n` + (historyStr ? `*Riwayat Perjalanan:*\n${historyStr}\n\n` : "") + `${footer}`;
       const buttons = [{
         name: "cta_copy",
         display_text: "📄 Salin No. Resi",
         copy_code: String(summaryData.resi)
       }];
-
       if (canvasUrl) {
         buttons.push({
           name: "cta_url",
@@ -539,7 +538,6 @@ export default {
           url: canvasUrl
         });
       }
-
       if (typeof ctx.sendCta === "function") {
         await ctx.sendCta(bodyText, `_Tracking Update_`, buttons, {
           media: canvasUrl || null,
@@ -549,13 +547,16 @@ export default {
         await sock.sendMessage(targetJid, {
           image: canvasBuffer,
           caption: bodyText
-        }, { quoted: quotedMsg });
+        }, {
+          quoted: quotedMsg
+        });
       } else {
         await sock.sendMessage(targetJid, {
           text: bodyText
-        }, { quoted: quotedMsg });
+        }, {
+          quoted: quotedMsg
+        });
       }
-
       await ctx.react("✅");
     } catch (error) {
       await ctx.react("❌");

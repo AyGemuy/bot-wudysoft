@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Auto Word Impact 512</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    body,
+    html {
+      height: 100%;
+      background: #050505;
+      display: grid;
+      place-items: center;
+      font-family: system-ui, sans-serif;
+      overflow: hidden
+    }
+
+    .stage {
+      position: relative;
+      width: 512px;
+      height: 512px;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 55%, #1a0800 0, #050505 70%);
+      border-radius: 14px;
+      border: 1px solid rgba(255, 100, 0, .15);
+      box-shadow: 0 0 80px rgba(255, 60, 0, .12), inset 0 0 100px rgba(255, 40, 0, .05)
+    }
+
+    .word {
+      position: absolute;
+      top: 50%;
+      font-family: Anton, 'Arial Black', sans-serif;
+      font-weight: 900;
+      white-space: nowrap;
+      line-height: 1;
+      will-change: transform
+    }
+
+    .word-left {
+      left: 50%;
+      transform: translate(-100%, -50%)
+    }
+
+    .word-right {
+      left: 50%;
+      transform: translate(0, -50%)
+    }
+
+    .fly {
+      display: inline-block;
+      will-change: transform
+    }
+
+    .stage.run .word-left .fly {
+      animation: flyLeft .45s cubic-bezier(.6, 0, .95, .55) forwards
+    }
+
+    .stage.run .word-right .fly {
+      animation: flyRight .45s cubic-bezier(.6, 0, .95, .55) forwards
+    }
+
+    @keyframes flyLeft {
+      from {
+        transform: translate(-512px, 0)
+      }
+
+      to {
+        transform: translate(14px, 0)
+      }
+    }
+
+    @keyframes flyRight {
+      from {
+        transform: translate(512px, 0)
+      }
+
+      to {
+        transform: translate(-14px, 0)
+      }
+    }
+
+    .word-text {
+      display: inline-block;
+      color: #fff;
+      text-shadow: 0 0 20px rgba(255, 60, 0, .5);
+      will-change: transform, color, text-shadow
+    }
+
+    .stage.impact .word-text {
+      animation: burn 2.2s ease-out forwards, recoil .4s ease-out
+    }
+
+    @keyframes recoil {
+      0% {
+        transform: scale(1.18)
+      }
+
+      45% {
+        transform: scale(.95)
+      }
+
+      100% {
+        transform: scale(1)
+      }
+    }
+
+    @keyframes burn {
+      0% {
+        color: #fff;
+        text-shadow: 0 0 30px rgba(255, 80, 0, .7)
+      }
+
+      5% {
+        color: #fff;
+        text-shadow: 0 0 60px #ffdc64, 0 0 130px rgba(255, 120, 0, .9)
+      }
+
+      15% {
+        color: #fff6a8;
+        text-shadow: 0 0 70px #ffff78, 0 0 150px #ffc800
+      }
+
+      25% {
+        color: #fc0;
+        text-shadow: 0 0 60px #ffb400, 0 0 140px rgba(255, 80, 0, .9)
+      }
+
+      40% {
+        color: #f60;
+        text-shadow: 0 0 50px rgba(255, 80, 0, .9), 0 0 120px rgba(255, 20, 0, .7)
+      }
+
+      60% {
+        color: #c20;
+        text-shadow: 0 0 40px rgba(255, 40, 0, .7), 0 0 100px rgba(255, 0, 0, .5)
+      }
+
+      100% {
+        color: #7a1800;
+        text-shadow: 0 0 40px rgba(255, 50, 0, .6), 0 0 90px rgba(255, 10, 0, .3)
+      }
+    }
+
+    .stage.impact {
+      animation: shake .5s cubic-bezier(.36, .07, .19, .97)
+    }
+
+    @keyframes shake {
+
+      0%,
+      100% {
+        transform: translate(0, 0)
+      }
+
+      10% {
+        transform: translate(-8px, 6px) rotate(-.5deg)
+      }
+
+      20% {
+        transform: translate(8px, -6px) rotate(.5deg)
+      }
+
+      30% {
+        transform: translate(-6px, 4px) rotate(-.3deg)
+      }
+
+      40% {
+        transform: translate(6px, -4px) rotate(.3deg)
+      }
+
+      55% {
+        transform: translate(-4px, 3px)
+      }
+
+      75% {
+        transform: translate(3px, -2px)
+      }
+
+      90% {
+        transform: translate(-1px, 1px)
+      }
+    }
+
+    .flash {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at center, #fff 0, #fc6 25%, transparent 65%);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 50
+    }
+
+    .stage.impact .flash {
+      animation: flash .5s ease-out
+    }
+
+    @keyframes flash {
+      0% {
+        opacity: 0
+      }
+
+      8% {
+        opacity: 1
+      }
+
+      100% {
+        opacity: 0
+      }
+    }
+
+    .shockwave {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 6px solid rgba(255, 160, 0, .9);
+      transform: translate(-50%, -50%) scale(0);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 40;
+      box-shadow: 0 0 40px rgba(255, 120, 0, .8), inset 0 0 40px rgba(255, 80, 0, .6)
+    }
+
+    .stage.impact .shockwave {
+      animation: shockwave 1s cubic-bezier(.2, .8, .4, 1) forwards
+    }
+
+    @keyframes shockwave {
+      0% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 1;
+        border-width: 10px
+      }
+
+      100% {
+        transform: translate(-50%, -50%) scale(30);
+        opacity: 0;
+        border-width: 1px
+      }
+    }
+
+    #fx {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 30
+    }
+
+    .vignette {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 20;
+      background: radial-gradient(ellipse at center, transparent 40%, rgba(0, 0, 0, .5) 100%)
+    }
+  </style>
+</head>
+
+<body>
+  <div id="kalimat-src" data-text="{{TEXT}}" hidden></div>
+  <div class="stage" id="stage">
+    <div class="word word-left">
+      <div class="fly"><span class="word-text" id="textLeft"></span></div>
+    </div>
+    <div class="word word-right">
+      <div class="fly"><span class="word-text" id="textRight"></span></div>
+    </div><canvas id="fx" width="512" height="512"></canvas>
+    <div class="shockwave"></div>
+    <div class="flash"></div>
+    <div class="vignette"></div>
+  </div>
+  <script>
+    ! function() { var e = document.getElementById("kalimat-src"),
+        t = (e && e.dataset.text || "WILD FIRE").trim() || "WILD FIRE",
+        a = document.getElementById("stage"),
+        n = document.getElementById("fx").getContext("2d"),
+        o = document.querySelector(".word-left"),
+        i = document.querySelector(".word-right"),
+        r = o.querySelector(".fly"),
+        l = i.querySelector(".fly"),
+        s = document.getElementById("textLeft"),
+        c = document.getElementById("textRight"),
+        d = document.createElement("canvas").getContext("2d");
+
+      function h(e) { if (!e) return 200;
+        d.font = '900 100px Anton, "Arial Black", sans-serif'; var t = d.measureText(e).width || 1; return Math.min(27e3 / t, 200) }
+
+      function f() { var e = function(e) { var t = String(e).trim().split(/\s+/).filter(Boolean); if (!t.length) return ["", ""]; if (1 === t.length) { var a = t[0],
+                n = Math.ceil(a.length / 2); return [a.slice(0, n), a.slice(n)] } if (2 === t.length) return [t[0], t[1]]; for (var o = 1, i = 1 / 0, r = 1; r < t.length; r++) { var l = t.slice(0, r).join("").length,
+                s = t.slice(r).join("").length,
+                c = Math.abs(l - s);
+              c < i && (i = c, o = r) } return [t.slice(0, o).join(" "), t.slice(o).join(" ")] }(t),
+          a = e[0],
+          n = e[1];
+        s.textContent = a, c.textContent = n; var r = Math.min(h(a), h(n));
+        o.style.fontSize = r + "px", i.style.fontSize = r + "px" } var m = [],
+        v = [],
+        y = [];
+
+      function u() { a.classList.add("impact"),
+          function(e, t) { for (var a = 0; a < 200; a++) { var n = Math.random() * Math.PI * 2,
+                o = 18 * Math.random() + 2;
+              m.push({ x: e, y: t, vx: Math.cos(n) * o, vy: Math.sin(n) * o - 3, life: 1, decay: .014 + .015 * Math.random(), size: 14 + 40 * Math.random(), hue: 10 + 50 * Math.random(), shrink: .95 + .02 * Math.random() }) } for (var i = 0; i < 130; i++) { var r = Math.random() * Math.PI * 2,
+                l = 26 * Math.random() + 4;
+              v.push({ x: e, y: t, vx: Math.cos(r) * l, vy: Math.sin(r) * l - 3, life: 1, decay: .015 + .02 * Math.random(), size: 1 + 2.5 * Math.random(), hue: 20 + 40 * Math.random() }) } for (var s = 0; s < 35; s++) { var c = Math.random() * Math.PI * 2,
+                d = 7 * Math.random() + 1;
+              y.push({ x: e, y: t, vx: Math.cos(c) * d, vy: Math.sin(c) * d - 4, life: 1, decay: .004 + .004 * Math.random(), size: 40 + 70 * Math.random(), growth: 1.02 }) } }(256, 256) }
+
+      function x() { a.classList.remove("impact", "run"), m = [], v = [], y = [], n.clearRect(0, 0, 512, 512), [r, l].forEach(function(e) { e.style.animation = "none", e.offsetWidth, e.style.animation = "" }), requestAnimationFrame(function() { a.classList.add("run"); var e = function() { r.removeEventListener("animationend", e), u(), setTimeout(x, 3400) };
+          r.addEventListener("animationend", e, { once: !0 }) }) }
+
+      function g() { f(), x() }! function e() { n.clearRect(0, 0, 512, 512), n.globalCompositeOperation = "source-over"; for (var t = y.length - 1; t >= 0; t--) { var a = y[t]; if (a.x += a.vx, a.y += a.vy, a.vy -= .04, a.vx *= .97, a.vy *= .97, a.life -= a.decay, a.size *= a.growth, a.life <= 0) y.splice(t, 1);
+          else { var o = n.createRadialGradient(a.x, a.y, 0, a.x, a.y, a.size);
+            o.addColorStop(0, "rgba(70,25,12," + .4 * a.life + ")"), o.addColorStop(1, "rgba(0,0,0,0)"), n.fillStyle = o, n.beginPath(), n.arc(a.x, a.y, a.size, 0, 7), n.fill() } } n.globalCompositeOperation = "lighter"; for (var i = m.length - 1; i >= 0; i--) { var r = m[i]; if (r.x += r.vx, r.y += r.vy, r.vy += .28, r.vx *= .96, r.vy *= .96, r.life -= r.decay, r.size *= r.shrink, r.life <= 0 || r.size < 1) m.splice(i, 1);
+          else { var l = n.createRadialGradient(r.x, r.y, 0, r.x, r.y, r.size);
+            l.addColorStop(0, "hsla(" + (r.hue + 30) + ",100%,75%," + r.life + ")"), l.addColorStop(.5, "hsla(" + r.hue + ",100%,50%," + .6 * r.life + ")"), l.addColorStop(1, "hsla(" + (r.hue - 10) + ",100%,25%,0)"), n.fillStyle = l, n.beginPath(), n.arc(r.x, r.y, r.size, 0, 7), n.fill() } } for (var s = v.length - 1; s >= 0; s--) { var c = v[s];
+          c.x += c.vx, c.y += c.vy, c.vy += .22, c.vx *= .975, c.vy *= .975, c.life -= c.decay, c.life <= 0 ? v.splice(s, 1) : (n.strokeStyle = "hsla(" + (c.hue + 20) + ",100%,72%," + c.life + ")", n.lineWidth = c.size, n.lineCap = "round", n.beginPath(), n.moveTo(c.x, c.y), n.lineTo(c.x - 2 * c.vx, c.y - 2 * c.vy), n.stroke(), n.fillStyle = "hsla(" + (c.hue + 35) + ",100%,92%," + c.life + ")", n.beginPath(), n.arc(c.x, c.y, .8 * c.size, 0, 7), n.fill()) } n.globalCompositeOperation = "source-over", requestAnimationFrame(e) }(), document.fonts && document.fonts.load ? document.fonts.load("900 100px Anton").then(g).catch(g) : g() }()
+  </script>
+</body>
+
+</html>

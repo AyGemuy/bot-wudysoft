@@ -1,949 +1,329 @@
-<!doctype html>
+Berikut adalah game klasik Highway Traffic Racer (balap mobil menghindari rintangan di jalan raya) dengan desain antarmuka modern yang selaras, dilengkapi efek suara procedural (Web Audio API), kontrol setir kiri-kanan, serta peningkatan kecepatan bertahap.
+<!DOCTYPE html>
 <html lang="id">
+
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-  <title>Highway Bot — Balap Jalanan</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>SxcWaMd Highway Racer</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    html, body {
-      height: 100%; width: 100%; overflow: hidden;
-      overscroll-behavior: none; background: #0b141a; touch-action: none;
+    :root {
+      --bg: #08070b;
+      --panel: #121017;
+      --line: rgba(255, 255, 255, .09);
+      --text: #fff;
+      --muted: #aaa1ae;
+      --yellow: #facc15;
+      --red: #ef4444;
+      --blue: #38bdf8
     }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent
+    }
+
+    body,
+    html {
+      margin: 0;
+      padding: 0;
+      background: radial-gradient(circle at top, #1e1b2e 0, #0b080d 50%, #050407 100%);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      overflow-x: hidden
+    }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      color: #e9edef; user-select: none; -webkit-user-select: none;
-      position: fixed; inset: 0;
+      min-height: 100vh;
+      padding: 12px;
+      display: flex;
+      justify-content: center
     }
-    canvas { display: block; touch-action: none; width: 100vw; height: 100vh; }
+
+    .app {
+      width: min(100%, 760px);
+      margin: auto
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px
+    }
+
+    .avatar {
+      width: 46px;
+      height: 46px;
+      border-radius: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--red), var(--yellow));
+      box-shadow: 0 8px 25px rgba(239, 68, 68, .3);
+      font-size: 25px
+    }
+
+    .title {
+      font-size: 19px;
+      font-weight: 800
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 11px;
+      margin-top: 2px
+    }
+
+    .status {
+      padding: 8px 11px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, .035);
+      color: #ddd;
+      font-size: 11px
+    }
+
+    .gameWrap {
+      position: relative;
+      width: 100%;
+      max-width: 680px;
+      margin: auto;
+      padding: 8px;
+      border-radius: 22px;
+      background: linear-gradient(145deg, rgba(255, 255, 255, .1), rgba(255, 255, 255, .025));
+      box-shadow: 0 20px 60px rgba(0, 0, 0, .45), 0 0 40px rgba(239, 68, 68, .12)
+    }
+
+    canvas {
+      width: 100%;
+      aspect-ratio: 16/9;
+      display: block;
+      background: #1f2937;
+      border-radius: 15px;
+      touch-action: none
+    }
+
+    .info {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-top: 10px
+    }
+
+    .card {
+      padding: 11px;
+      min-height: 62px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, .035);
+      text-align: center
+    }
+
+    .card b {
+      display: block;
+      font-size: 16px;
+      color: var(--yellow)
+    }
+
+    .card span {
+      color: var(--muted);
+      font-size: 10px
+    }
+
+    .message {
+      margin-top: 10px;
+      padding: 11px 13px;
+      border-radius: 13px;
+      background: rgba(239, 68, 68, .1);
+      border: 1px solid rgba(239, 68, 68, .2);
+      text-align: center;
+      color: #fee2e2;
+      font-size: 12px;
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center
+    }
+
+    .touch-controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 12px;
+      user-select: none
+    }
+
+    .t-btn {
+      min-height: 55px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, .08);
+      color: #fff;
+      font-size: 20px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      touch-action: manipulation
+    }
+
+    .t-btn:active {
+      background: rgba(255, 255, 255, .2);
+      transform: scale(.96)
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(0, 0, 0, .75);
+      backdrop-filter: blur(8px)
+    }
+
+    .overlay.show {
+      display: flex
+    }
+
+    .modal {
+      width: min(92vw, 420px);
+      padding: 23px;
+      border-radius: 23px;
+      background: linear-gradient(145deg, #1c151e, #0f0c12);
+      border: 1px solid rgba(255, 255, 255, .1);
+      box-shadow: 0 25px 80px rgba(0, 0, 0, .65);
+      text-align: center
+    }
+
+    .modalIcon {
+      font-size: 55px;
+      margin-bottom: 7px
+    }
+
+    .modal h2 {
+      margin: 5px 0;
+      font-size: 24px
+    }
+
+    .modal p {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 17px
+    }
+
+    .btn-restart {
+      width: 100%;
+      min-height: 48px;
+      border-radius: 14px;
+      border: none;
+      background: linear-gradient(135deg, var(--red), var(--yellow));
+      color: #fff;
+      font-weight: 700;
+      font-size: 15px;
+      cursor: pointer
+    }
+
+    @media(max-width:430px) {
+      body {
+        padding: 8px
+      }
+
+      .gameWrap {
+        padding: 5px
+      }
+
+      .info {
+        gap: 5px
+      }
+
+      .card {
+        padding: 9px 4px
+      }
+    }
   </style>
 </head>
+
 <body>
-  <canvas id="game"></canvas>
+  <div class="app">
+    <div class="header">
+      <div class="brand">
+        <div class="avatar">🏎️</div>
+        <div>
+          <div class="title">SxcWaMd Highway Racer 🚗</div>
+          <div class="subtitle">"Hindari mobil lain di jalan tol!" ✨</div>
+        </div>
+      </div>
+      <div class="status" id="statusText">READY</div>
+    </div>
+    <div class="gameWrap"><canvas id="gameCanvas" width="640" height="360"></canvas></div>
+    <div class="info">
+      <div class="card"><b id="scoreVal">0</b> <span>JARAK (M)</span></div>
+      <div class="card"><b id="highScoreVal">0</b> <span>REKOR (M)</span></div>
+    </div>
+    <div class="message" id="msgText">Gunakan Panah Kiri / Kanan, A/D, atau Tombol Sentuh di bawah untuk berpindah jalur! 🛣️</div>
+    <div class="touch-controls">
+      <div class="t-btn" id="btnLeft">◀ KIRI</div>
+      <div class="t-btn" id="btnRight">KANAN ▶</div>
+    </div>
+  </div>
+  <div class="overlay" id="overlay">
+    <div class="modal">
+      <div class="modalIcon">💥</div>
+      <h2>CRASH!</h2>
+      <p id="finalScoreDesc">Jarak tempuh: 0 m</p><button class="btn-restart" id="btnRestart">🔄 Main Lagi</button>
+    </div>
+  </div>
   <script>
-    const canvas = document.getElementById("game");
-    const ctx = canvas.getContext("2d");
-
-    let W = 0, H = 0;
-    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-    const rand = (a, b) => a + Math.random() * (b - a);
-    const rp = n => "Rp " + Math.round(n).toLocaleString("id-ID");
-
-    const state = { saldo: 1e5 };
-    let displaySaldo = 1e5;
-    let saldoAnim = 0;
-
-    const game = {
-      phase: "idle",
-      bet: 1000,
-      lives: 3,
-      distance: 0,
-      coins: 0,
-      timeLeft: 30,
-      speed: 8,
-      scrollY: 0,
-      scrollY2: 0,
-      cars: [],
-      coinsList: [],
-      particles: [],
-      floaties: [],
-      spawnTimer: 0,
-      coinTimer: 0,
-      shake: 0,
-      flash: 0,
-      flashColor: "rgba(6,207,156,.4)",
-      payout: 0,
-      player: { x: 0, vx: 0, w: 60, h: 100, targetX: 0, followPointer: false, invincible: 0 }
-    };
-
-    const LANES = 4;
-    const ENEMY_COLORS = ["#f15c6d", "#ffb74d", "#7986cb", "#ba68c8", "#4db6ac"];
-
-    const roadLeft   = () => 0.14 * W;
-    const roadRight  = () => 0.86 * W;
-    const roadWidth  = () => roadRight() - roadLeft();
-    const laneWidth  = () => roadWidth() / 4;
-    const laneCenter = i => roadLeft() + laneWidth() * (i + 0.5);
-
-    const keys = { left: false, right: false };
-    const CHIP_DEFS = [
-      { amt: 1000,  label: '1rb'    },
-      { amt: 5000,  label: '5rb'    },
-      { amt: 10000, label: '10rb'   },
-      { amt: 25000, label: '25rb'   },
-      { amt: 50000, label: '50rb'   },
-      { amt: 'all', label: 'ALL IN' }
-    ];
-    const ui = { chips: [], btn: null };
-
-    // ------------------------------------------------------------
-    // SALDO ANIMATION
-    // ------------------------------------------------------------
-    function setSaldo(v) {
-      const from = displaySaldo;
-      state.saldo = Math.max(0, Math.round(v));
-      const token = ++saldoAnim;
-      const start = performance.now();
-      (function step(now) {
-        if (token !== saldoAnim) return;
-        const t = Math.min((now - start) / 420, 1);
-        const ease = 1 - Math.pow(1 - t, 3);
-        displaySaldo = from + (state.saldo - from) * ease;
-        if (t < 1) requestAnimationFrame(step);
-        else displaySaldo = state.saldo;
-      })(performance.now());
-    }
-
-    // ------------------------------------------------------------
-    // RESIZE + LAYOUT
-    // ------------------------------------------------------------
-    function resize() {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      W = window.innerWidth;
-      H = window.innerHeight;
-      canvas.width = Math.floor(W * dpr);
-      canvas.height = Math.floor(H * dpr);
-      canvas.style.width = W + "px";
-      canvas.style.height = H + "px";
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-      game.player.w = Math.max(46, Math.min(72, 0.58 * laneWidth()));
-      game.player.h = 1.7 * game.player.w;
-      if (game.player.x === 0) game.player.x = laneCenter(1);
-      game.player.x = clamp(game.player.x,
-        roadLeft() + game.player.w / 2,
-        roadRight() - game.player.w / 2);
-
-      layoutUI();
-    }
-
-    function layoutUI() {
-      const wide   = W >= 440;
-      const gap    = 8;
-      const chipH  = 40;
-      const rows   = wide ? 1 : 2;
-      const cols   = 6 / rows;
-      const chipTotalW = Math.min(W - 32, wide ? 560 : 380);
-      const chipW  = (chipTotalW - gap * (cols - 1)) / cols;
-
-      const btnW = Math.min(280, W - 40);
-      const btnH = 52;
-      const btnY = H - 24 - btnH;
-
-      const chipsBottom = btnY - 32;
-      const chipsTop    = chipsBottom - rows * chipH - (rows - 1) * gap;
-      const chipsStartX = (W - chipTotalW) / 2;
-
-      ui.chips = CHIP_DEFS.map((d, i) => {
-        const row = Math.floor(i / cols);
-        const col = i % cols;
-        return {
-          x: chipsStartX + col * (chipW + gap),
-          y: chipsTop + row * (chipH + gap),
-          w: chipW, h: chipH,
-          amt: d.amt, label: d.label
-        };
-      });
-
-      const canStart = state.saldo >= 100;
-      ui.btn = {
-        x: (W - btnW) / 2, y: btnY, w: btnW, h: btnH,
-        mode: canStart ? 'start' : 'reset'
-      };
-    }
-
-    const inRect = (x, y, r) => r && x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
-
-    // ------------------------------------------------------------
-    // GAME LOGIC
-    // ------------------------------------------------------------
-    function spawnCar() {
-      const lane = Math.floor(4 * Math.random());
-      for (const c of game.cars) if (c.lane === lane && c.y < 220) return;
-      const w = Math.max(46, Math.min(72, 0.58 * laneWidth()));
-      game.cars.push({
-        lane, x: laneCenter(lane), y: -2 * w, w, h: 1.7 * w,
-        color: ENEMY_COLORS[Math.floor(Math.random() * ENEMY_COLORS.length)],
-        speedMult: rand(0.55, 0.85)
-      });
-    }
-
-    function spawnCoin() {
-      const lane = Math.floor(4 * Math.random());
-      for (const c of game.cars)
-        if (c.lane === lane && c.y < 250 && c.y > -250) return;
-      game.coinsList.push({
-        lane, x: laneCenter(lane), y: -30,
-        r: Math.max(11, Math.min(16, 0.14 * laneWidth())),
-        phase: Math.random() * Math.PI * 2
-      });
-    }
-
-    function spawnParticles(x, y, color, n = 14, s = 1) {
-      for (let i = 0; i < n; i++) {
-        const a = Math.random() * Math.PI * 2;
-        const v = (1.5 + 4 * Math.random()) * s;
-        game.particles.push({
-          x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 1,
-          life: 1, size: 2 + 3.5 * Math.random(), color
-        });
-      }
-    }
-
-    function spawnFloatText(x, y, text, color) {
-      game.floaties.push({ x, y, text, color, life: 1 });
-    }
-
-    function updateParticles(dt) {
-      for (let i = game.particles.length - 1; i >= 0; i--) {
-        const p = game.particles[i];
-        p.x += p.vx * dt; p.y += p.vy * dt;
-        p.vy += 0.24 * dt; p.vx *= 0.985;
-        p.life -= 0.028 * dt;
-        if (p.life <= 0) game.particles.splice(i, 1);
-      }
-      for (let i = game.floaties.length - 1; i >= 0; i--) {
-        const f = game.floaties[i];
-        f.y -= 0.9 * dt; f.life -= 0.02 * dt;
-        if (f.life <= 0) game.floaties.splice(i, 1);
-      }
-    }
-
-    function updatePlayer(dt) {
-      const p = game.player;
-      let dir = 0;
-      if (keys.left) dir -= 1;
-      if (keys.right) dir += 1;
-
-      if (dir !== 0) {
-        p.followPointer = false;
-        p.vx = 0.7 * dir * laneWidth();
-      } else if (p.followPointer) {
-        p.vx = 0.28 * (p.targetX - p.x);
-      } else {
-        p.vx *= 0.75;
-        if (Math.abs(p.vx) < 0.05) p.vx = 0;
-      }
-      p.x += p.vx * dt;
-
-      const minX = roadLeft() + p.w / 2;
-      const maxX = roadRight() - p.w / 2;
-      if (p.x < minX) { p.x = minX; p.vx = 0; }
-      if (p.x > maxX) { p.x = maxX; p.vx = 0; }
-      if (p.invincible > 0) p.invincible = Math.max(0, p.invincible - dt / 60);
-    }
-
-    function updateWorld(dt) {
-      const sec = dt / 60;
-      game.speed = 8 + Math.min(7, game.distance / 180);
-      const dy = game.speed * dt;
-
-      game.distance += game.speed * dt * 0.05;
-      game.scrollY = (game.scrollY + dy) % 120;
-      game.scrollY2 = (game.scrollY2 + 0.85 * dy) % 160;
-
-      game.spawnTimer -= sec;
-      if (game.spawnTimer <= 0) {
-        spawnCar();
-        const base = 0.9 - Math.min(0.45, game.distance / 1200);
-        game.spawnTimer = Math.max(0.32, base + rand(-0.15, 0.35));
-      }
-
-      game.coinTimer -= sec;
-      if (game.coinTimer <= 0) {
-        spawnCoin();
-        if (Math.random() < 0.35) spawnCoin();
-        game.coinTimer = rand(0.55, 1.3);
-      }
-
-      for (let i = game.cars.length - 1; i >= 0; i--) {
-        const c = game.cars[i];
-        c.y += dy * c.speedMult;
-        if (c.y - c.h > H + 40) game.cars.splice(i, 1);
-      }
-      for (let i = game.coinsList.length - 1; i >= 0; i--) {
-        const c = game.coinsList[i];
-        c.y += dy; c.phase += 0.08 * dt;
-        if (c.y > H + 40) game.coinsList.splice(i, 1);
-      }
-
-      game.timeLeft -= sec;
-      if (game.timeLeft <= 0) {
-        game.timeLeft = 0;
-        endGame();
-        return;
-      }
-      checkCollisions();
-    }
-
-    function checkCollisions() {
-      const p = game.player;
-      const px = p.x;
-      const py = H - 190;
-      const pw = 0.82 * p.w;
-      const ph = 0.85 * p.h;
-
-      if (p.invincible <= 0) {
-        for (let i = game.cars.length - 1; i >= 0; i--) {
-          const c = game.cars[i];
-          if (Math.abs(px - c.x) < (pw + 0.82 * c.w) / 2 &&
-              Math.abs(py - c.y) < (ph + 0.85 * c.h) / 2) {
-            game.cars.splice(i, 1);
-            crash();
-            return;
-          }
-        }
-      }
-
-      for (let i = game.coinsList.length - 1; i >= 0; i--) {
-        const c = game.coinsList[i];
-        if (Math.hypot(px - c.x, py - c.y) < 0.55 * p.w + c.r) {
-          game.coinsList.splice(i, 1);
-          game.coins++;
-          spawnParticles(c.x, c.y, "#ffb74d", 10, 0.8);
-          spawnFloatText(c.x, c.y, "+1", "#ffb74d");
-          game.flash = 0.15;
-          game.flashColor = "rgba(255,183,77,.35)";
-          updatePayout();
-        }
-      }
-    }
-
-    function crash() {
-      const p = game.player;
-      p.invincible = 1.6;
-      game.lives--;
-      game.shake = 16;
-      game.flash = 0.55;
-      game.flashColor = "rgba(241,92,109,.55)";
-      spawnParticles(p.x, H - 190, "#f15c6d", 28, 1.6);
-      spawnParticles(p.x, H - 190, "#ffb74d", 12, 1.2);
-      spawnFloatText(p.x, H - 240, "CRASH!", "#f15c6d");
-      if (game.lives <= 0) endGame();
-    }
-
-    function updatePayout() {
-      const score = Math.floor(game.distance) + 50 * game.coins;
-      const t = clamp(score / 2000, 0, 1);
-      game.payout = Math.round(game.bet * (1 + 2.5 * t));
-    }
-
-    function startGame() {
-      if (state.saldo < 100 || game.bet < 100 || game.bet > state.saldo) return;
-      setSaldo(state.saldo - game.bet);
-
-      game.phase = 'playing';
-      game.lives = 3;
-      game.distance = 0;
-      game.coins = 0;
-      game.timeLeft = 30;
-      game.speed = 8;
-      game.scrollY = 0;
-      game.scrollY2 = 0;
-      game.cars = [];
-      game.coinsList = [];
-      game.particles = [];
-      game.floaties = [];
-      game.spawnTimer = 0.6;
-      game.coinTimer = 0.8;
-      game.shake = 0;
-      game.flash = 0;
-      game.payout = 0;
-      game.player.x = laneCenter(1);
-      game.player.vx = 0;
-      game.player.targetX = game.player.x;
-      game.player.followPointer = false;
-      game.player.invincible = 0;
-      spawnCar();
-      layoutUI();
-    }
-
-    function endGame() {
-      if (game.phase !== 'playing') return;
-      game.phase = 'over';
-      updatePayout();
-      const payout = game.payout;
-      setSaldo(state.saldo + payout);
-      if (game.bet > state.saldo) game.bet = Math.max(100, state.saldo);
-      layoutUI();
-    }
-
-    function resetGame() {
-      state.saldo = 1e5;
-      displaySaldo = 1e5;
-      saldoAnim++;
-      game.phase = 'idle';
-      game.bet = 1000;
-      game.cars = [];
-      game.coinsList = [];
-      game.particles = [];
-      game.floaties = [];
-      game.lives = 3;
-      game.distance = 0;
-      game.coins = 0;
-      game.timeLeft = 30;
-      game.payout = 0;
-      game.player.x = laneCenter(1);
-      game.player.invincible = 0;
-      layoutUI();
-    }
-
-    function setBet(amt) {
-      if (amt === 'all') game.bet = Math.max(100, state.saldo);
-      else game.bet = Math.max(100, Math.min(Number(amt), state.saldo));
-      if (game.bet > state.saldo) game.bet = state.saldo;
-      layoutUI();
-    }
-
-    function isChipActive(c) {
-      if (c.amt === 'all') return game.bet === Math.max(100, state.saldo);
-      return game.bet === Number(c.amt);
-    }
-
-    function movePlayerTo(x) {
-      const p = game.player;
-      p.targetX = clamp(x, roadLeft() + p.w / 2, roadRight() - p.w / 2);
-      p.followPointer = true;
-    }
-
-    // ------------------------------------------------------------
-    // UPDATE LOOP
-    // ------------------------------------------------------------
-    let lastTime = performance.now();
-
-    function update(dt) {
-      if (game.phase === 'playing') {
-        updateWorld(dt);
-        if (game.phase !== 'playing') return;
-        updatePlayer(dt);
-      } else if (game.phase === 'idle') {
-        game.scrollY = (game.scrollY + 2 * dt) % 120;
-        game.scrollY2 = (game.scrollY2 + 1.7 * dt) % 160;
-      }
-      if (game.shake > 0) game.shake = Math.max(0, game.shake - 0.7 * dt);
-      if (game.flash > 0) game.flash = Math.max(0, game.flash - 0.035 * dt);
-      updateParticles(dt);
-    }
-
-    // ------------------------------------------------------------
-    // DRAWING
-    // ------------------------------------------------------------
-    function rr(x, y, w, h, r) {
-      ctx.beginPath();
-      if (typeof ctx.roundRect === 'function') {
-        ctx.roundRect(x, y, w, h, r);
-        return;
-      }
-      r = Math.min(r, w / 2, h / 2);
-      ctx.moveTo(x + r, y);
-      ctx.lineTo(x + w - r, y);
-      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-      ctx.lineTo(x + w, y + h - r);
-      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-      ctx.lineTo(x + r, y + h);
-      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-      ctx.lineTo(x, y + r);
-      ctx.quadraticCurveTo(x, y, x + r, y);
-      ctx.closePath();
-    }
-
-    function drawCar(x, y, w, h, color, isPlayer) {
-      ctx.save();
-      ctx.translate(x, y);
-
-      ctx.fillStyle = "rgba(0,0,0,.5)";
-      rr(-w / 2 + 3, -h / 2 + 5, w, h, 10); ctx.fill();
-
-      ctx.fillStyle = color;
-      rr(-w / 2, -h / 2, w, h, 10); ctx.fill();
-
-      const g = ctx.createLinearGradient(-w / 2, 0, w / 2, 0);
-      g.addColorStop(0, "rgba(0,0,0,.28)");
-      g.addColorStop(0.5, "rgba(255,255,255,.18)");
-      g.addColorStop(1, "rgba(0,0,0,.28)");
-      ctx.fillStyle = g;
-      rr(-w / 2, -h / 2, w, h, 10); ctx.fill();
-
-      ctx.fillStyle = "rgba(11,20,26,.85)";
-      rr(-0.34 * w, -0.30 * h, 0.68 * w, 0.26 * h, 4); ctx.fill();
-      rr(-0.32 * w,  0.06 * h, 0.64 * w, 0.20 * h, 4); ctx.fill();
-
-      ctx.fillStyle = "rgba(255,255,255,.08)";
-      rr(-0.20 * w, -0.02 * h, 0.40 * w, 0.06 * h, 2); ctx.fill();
-
-      ctx.fillStyle = color;
-      ctx.fillRect(-w / 2 - 3, -0.15 * h, 3, 6);
-      ctx.fillRect(w / 2,      -0.15 * h, 3, 6);
-
-      const frontColor = isPlayer ? "rgba(255,235,160,.95)" : "rgba(255,235,160,.9)";
-      const backColor  = isPlayer ? "rgba(241,92,109,.9)"   : "rgba(241,92,109,.85)";
-      const frontY = isPlayer ? -h / 2 + 2 : h / 2 - 5;
-      const backY  = isPlayer ? h / 2 - 5  : -h / 2 + 2;
-
-      ctx.fillStyle = frontColor;
-      ctx.fillRect(-0.36 * w, frontY, 5, 3);
-      ctx.fillRect( 0.36 * w - 5, frontY, 5, 3);
-      ctx.fillStyle = backColor;
-      ctx.fillRect(-0.36 * w, backY, 5, 3);
-      ctx.fillRect( 0.36 * w - 5, backY, 5, 3);
-
-      ctx.restore();
-    }
-
-    function drawCoin(x, y, r, phase) {
-      const sx = 0.85 + 0.15 * Math.sin(phase);
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.scale(sx, 1);
-      ctx.shadowColor = "rgba(255,183,77,.85)";
-      ctx.shadowBlur = 22;
-
-      const g = ctx.createRadialGradient(-0.3 * r, -0.3 * r, 0.15 * r, 0, 0, r);
-      g.addColorStop(0, "#ffe082");
-      g.addColorStop(0.6, "#ffb74d");
-      g.addColorStop(1, "#e08c1e");
-      ctx.fillStyle = g;
-      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
-
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = "rgba(255,255,255,.6)";
-      ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.arc(0, 0, 0.65 * r, 0, Math.PI * 2); ctx.stroke();
-
-      ctx.fillStyle = "rgba(255,255,255,.9)";
-      ctx.beginPath(); ctx.arc(0, 0, 0.2 * r, 0, Math.PI * 2); ctx.fill();
-      ctx.restore();
-    }
-
-    function drawWorld() {
-      ctx.save();
-      if (game.shake > 0)
-        ctx.translate(rand(-game.shake, game.shake), rand(-game.shake, game.shake));
-
-      ctx.clearRect(-20, -20, W + 40, H + 40);
-
-      const bg = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H));
-      bg.addColorStop(0, "#13222b");
-      bg.addColorStop(1, "#0b141a");
-      ctx.fillStyle = bg;
-      ctx.fillRect(-20, -20, W + 40, H + 40);
-
-      ctx.strokeStyle = "rgba(6,207,156,.06)";
-      ctx.lineWidth = 1;
-      for (let i = 0; i < 40; i++) {
-        const y = (80 * i + 0.5 * game.scrollY) % (H + 100) - 50;
-        ctx.beginPath();
-        ctx.moveTo(0, y);         ctx.lineTo(roadLeft() - 20, y + 40);
-        ctx.moveTo(W, y + 20);    ctx.lineTo(roadRight() + 20, y + 60);
-        ctx.stroke();
-      }
-
-      const road = ctx.createLinearGradient(roadLeft(), 0, roadRight(), 0);
-      road.addColorStop(0, "#151f26");
-      road.addColorStop(0.5, "#1a262e");
-      road.addColorStop(1, "#151f26");
-      ctx.fillStyle = road;
-      ctx.fillRect(roadLeft(), -20, roadWidth(), H + 40);
-
-      ctx.strokeStyle = "rgba(255,255,255,.55)";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(roadLeft() + 3, -20);  ctx.lineTo(roadLeft() + 3, H + 20);
-      ctx.moveTo(roadRight() - 3, -20); ctx.lineTo(roadRight() - 3, H + 20);
-      ctx.stroke();
-
-      ctx.lineWidth = 8;
-      for (let i = 0; i < 30; i++) {
-        const y = (60 * i + 1.4 * game.scrollY) % (H + 60) - 30;
-        ctx.strokeStyle = i % 2 === 0 ? "rgba(241,92,109,.35)" : "rgba(255,255,255,.2)";
-        ctx.beginPath();
-        ctx.moveTo(roadLeft() - 8, y);   ctx.lineTo(roadLeft() - 8, y + 30);
-        ctx.moveTo(roadRight() + 8, y);  ctx.lineTo(roadRight() + 8, y + 30);
-        ctx.stroke();
-      }
-
-      ctx.strokeStyle = "rgba(255,255,255,.28)";
-      ctx.lineWidth = 3;
-      ctx.setLineDash([28, 22]);
-      ctx.lineDashOffset = 1.4 * -game.scrollY;
-      for (let i = 1; i < 4; i++) {
-        const x = roadLeft() + laneWidth() * i;
-        ctx.beginPath();
-        ctx.moveTo(x, -20); ctx.lineTo(x, H + 20);
-        ctx.stroke();
-      }
-      ctx.setLineDash([]);
-
-      ctx.strokeStyle = "rgba(6,207,156,.14)";
-      ctx.lineWidth = 2;
-      for (let i = 0; i < 18; i++) {
-        const x = roadLeft() + (137 * i + 30) % roadWidth();
-        const y = (173 * i + game.scrollY2) % (H + 200) - 100;
-        ctx.beginPath();
-        ctx.moveTo(x, y); ctx.lineTo(x, y + 60 + 4 * game.speed);
-        ctx.stroke();
-      }
-
-      for (const c of game.coinsList) drawCoin(c.x, c.y, c.r, c.phase);
-      for (const c of game.cars)      drawCar(c.x, c.y, c.w, c.h, c.color, false);
-
-      const p = game.player;
-      const px = p.x, py = H - 190;
-      const blink = p.invincible > 0 && Math.floor(12 * p.invincible) % 2 === 0;
-      if (blink) {
-        ctx.save();
-        ctx.globalAlpha = 0.4;
-        drawCar(px, py, p.w, p.h, "#06cf9c", true);
-        ctx.restore();
-      } else {
-        ctx.save();
-        ctx.shadowColor = "rgba(6,207,156,.7)";
-        ctx.shadowBlur = 32;
-        ctx.fillStyle = "#06cf9c";
-        rr(px - p.w / 2, py - p.h / 2, p.w, p.h, 10); ctx.fill();
-        ctx.restore();
-        drawCar(px, py, p.w, p.h, "#06cf9c", true);
-      }
-
-      for (const pt of game.particles) {
-        ctx.globalAlpha = Math.max(0, pt.life);
-        ctx.fillStyle = pt.color;
-        ctx.beginPath();
-        ctx.arc(pt.x, pt.y, pt.size * pt.life, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-
-      for (const f of game.floaties) {
-        ctx.globalAlpha = Math.max(0, f.life);
-        ctx.font = '800 22px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-        ctx.fillStyle = f.color;
-        ctx.textAlign = "center";
-        ctx.shadowColor = f.color;
-        ctx.shadowBlur = 16;
-        ctx.fillText(f.text, f.x, f.y);
-        ctx.shadowBlur = 0;
-      }
-      ctx.globalAlpha = 1;
-
-      if (game.flash > 0) {
-        ctx.fillStyle = game.flashColor.replace(/[\d.]+\)$/, (0.55 * game.flash) + ")");
-        ctx.fillRect(-20, -20, W + 40, H + 40);
-      }
-
-      ctx.restore();
-    }
-
-    function drawHUD() {
-      ctx.save();
-      ctx.textBaseline = 'middle';
-
-      const ly = 12, lh = 44;
-      const lw = W < 400 ? 158 : 180;
-      const lx = 12;
-
-      ctx.fillStyle = 'rgba(11,20,26,.78)';
-      rr(lx, ly, lw, lh, 12); ctx.fill();
-
-      const cy = ly + lh / 2;
-      ctx.textAlign = 'center';
-
-      const hearts =
-        '❤️'.repeat(Math.max(0, game.lives)) +
-        '🖤'.repeat(Math.max(0, 3 - game.lives));
-      ctx.font = '14px -apple-system, sans-serif';
-      ctx.fillStyle = '#f15c6d';
-      ctx.fillText(hearts, lx + lw * 0.18, cy);
-
-      const d = game.distance;
-      const distStr = d >= 1000 ? (d / 1000).toFixed(1) + 'km' : Math.floor(d) + 'm';
-      ctx.font = '800 13px -apple-system, sans-serif';
-      ctx.fillStyle = '#ffb74d';
-      ctx.fillText(distStr, lx + lw * 0.5, cy);
-
-      ctx.fillStyle = '#06cf9c';
-      ctx.fillText('🪙' + game.coins, lx + lw * 0.83, cy);
-
-      const rw = W < 400 ? 128 : 144;
-      const rx = W - rw - 12;
-      ctx.fillStyle = 'rgba(11,20,26,.78)';
-      rr(rx, ly, rw, lh, 12); ctx.fill();
-
-      ctx.textAlign = 'left';
-      ctx.font = '600 9px -apple-system, sans-serif';
-      ctx.fillStyle = '#8696a0';
-      ctx.fillText('SALDO', rx + 12, ly + 15);
-
-      ctx.font = '800 14px -apple-system, sans-serif';
-      ctx.fillStyle = '#e9edef';
-      ctx.fillText(rp(displaySaldo), rx + 12, ly + 31);
-
-      ctx.restore();
-    }
-
-    function drawTimer() {
-      if (game.phase !== 'playing') return;
-      const t = clamp(game.timeLeft / 30, 0, 1);
-      const barW = 0.5 * W;
-      const x = (W - barW) / 2;
-      const y = 88;
-
-      ctx.save();
-      ctx.fillStyle = 'rgba(255,255,255,.08)';
-      rr(x, y, barW, 4, 2); ctx.fill();
-
-      const g = ctx.createLinearGradient(x, 0, x + barW, 0);
-      g.addColorStop(0,   '#f15c6d');
-      g.addColorStop(0.5, '#ffb74d');
-      g.addColorStop(1,   '#06cf9c');
-      ctx.fillStyle = g;
-      rr(x, y, barW * t, 4, 2); ctx.fill();
-      ctx.restore();
-    }
-
-    function drawCountdown() {
-      if (game.phase !== 'playing' || game.timeLeft > 5) return;
-      const a = 0.4 + 0.4 * Math.sin(performance.now() * 0.012);
-      ctx.save();
-      ctx.font = '800 120px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-      ctx.fillStyle = 'rgba(241,92,109,' + a + ')';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.shadowColor = 'rgba(241,92,109,.9)';
-      ctx.shadowBlur = 40;
-      ctx.fillText(Math.ceil(game.timeLeft), W / 2, H / 2 - 40);
-      ctx.restore();
-    }
-
-    function drawOverlay() {
-      if (game.phase !== 'over') return;
-
-      ctx.save();
-      ctx.fillStyle = 'rgba(11,20,26,.88)';
-      ctx.fillRect(0, 0, W, H);
-
-      const diff = game.payout - game.bet;
-      let icon, title, titleColor;
-      if (diff > 0) {
-        icon = '🎉';
-        title = 'Menang +' + rp(diff);
-        titleColor = '#06cf9c';
-      } else if (diff < 0) {
-        icon = '😔';
-        title = 'Kalah −' + rp(Math.abs(diff));
-        titleColor = '#f15c6d';
-      } else {
-        icon = '🤝';
-        title = 'Impas';
-        titleColor = '#e9edef';
-      }
-
-      const cx = W / 2;
-      let cy = H / 2 - 100;
-
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-
-      ctx.font = '64px -apple-system, sans-serif';
-      ctx.fillText(icon, cx, cy);
-      cy += 58;
-
-      ctx.font = '800 30px -apple-system, sans-serif';
-      ctx.fillStyle = titleColor;
-      ctx.shadowColor = titleColor;
-      ctx.shadowBlur = 30;
-      ctx.fillText(title, cx, cy);
-      ctx.shadowBlur = 0;
-      cy += 46;
-
-      ctx.font = '600 14px -apple-system, sans-serif';
-      ctx.fillStyle = '#8696a0';
-      ctx.fillText(
-        'Jarak ' + Math.floor(game.distance) + 'm · Koin ' + game.coins,
-        cx, cy);
-      cy += 24;
-      ctx.fillText('Saldo sekarang ' + rp(state.saldo), cx, cy);
-
-      ctx.restore();
-    }
-
-    function drawBottomUI() {
-      if (game.phase !== 'idle' && game.phase !== 'over') return;
-
-      ctx.save();
-      ctx.textBaseline = 'middle';
-
-      for (const c of ui.chips) {
-        const active = isChipActive(c);
-
-        if (active) {
-          ctx.shadowColor = 'rgba(0,168,132,.5)';
-          ctx.shadowBlur = 20;
-          ctx.fillStyle = '#00a884';
-        } else {
-          ctx.shadowBlur = 0;
-          ctx.fillStyle = 'rgba(32,44,51,.85)';
-        }
-        rr(c.x, c.y, c.w, c.h, 10);
-        ctx.fill();
-        ctx.shadowBlur = 0;
-
-        if (!active) {
-          ctx.strokeStyle = 'rgba(255,255,255,.1)';
-          ctx.lineWidth = 1;
-          rr(c.x, c.y, c.w, c.h, 10);
-          ctx.stroke();
-        }
-
-        ctx.fillStyle = active ? '#0b141a' : '#e9edef';
-        ctx.font = '800 13px -apple-system, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(c.label, c.x + c.w / 2, c.y + c.h / 2 + 1);
-      }
-
-      const infoY = ui.btn.y - 16;
-      ctx.textAlign = 'center';
-      ctx.font = '600 11px -apple-system, sans-serif';
-      ctx.fillStyle = '#8696a0';
-      ctx.fillText(
-        rp(game.bet) + '  →  +' + rp(2.5 * game.bet),
-        W / 2, infoY);
-
-      const b = ui.btn;
-      let btnText = 'MULAI BALAP';
-      let btnBg = '#00a884';
-      let btnTx = '#0b141a';
-      let btnShadow = 'rgba(0,168,132,.45)';
-
-      if (b.mode === 'reset') {
-        btnText = 'MULAI ULANG';
-        btnBg = '#f15c6d';
-        btnTx = '#ffffff';
-        btnShadow = 'rgba(241,92,109,.45)';
-      } else if (game.phase === 'over') {
-        btnText = 'BALAP LAGI';
-      }
-
-      ctx.shadowColor = btnShadow;
-      ctx.shadowBlur = 24;
-      ctx.fillStyle = btnBg;
-      rr(b.x, b.y, b.w, b.h, 14);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-
-      ctx.fillStyle = btnTx;
-      ctx.font = '800 14px -apple-system, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(btnText, b.x + b.w / 2, b.y + b.h / 2 + 1);
-
-      ctx.restore();
-    }
-
-    function draw() {
-      layoutUI();
-
-      drawWorld();
-
-      if (game.phase !== 'over') drawHUD();
-      if (game.phase === 'playing') { drawTimer(); drawCountdown(); }
-      if (game.phase === 'over') drawOverlay();
-      drawBottomUI();
-    }
-
-    // ------------------------------------------------------------
-    // INTERACTION
-    // ------------------------------------------------------------
-    let dragging = false;
-
-    function handlePointerDown(e) {
-      if (e.cancelable) e.preventDefault();
-      const x = e.clientX, y = e.clientY;
-
-      if (game.phase === 'idle' || game.phase === 'over') {
-        if (inRect(x, y, ui.btn)) {
-          if (ui.btn.mode === 'reset') resetGame();
-          else startGame();
-          return;
-        }
-        for (const c of ui.chips) {
-          if (inRect(x, y, c)) { setBet(c.amt); return; }
-        }
-        return;
-      }
-
-      if (game.phase === 'playing') {
-        dragging = true;
-        try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
-        movePlayerTo(x);
-      }
-    }
-
-    function handlePointerMove(e) {
-      if (e.cancelable) e.preventDefault();
-      if (!dragging || game.phase !== 'playing') return;
-      movePlayerTo(e.clientX);
-    }
-
-    function handlePointerUp(e) {
-      if (dragging) {
-        dragging = false;
-        try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
-      }
-    }
-
-    window.addEventListener('pointerdown', handlePointerDown, { passive: false });
-    window.addEventListener('pointermove', handlePointerMove, { passive: false });
-    window.addEventListener('pointerup',   handlePointerUp,   { passive: false });
-    window.addEventListener('pointercancel', () => { dragging = false; }, { passive: true });
-    canvas.addEventListener('contextmenu', e => e.preventDefault());
-    document.addEventListener('gesturestart', e => e.preventDefault());
-    document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
-    document.addEventListener('touchmove', e => {
-      if (!e.target.closest('button')) e.preventDefault();
-    }, { passive: false });
-
-    window.addEventListener('keydown', e => {
-      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
-        keys.left = true; e.preventDefault();
-      }
-      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
-        keys.right = true; e.preventDefault();
-      }
-      if ((e.key === 'Enter' || e.key === ' ') &&
-          (game.phase === 'idle' || game.phase === 'over')) {
-        e.preventDefault();
-        if (ui.btn.mode === 'reset') resetGame();
-        else startGame();
-      }
-      if (['ArrowUp', 'ArrowDown', ' '].includes(e.key)) e.preventDefault();
-    }, { passive: false });
-
-    window.addEventListener('keyup', e => {
-      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false;
-      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
-    });
-
-    window.addEventListener('resize', resize);
-    window.addEventListener('orientationchange', () => setTimeout(resize, 200));
-
-    // ------------------------------------------------------------
-    // MAIN LOOP
-    // ------------------------------------------------------------
-    function loop(now) {
-      const dt = Math.min(2.5, (now - lastTime) / 16.667);
-      lastTime = now;
-      update(dt);
-      draw();
-      requestAnimationFrame(loop);
-    }
-
-    // ------------------------------------------------------------
-    // INIT
-    // ------------------------------------------------------------
-    resize();
-    game.player.x = laneCenter(1);
-    layoutUI();
-    requestAnimationFrame(loop);
+    "use strict";
+    let audioCtx = null;
+
+    function initAudio() { audioCtx || (audioCtx = new(window.AudioContext || window.webkitAudioContext)), "suspended" === audioCtx.state && audioCtx.resume() }
+
+    function playSound(e) { try { initAudio(); const t = audioCtx.createOscillator(),
+          a = audioCtx.createGain();
+        t.connect(a), a.connect(audioCtx.destination); const i = audioCtx.currentTime; "steer" === e ? (t.type = "sine", t.frequency.setValueAtTime(300, i), a.gain.setValueAtTime(.05, i), a.gain.exponentialRampToValueAtTime(.01, i + .05), t.start(i), t.stop(i + .05)) : "crash" === e && (t.type = "sawtooth", t.frequency.setValueAtTime(120, i), t.frequency.linearRampToValueAtTime(20, i + .4), a.gain.setValueAtTime(.25, i), a.gain.exponentialRampToValueAtTime(.01, i + .4), t.start(i), t.stop(i + .4)) } catch (e) {} }
+    const canvas = document.getElementById("gameCanvas"),
+      ctx = canvas.getContext("2d"),
+      CANVAS_WIDTH = 640,
+      CANVAS_HEIGHT = 360,
+      LANES = [190, 320, 450];
+    let player, score = 0,
+      highScore = 0,
+      gameOver = !1,
+      gameSpeed = 4,
+      roadAnimOffset = 0;
+    class PlayerCar { constructor() { this.laneIndex = 1, this.x = LANES[this.laneIndex], this.y = 270, this.w = 36, this.h = 64 } moveLeft() { this.laneIndex > 0 && (this.laneIndex--, this.x = LANES[this.laneIndex], playSound("steer")) } moveRight() { this.laneIndex < LANES.length - 1 && (this.laneIndex++, this.x = LANES[this.laneIndex], playSound("steer")) } draw() { ctx.save(), ctx.translate(this.x - this.w / 2, this.y), ctx.fillStyle = "#ef4444", ctx.fillRect(0, 0, this.w, this.h), ctx.fillStyle = "#1e293b", ctx.fillRect(4, 12, this.w - 8, 14), ctx.fillRect(6, 42, this.w - 12, 10), ctx.fillStyle = "#facc15", ctx.fillRect(2, 2, 6, 4), ctx.fillRect(this.w - 8, 2, 6, 4), ctx.restore() } } class TrafficCar { constructor() { this.laneIndex = Math.floor(Math.random() * LANES.length), this.x = LANES[this.laneIndex], this.y = -100, this.w = 36, this.h = 64, this.speed = 2 + 2 * Math.random(), this.color = ["#38bdf8", "#facc15", "#22c55e", "#a855f7"][Math.floor(4 * Math.random())] } update() { this.y += gameSpeed - this.speed } draw() { ctx.save(), ctx.translate(this.x - this.w / 2, this.y), ctx.fillStyle = this.color, ctx.fillRect(0, 0, this.w, this.h), ctx.fillStyle = "#1e293b", ctx.fillRect(4, 38, this.w - 8, 14), ctx.fillStyle = "#ef4444", ctx.fillRect(2, this.h - 4, 6, 3), ctx.fillRect(this.w - 8, this.h - 4, 6, 3), ctx.restore() } }
+    let traffic = [],
+      frameCount = 0;
+
+    function initGame() { score = 0, gameOver = !1, gameSpeed = 5, frameCount = 0, traffic = [], player = new PlayerCar, document.getElementById("overlay").classList.remove("show"), updateUI() }
+
+    function update() { if (!gameOver) { frameCount++, score += Math.floor(gameSpeed), roadAnimOffset = (roadAnimOffset + gameSpeed) % 40, gameSpeed = 5 + .5 * Math.floor(score / 1e3), frameCount % Math.max(50, 110 - Math.floor(4 * gameSpeed)) === 0 && traffic.push(new TrafficCar); for (let e = traffic.length - 1; e >= 0; e--) traffic[e].update(), player.x - player.w / 2 < traffic[e].x + traffic[e].w / 2 && player.x + player.w / 2 > traffic[e].x - traffic[e].w / 2 && player.y < traffic[e].y + traffic[e].h && player.y + player.h > traffic[e].y && (gameOver = !0, playSound("crash"), endGame()), traffic[e].y > 410 && traffic.splice(e, 1) } }
+
+    function render() { ctx.clearRect(0, 0, 640, 360), ctx.fillStyle = "#15803d", ctx.fillRect(0, 0, 640, 360), ctx.fillStyle = "#334155", ctx.fillRect(120, 0, 400, 360), ctx.strokeStyle = "#f8fafc", ctx.lineWidth = 4, ctx.setLineDash([20, 20]), ctx.lineDashOffset = -roadAnimOffset, ctx.beginPath(), ctx.moveTo(255, 0), ctx.lineTo(255, 360), ctx.stroke(), ctx.beginPath(), ctx.moveTo(385, 0), ctx.lineTo(385, 360), ctx.stroke(), ctx.setLineDash([]); for (let e of traffic) e.draw();
+      player.draw(), updateUI() }
+
+    function gameLoop() { update(), render(), requestAnimationFrame(gameLoop) }
+
+    function updateUI() { score > highScore && (highScore = score), document.getElementById("scoreVal").textContent = score, document.getElementById("highScoreVal").textContent = highScore }
+
+    function endGame() { document.getElementById("finalScoreDesc").textContent = "Jarak tempuh: " + score + " m", document.getElementById("overlay").classList.add("show") } window.addEventListener("keydown", e => { initAudio(), "ArrowLeft" !== e.code && "KeyA" !== e.code || (e.preventDefault(), player.moveLeft()), "ArrowRight" !== e.code && "KeyD" !== e.code || (e.preventDefault(), player.moveRight()) });
+    const btnLeft = document.getElementById("btnLeft"),
+      btnRight = document.getElementById("btnRight");
+    btnLeft.addEventListener("touchstart", e => { e.preventDefault(), initAudio(), player.moveLeft() }), btnLeft.addEventListener("mousedown", e => { e.preventDefault(), initAudio(), player.moveLeft() }), btnRight.addEventListener("touchstart", e => { e.preventDefault(), initAudio(), player.moveRight() }), btnRight.addEventListener("mousedown", e => { e.preventDefault(), initAudio(), player.moveRight() }), document.getElementById("btnRestart").addEventListener("click", () => { initGame() }), initGame(), gameLoop()
   </script>
 </body>
+
 </html>

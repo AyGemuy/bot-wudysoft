@@ -1,12 +1,15 @@
 import axios from "axios";
 import db from "../../data/db.js";
-import { upload } from "../../lib/upload.js";
-import { simpleQuoted } from "../../lib/quoted.js";
-
+import {
+  upload
+} from "../../lib/upload.js";
+import {
+  simpleQuoted
+} from "../../lib/quoted.js";
 const API_URL = `${global.bot?.api?.wudysoft}/api/ai/thebetter`;
-const SESSION_TIMEOUT = 25 * 60 * 1e3; // 25 Menit
+const SESSION_TIMEOUT = 25 * 60 * 1e3;
 const CONFIG = {
-  TIMEOUT: 18e4, // 180 detik sesuai polling pemrosesan gambar S3
+  TIMEOUT: 18e4,
   USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
   ITEMS_PER_PAGE: 8
 };
@@ -38,13 +41,11 @@ function parseFlags(input = "") {
     let key = match[1].toLowerCase();
     let rawVal = match[2];
     let val = true;
-
     if (["mod", "m"].includes(key)) key = "mode";
     if (["img", "image"].includes(key)) key = "media";
     if (["theme", "template", "tpl"].includes(key)) key = "theme_id";
-
     if (rawVal !== undefined) {
-      if ((rawVal.startsWith('"') && rawVal.endsWith('"')) || (rawVal.startsWith("'") && rawVal.endsWith("'"))) {
+      if (rawVal.startsWith('"') && rawVal.endsWith('"') || rawVal.startsWith("'") && rawVal.endsWith("'")) {
         rawVal = rawVal.slice(1, -1);
       }
       if (rawVal === "true") val = true;
@@ -56,37 +57,34 @@ function parseFlags(input = "") {
   }
   const cleanPrompt = input.replace(flagRegex, "").trim();
   return {
-    flags,
-    cleanPrompt
+    flags: flags,
+    cleanPrompt: cleanPrompt
   };
 }
-
-// Request API TheBetter AI (Dukungan JSON & Buffer Binary Gambar)
 async function requestTheBetterAi(payload = {}, asBuffer = false) {
   const config = {
-    headers: { "User-Agent": CONFIG.USER_AGENT },
+    headers: {
+      "User-Agent": CONFIG.USER_AGENT
+    },
     timeout: CONFIG.TIMEOUT
   };
-
   if (asBuffer) {
     config.responseType = "arraybuffer";
   }
-
   const res = await axios.get(API_URL, {
     params: payload,
     ...config
   }).catch(err => {
-    // Fallback POST jika diperlukan
-    return axios.post(API_URL, payload, { ...config });
+    return axios.post(API_URL, payload, {
+      ...config
+    });
   });
-
   if (asBuffer) {
     return {
       buffer: Buffer.from(res.data),
       contentType: res.headers["content-type"] || "image/jpeg"
     };
   }
-
   return res.data;
 }
 
@@ -119,7 +117,6 @@ function recordSession(chatId, messageId, mode, lastMedia, themeId, themeName) {
   s.expireTime = Date.now() + SESSION_TIMEOUT;
   saveDB();
 }
-
 export default {
   name: "thebetter",
   aliases: ["thebetterai", "remini", "tbai", "hdphoto"],
@@ -127,41 +124,32 @@ export default {
   category: "AI",
   limit: true,
   example: "thebetter --mode enhance (Kirim/balas foto)\nthebetter add sunglasses --mode chat-edit\nBalas/reply media bot untuk memproses transformasi ulang.",
-
-  before: async (msg, { sock, ctx }) => {
+  before: async (msg, {
+    sock,
+    ctx
+  }) => {
     try {
       const chatId = ctx?.id || msg?.key?.remoteJid;
       if (!chatId) return;
       initDB();
       if (!global.db.thebetterAi[chatId]) return;
-
       const isFromMe = Boolean(msg?.key?.fromMe || ctx?.isFromMe);
       if (isFromMe) return;
-
       const sessionData = global.db.thebetterAi[chatId];
       if (Date.now() > sessionData.expireTime) {
         delete global.db.thebetterAi[chatId];
         saveDB();
         return;
       }
-
       const quotedStanzaId = ctx?.quoted?.id || msg?.message?.extendedTextMessage?.contextInfo?.stanzaId;
-      const isQuotingAi = quotedStanzaId && (
-        quotedStanzaId === sessionData.lastMsgId ||
-        (Array.isArray(sessionData.msgIds) && sessionData.msgIds.includes(quotedStanzaId))
-      );
-
+      const isQuotingAi = quotedStanzaId && (quotedStanzaId === sessionData.lastMsgId || Array.isArray(sessionData.msgIds) && sessionData.msgIds.includes(quotedStanzaId));
       if (!isQuotingAi) return;
-
       const userText = (ctx?.text || ctx?.query || msg?.message?.conversation || msg?.message?.extendedTextMessage?.text || "").trim();
       const prefixList = [".", "#", "!", "/", ctx?.prefix].filter(Boolean);
       if (prefixList.some(p => userText.startsWith(p))) return;
-
       const isMedia = ctx?.isMedia || ctx?.quoted?.isMedia;
       if (!userText && !isMedia) return;
-
       if (typeof ctx?.react === "function") await ctx.react("🎨");
-
       let uploadedMediaUrl = null;
       if (isMedia && typeof ctx.download === "function") {
         const buffer = await ctx.download();
@@ -172,13 +160,13 @@ export default {
           }
         }
       }
-
       const inputImage = uploadedMediaUrl || sessionData.last_media;
       if (!inputImage) return;
-
-      const { flags, cleanPrompt } = parseFlags(userText);
-      const activeMode = flags.mode || (cleanPrompt ? "chat-edit" : (sessionData.mode || "enhance"));
-
+      const {
+        flags,
+        cleanPrompt
+      } = parseFlags(userText);
+      const activeMode = flags.mode || (cleanPrompt ? "chat-edit" : sessionData.mode || "enhance");
       const queryParams = {
         action: "generate",
         mode: activeMode,
@@ -187,24 +175,16 @@ export default {
         theme_id: flags.theme_id || sessionData.theme_id || undefined,
         ...flags
       };
-
       const resultMedia = await requestTheBetterAi(queryParams, true);
       if (!resultMedia?.buffer) throw new Error("Gagal menghasilkan gambar dari TheBetter AI.");
-
-      const bodyText = `–  *T H E  B E T T E R  A I*\n\n` +
-        `┌  ◦  *Mode* : ${activeMode}\n` +
-        `├  ◦  *Prompt* : ${queryParams.prompt || "-"}\n` +
-        `└  ◦  *Engine* : Photo Enhancer v3.11`;
-
+      const bodyText = `–  *T H E  B E T T E R  A I*\n\n` + `┌  ◦  *Mode* : ${activeMode}\n` + `├  ◦  *Prompt* : ${queryParams.prompt || "-"}\n` + `└  ◦  *Engine* : Photo Enhancer v3.11`;
       const uploadResult = await upload(resultMedia.buffer).catch(() => null);
       const finalUrl = uploadResult?.url || null;
-
       const buttons = [{
         name: "cta_copy",
         display_text: "📄 Salin Prompt",
         copy_code: queryParams.prompt || activeMode
       }];
-
       let sentMsg;
       if (typeof ctx.sendCta === "function" && finalUrl) {
         sentMsg = await ctx.sendCta(bodyText, "", buttons, {
@@ -215,25 +195,23 @@ export default {
         sentMsg = await sock.sendMessage(ctx.id, {
           image: resultMedia.buffer,
           caption: bodyText
-        }, { quoted: msg });
+        }, {
+          quoted: msg
+        });
       }
-
       const newMsgId = sentMsg?.key?.id;
       recordSession(chatId, newMsgId, activeMode, finalUrl || inputImage, sessionData.theme_id, sessionData.theme_name);
-
       if (typeof ctx?.react === "function") await ctx.react("✨");
       return true;
     } catch (e) {
       console.error("[THEBETTER BEFORE ERROR]:", e.message);
     }
   },
-
   execute: async (sock, ctx, msg) => {
     try {
       const chatId = ctx.id;
       const senderId = ctx.sender || ctx.author || msg.key?.participant || msg.key?.remoteJid || ctx.id;
       initDB(senderId, ctx.pushName);
-
       let rawText = ctx.args?.join(" ")?.trim() || "";
       if (!rawText && ctx.text) {
         const raw = ctx.text.trim();
@@ -242,11 +220,8 @@ export default {
           rawText = raw.slice(firstWord.length).trim();
         }
       }
-
       const prefix = ctx.prefix || ".";
       const quotedMsg = typeof simpleQuoted === "function" ? simpleQuoted(ctx) : msg;
-
-      // 1. Reset Sesi
       if (rawText === "--reset" || rawText === "--clear" || rawText === "reset" || rawText === "clear") {
         if (global.db.thebetterAi[chatId]) {
           delete global.db.thebetterAi[chatId];
@@ -255,74 +230,56 @@ export default {
         }
         return ctx.reply("ℹ️ Tidak ada sesi aktif di percakapan ini.");
       }
-
-      const { flags, cleanPrompt } = parseFlags(rawText);
+      const {
+        flags,
+        cleanPrompt
+      } = parseFlags(rawText);
       const existingSession = global.db.thebetterAi[chatId];
-
-      // 2. Set Template Pilihan
       if (flags.settemplate || flags.settheme) {
         const themeId = String(flags.settemplate || flags.settheme).trim();
         const themeName = flags.name || themeId;
-
         recordSession(chatId, null, "face-swapper", existingSession?.last_media, themeId, themeName);
-
         await ctx.react("✅");
-        return ctx.reply(
-          `–  *T H E  B E T T E R  A I*\n\n` +
-          `┌  ◦  *Preset Template* : ${themeName}\n` +
-          `├  ◦  *Theme ID* : \`${themeId}\`\n` +
-          `└  ◦  *Mode Otomatis* : \`face-swapper\`\n\n` +
-          `_Kirim atau balas foto dengan perintah \`${prefix}thebetter\` untuk menerapkan template ini._`
-        );
+        return ctx.reply(`–  *T H E  B E T T E R  A I*\n\n` + `┌  ◦  *Preset Template* : ${themeName}\n` + `├  ◦  *Theme ID* : \`${themeId}\`\n` + `└  ◦  *Mode Otomatis* : \`face-swapper\`\n\n` + `_Kirim atau balas foto dengan perintah \`${prefix}thebetter\` untuk menerapkan template ini._`);
       }
-
-      // 3. CTA Pagination List Templates
       if (flags.templates || flags.list || rawText.startsWith("--templates") || rawText.startsWith("--list") || flags.page) {
         await ctx.react("⏳");
         const res = await requestTheBetterAi({
           action: "templates",
           query: flags.search || flags.query || undefined
         });
-
         const list = res?.result?.list || [];
         if (!list.length) {
           await ctx.react("❌");
           return ctx.reply("❌ Tidak ada template yang ditemukan.");
         }
-
-        const searchQuery = flags.search || flags.query || (!flags.page && cleanPrompt) || "";
+        const searchQuery = flags.search || flags.query || !flags.page && cleanPrompt || "";
         let matched = list;
         if (searchQuery && searchQuery !== "true") {
           const kw = searchQuery.toLowerCase();
           matched = list.filter(t => (t.name || "").toLowerCase().includes(kw) || (t.theme_id || "").toLowerCase().includes(kw));
         }
-
         if (!matched.length) {
           await ctx.react("❌");
           return ctx.reply(`❌ Template tidak ditemukan dengan kata kunci "${searchQuery}".`);
         }
-
         const page = Math.max(1, Number(flags.page) || 1);
         const totalPages = Math.ceil(matched.length / CONFIG.ITEMS_PER_PAGE) || 1;
         const pageItems = matched.slice((page - 1) * CONFIG.ITEMS_PER_PAGE, page * CONFIG.ITEMS_PER_PAGE);
-
         const rows = pageItems.map((item, idx) => {
           const globalIdx = (page - 1) * CONFIG.ITEMS_PER_PAGE + idx + 1;
           const tid = item.theme_id;
           const name = item.name || tid;
           const tag = item.tag_name ? `[${item.tag_name.toUpperCase()}] ` : "";
-
           return {
             title: `${globalIdx}. ${name}`.slice(0, 24),
             id: `${prefix}thebetter --settheme "${tid}" --name "${name}"`,
             description: `${tag}ID: ${tid}`.slice(0, 60)
           };
         });
-
         let baseCmd = `${prefix}thebetter`;
         if (searchQuery && searchQuery !== "true") baseCmd += ` --search "${searchQuery}"`;
         else baseCmd += ` --list`;
-
         const buttons = [{
           name: "single_select",
           buttonParamsJson: JSON.stringify({
@@ -333,7 +290,6 @@ export default {
             }]
           })
         }];
-
         if (page > 1) {
           buttons.push({
             name: "quick_reply",
@@ -352,13 +308,7 @@ export default {
             })
           });
         }
-
-        const bodyText = `–  *T H E  B E T T E R  -  T E M P L A T E S*\n\n` +
-          `┌  ◦  *Total Template* : ${matched.length}\n` +
-          `├  ◦  *Halaman* : ${page} / ${totalPages}\n` +
-          `└  ◦  *Kategori* : Face Swapper & Thematic Outfits\n\n` +
-          `_Pilih template yang ingin digunakan dari menu di bawah:_`;
-
+        const bodyText = `–  *T H E  B E T T E R  -  T E M P L A T E S*\n\n` + `┌  ◦  *Total Template* : ${matched.length}\n` + `├  ◦  *Halaman* : ${page} / ${totalPages}\n` + `└  ◦  *Kategori* : Face Swapper & Thematic Outfits\n\n` + `_Pilih template yang ingin digunakan dari menu di bawah:_`;
         const options = {
           params: {
             bottom_sheet: {
@@ -370,7 +320,6 @@ export default {
           },
           quoted: quotedMsg
         };
-
         if (typeof ctx.sendCta === "function") {
           await ctx.sendCta(bodyText, "", buttons, options);
         } else {
@@ -380,12 +329,9 @@ export default {
           }
           await ctx.reply(fallback);
         }
-
         await ctx.react("✅");
         return;
       }
-
-      // 4. Generate Mode
       const isMedia = ctx.isMedia || ctx.quoted?.isMedia;
       if (!isMedia && !flags.media) {
         const activeTheme = existingSession?.theme_name || existingSession?.theme_id || "None";
@@ -419,12 +365,11 @@ Solusi Ultra HD Photo Enhancement, Colorize, Face-Swap, dan AI Edit.
    ├ \`--mode <enhance|colorize|descratch|restore|face-swapper|chat-edit>\`
    ├ \`--theme <theme_id>\` (Gunakan tema face-swap)
    └ \`--reset\` (Hapus riwayat sesi)`;
-
-        return ctx.reply(guideText, { quoted: quotedMsg });
+        return ctx.reply(guideText, {
+          quoted: quotedMsg
+        });
       }
-
       await ctx.react("🎨");
-
       let uploadedMediaUrl = null;
       if (isMedia) {
         const buffer = await ctx.download();
@@ -435,16 +380,13 @@ Solusi Ultra HD Photo Enhancement, Colorize, Face-Swap, dan AI Edit.
           }
         }
       }
-
       const inputImage = uploadedMediaUrl || flags.media || null;
       if (!inputImage) {
         await ctx.react("❌");
         return ctx.reply("❌ Gagal memproses atau mengunggah gambar input.");
       }
-
-      const chosenMode = flags.mode || (cleanPrompt ? "chat-edit" : (existingSession?.theme_id ? "face-swapper" : "enhance"));
+      const chosenMode = flags.mode || (cleanPrompt ? "chat-edit" : existingSession?.theme_id ? "face-swapper" : "enhance");
       const targetTheme = flags.theme_id || existingSession?.theme_id || undefined;
-
       const queryParams = {
         action: "generate",
         mode: chosenMode,
@@ -453,24 +395,16 @@ Solusi Ultra HD Photo Enhancement, Colorize, Face-Swap, dan AI Edit.
         theme_id: targetTheme,
         ...flags
       };
-
       const resultMedia = await requestTheBetterAi(queryParams, true);
       if (!resultMedia?.buffer) throw new Error("Gagal menerima gambar hasil pemrosesan.");
-
-      const bodyText = `–  *T H E  B E T T E R  A I*\n\n` +
-        `┌  ◦  *Mode* : ${chosenMode}\n` +
-        `├  ◦  *Theme* : ${targetTheme || "-"}\n` +
-        `└  ◦  *Engine* : Photo Enhancer v3.11`;
-
+      const bodyText = `–  *T H E  B E T T E R  A I*\n\n` + `┌  ◦  *Mode* : ${chosenMode}\n` + `├  ◦  *Theme* : ${targetTheme || "-"}\n` + `└  ◦  *Engine* : Photo Enhancer v3.11`;
       const uploadResult = await upload(resultMedia.buffer).catch(() => null);
       const finalUrl = uploadResult?.url || null;
-
       const buttons = [{
         name: "cta_copy",
         display_text: "📄 Salin Mode",
         copy_code: chosenMode
       }];
-
       let sentMsg;
       if (typeof ctx.sendCta === "function" && finalUrl) {
         sentMsg = await ctx.sendCta(bodyText, "", buttons, {
@@ -481,19 +415,12 @@ Solusi Ultra HD Photo Enhancement, Colorize, Face-Swap, dan AI Edit.
         sentMsg = await sock.sendMessage(ctx.id, {
           image: resultMedia.buffer,
           caption: bodyText
-        }, { quoted: quotedMsg });
+        }, {
+          quoted: quotedMsg
+        });
       }
-
       const sentMsgId = sentMsg?.key?.id;
-      recordSession(
-        chatId,
-        sentMsgId,
-        chosenMode,
-        finalUrl || inputImage,
-        targetTheme,
-        existingSession?.theme_name
-      );
-
+      recordSession(chatId, sentMsgId, chosenMode, finalUrl || inputImage, targetTheme, existingSession?.theme_name);
       await ctx.react("✨");
     } catch (error) {
       console.error("[TheBetter AI Error]:", error?.message || error);

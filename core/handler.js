@@ -584,6 +584,14 @@ export async function UpsertMsgHandle(sock, msg, ctx, {
     db.ensureGroup(chatId);
     groupData = global.db?.group?.[chatId];
   }
+  if (isGroup && chatId && !isBot) {
+    const uDb = global.db?.user?.[userPhoneJid];
+    if (uDb) {
+      if (!uDb.chatCount) uDb.chatCount = {};
+      uDb.chatCount[chatId] = (uDb.chatCount[chatId] || 0) + 1;
+      db.write(global.db).catch(() => {});
+    }
+  }
   const isFromMe = Boolean(msg.key?.fromMe || ctx.isFromMe);
   const botId = decodeJid(sock.user?.id || sock.user?.jid || "");
   const botLid = sock.user?.lid ? decodeJid(sock.user.lid) : null;
@@ -671,36 +679,28 @@ export async function UpsertMsgHandle(sock, msg, ctx, {
       console.error(chalk.yellow(`[GROUP SYNC WARNING] ${chatId}:`), grpErr?.message || grpErr);
     }
   }
-    await normalizeLidCtx(ctx, sock);
-  
-  // ---> TAMBAHKAN PENANGANAN POLL & EDIT DI SINI <---
+  await normalizeLidCtx(ctx, sock);
   let textBody = "";
-  
-  // Jika ini adalah pembaruan vote polling, ambil teks/pilihan yang dipilih user
-  // Jika ini adalah pembaruan vote polling, ekstrak opsi yang dipilih user
   if (msg.pollUpdates || ctx.pollUpdates || msg.update?.pollUpdates) {
-      const pUpdates = msg.pollUpdates || ctx.pollUpdates || msg.update?.pollUpdates;
-      if (Array.isArray(pUpdates) && pUpdates.length > 0) {
-          const pollCreation = ctx.quoted?.message || ctx.quoted?.rawMessage;
-          if (pollCreation) {
-              const userJid = sock?.user?.lid ? jidNormalizedUser(sock.user.lid) : jidNormalizedUser(sock?.user?.id || "");
-              const aggregate = getAggregateVotesInPollMessage({
-                  message: pollCreation,
-                  pollUpdates: pUpdates
-              }, userJid);
-              const chosen = aggregate.find(opt => opt.voters?.some(v => areJidsSameUser(v, ctx.sender)));
-              if (chosen?.name) textBody = chosen.name;
-          }
+    const pUpdates = msg.pollUpdates || ctx.pollUpdates || msg.update?.pollUpdates;
+    if (Array.isArray(pUpdates) && pUpdates.length > 0) {
+      const pollCreation = ctx.quoted?.message || ctx.quoted?.rawMessage;
+      if (pollCreation) {
+        const userJid = sock?.user?.lid ? jidNormalizedUser(sock.user.lid) : jidNormalizedUser(sock?.user?.id || "");
+        const aggregate = getAggregateVotesInPollMessage({
+          message: pollCreation,
+          pollUpdates: pUpdates
+        }, userJid);
+        const chosen = aggregate.find(opt => opt.voters?.some(v => areJidsSameUser(v, ctx.sender)));
+        if (chosen?.name) textBody = chosen.name;
       }
+    }
   }
-  
   if (!textBody) {
-      textBody = (ctx.selectedId || ctx.selectedRowId || typeof ctx.text === "string" && ctx.text.trim() || getBody(ctx.rawMessage || msg?.message || msg) || "").trim();
+    textBody = (ctx.selectedId || ctx.selectedRowId || typeof ctx.text === "string" && ctx.text.trim() || getBody(ctx.rawMessage || msg?.message || msg) || "").trim();
   }
-
   ctx.text = textBody;
   ctx.body = textBody;
-
   const isAntiBotActive = global.bot?.antiBot === true || isGroup && groupData?.antibot === true;
   if (isAntiBotActive && (ctx.isBaileys || ctx.isBot) && !isFromMe && !isOwner) {
     if (isGroup) {
@@ -865,8 +865,7 @@ export async function UpsertMsgHandle(sock, msg, ctx, {
   const cdTime = (command.cooldown || global.bot?.cooldown || 3) * 1e3;
   const userCdKey = `${userPhoneJid}_${chatId}_${command.name || ctx.cmd}`;
   const now = Date.now();
-    if (cooldowns.has(userCdKey) && !isOwner && !ctx.isEdited) {
-
+  if (cooldowns.has(userCdKey) && !isOwner && !ctx.isEdited) {
     const expirationTime = cooldowns.get(userCdKey) + cdTime;
     if (now < expirationTime) {
       const timeLeft = ((expirationTime - now) / 1e3).toFixed(1);

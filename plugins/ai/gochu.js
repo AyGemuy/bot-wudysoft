@@ -1,10 +1,13 @@
 import axios from "axios";
 import db from "../../data/db.js";
-import { upload } from "../../lib/upload.js";
-import { simpleQuoted } from "../../lib/quoted.js";
-
+import {
+  upload
+} from "../../lib/upload.js";
+import {
+  simpleQuoted
+} from "../../lib/quoted.js";
 const API_URL = `${global.bot?.api?.wudysoft}/api/ai/gochu`;
-const SESSION_TIMEOUT = 30 * 60 * 1e3; // 30 Menit
+const SESSION_TIMEOUT = 30 * 60 * 1e3;
 const CONFIG = {
   TIMEOUT: 65e3,
   USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -38,13 +41,11 @@ function parseFlags(input = "") {
     let key = match[1].toLowerCase();
     let rawVal = match[2];
     let val = true;
-
     if (["char", "character", "cid"].includes(key)) key = "char_id";
     if (["img", "image"].includes(key)) key = "media";
     if (["kategori", "cat"].includes(key)) key = "type";
-
     if (rawVal !== undefined) {
-      if ((rawVal.startsWith('"') && rawVal.endsWith('"')) || (rawVal.startsWith("'") && rawVal.endsWith("'"))) {
+      if (rawVal.startsWith('"') && rawVal.endsWith('"') || rawVal.startsWith("'") && rawVal.endsWith("'")) {
         rawVal = rawVal.slice(1, -1);
       }
       if (rawVal === "true") val = true;
@@ -56,17 +57,17 @@ function parseFlags(input = "") {
   }
   const cleanPrompt = input.replace(flagRegex, "").trim();
   return {
-    flags,
-    cleanPrompt
+    flags: flags,
+    cleanPrompt: cleanPrompt
   };
 }
-
 async function requestGochuAi(params = {}, chatId = null) {
   let session = chatId && global.db.gochuAi?.[chatId] ? global.db.gochuAi[chatId] : null;
   let currentState = params.state || session?.state || undefined;
-
-  const runRequest = async (stateVal) => {
-    const qParams = { ...params };
+  const runRequest = async stateVal => {
+    const qParams = {
+      ...params
+    };
     if (stateVal) qParams.state = stateVal;
     return await axios.get(API_URL, {
       params: qParams,
@@ -76,9 +77,10 @@ async function requestGochuAi(params = {}, chatId = null) {
       timeout: CONFIG.TIMEOUT
     });
   };
-
   try {
-    const { data } = await runRequest(currentState);
+    const {
+      data
+    } = await runRequest(currentState);
     if (!data?.status) {
       throw new Error(data?.error || data?.message || "Gagal memproses permintaan ke Gochu AI.");
     }
@@ -90,10 +92,11 @@ async function requestGochuAi(params = {}, chatId = null) {
     return data;
   } catch (err) {
     const errMsg = err.response?.data?.error || err.message || "";
-    // Jika auth atau sesi cookie rusak, auto-refresh state sesi baru
     if (currentState && /auth|cookie|token|unauthorized|session/i.test(errMsg)) {
       if (global.db.gochuAi[chatId]) global.db.gochuAi[chatId].state = null;
-      const { data } = await runRequest(undefined);
+      const {
+        data
+      } = await runRequest(undefined);
       if (data?.status && data?.state && chatId) {
         global.db.gochuAi[chatId].state = data.state;
         saveDB();
@@ -131,7 +134,6 @@ function recordSession(chatId, messageId, returnedState, charId, charName) {
   s.expireTime = Date.now() + SESSION_TIMEOUT;
   saveDB();
 }
-
 export default {
   name: "gochu",
   aliases: ["gochuai", "cai", "roleplay", "rpchat"],
@@ -139,41 +141,32 @@ export default {
   category: "AI",
   limit: true,
   example: "gochu Halo suzume, sedang baca buku apa?\ngochu --list (Pilih karakter)\nBalas/reply pesan bot untuk melanjutkan obrolan.",
-
-  before: async (msg, { sock, ctx }) => {
+  before: async (msg, {
+    sock,
+    ctx
+  }) => {
     try {
       const chatId = ctx?.id || msg?.key?.remoteJid;
       if (!chatId) return;
       initDB();
       if (!global.db.gochuAi[chatId]) return;
-
       const isFromMe = Boolean(msg?.key?.fromMe || ctx?.isFromMe);
       if (isFromMe) return;
-
       const sessionData = global.db.gochuAi[chatId];
       if (Date.now() > sessionData.expireTime) {
         delete global.db.gochuAi[chatId];
         saveDB();
         return;
       }
-
       const quotedStanzaId = ctx?.quoted?.id || msg?.message?.extendedTextMessage?.contextInfo?.stanzaId;
-      const isQuotingAi = quotedStanzaId && (
-        quotedStanzaId === sessionData.lastMsgId ||
-        (Array.isArray(sessionData.msgIds) && sessionData.msgIds.includes(quotedStanzaId))
-      );
-
+      const isQuotingAi = quotedStanzaId && (quotedStanzaId === sessionData.lastMsgId || Array.isArray(sessionData.msgIds) && sessionData.msgIds.includes(quotedStanzaId));
       if (!isQuotingAi) return;
-
       const userText = (ctx?.text || ctx?.query || msg?.message?.conversation || msg?.message?.extendedTextMessage?.text || "").trim();
       const prefixList = [".", "#", "!", "/", ctx?.prefix].filter(Boolean);
       if (prefixList.some(p => userText.startsWith(p))) return;
-
       const isMedia = ctx?.isMedia || ctx?.quoted?.isMedia;
       if (!userText && !isMedia) return;
-
       if (typeof ctx?.react === "function") await ctx.react("💭");
-
       let uploadedMediaUrl = null;
       if (isMedia && typeof ctx.download === "function") {
         const buffer = await ctx.download();
@@ -184,24 +177,22 @@ export default {
           }
         }
       }
-
       const payload = {
         action: "chat",
         prompt: userText || (uploadedMediaUrl ? "Look at this photo" : "Hello"),
         char_id: sessionData.char_id || "suzume",
-        ...uploadedMediaUrl ? { media: uploadedMediaUrl } : {}
+        ...uploadedMediaUrl ? {
+          media: uploadedMediaUrl
+        } : {}
       };
-
       const data = await requestGochuAi(payload, chatId);
       const answerText = (data?.result || "Tidak ada respon.").trim();
       const bodyText = answerText;
-
       const buttons = [{
         name: "cta_copy",
         display_text: "📄 Salin Jawaban",
         copy_code: answerText
       }];
-
       let sentMsg;
       if (typeof ctx.sendCta === "function") {
         sentMsg = await ctx.sendCta(bodyText, `_Karakter: ${sessionData.char_name || sessionData.char_id}_`, buttons, {
@@ -210,31 +201,33 @@ export default {
         });
       } else if (uploadedMediaUrl) {
         sentMsg = await sock.sendMessage(ctx.id, {
-          image: { url: uploadedMediaUrl },
+          image: {
+            url: uploadedMediaUrl
+          },
           caption: bodyText
-        }, { quoted: msg });
+        }, {
+          quoted: msg
+        });
       } else {
         sentMsg = await sock.sendMessage(ctx.id, {
           text: bodyText
-        }, { quoted: msg });
+        }, {
+          quoted: msg
+        });
       }
-
       const newMsgId = sentMsg?.key?.id;
       recordSession(chatId, newMsgId, data.state || sessionData.state, sessionData.char_id, sessionData.char_name);
-
       if (typeof ctx?.react === "function") await ctx.react("✨");
       return true;
     } catch (e) {
       console.error("[GOCHU BEFORE ERROR]:", e.message);
     }
   },
-
   execute: async (sock, ctx, msg) => {
     try {
       const chatId = ctx.id;
       const senderId = ctx.sender || ctx.author || msg.key?.participant || msg.key?.remoteJid || ctx.id;
       initDB(senderId, ctx.pushName);
-
       let rawText = ctx.args?.join(" ")?.trim() || "";
       if (!rawText && ctx.text) {
         const raw = ctx.text.trim();
@@ -243,11 +236,8 @@ export default {
           rawText = raw.slice(firstWord.length).trim();
         }
       }
-
       const prefix = ctx.prefix || ".";
       const quotedMsg = typeof simpleQuoted === "function" ? simpleQuoted(ctx) : msg;
-
-      // Reset Sesi Chat
       if (rawText === "--reset" || rawText === "--clear" || rawText === "reset" || rawText === "clear") {
         if (global.db.gochuAi[chatId]) {
           delete global.db.gochuAi[chatId];
@@ -256,26 +246,22 @@ export default {
         }
         return ctx.reply("ℹ️ Tidak ada sesi Gochu AI yang aktif di percakapan ini.");
       }
-
-      const { flags, cleanPrompt } = parseFlags(rawText);
-
-      // Set Karakter Pilihan
+      const {
+        flags,
+        cleanPrompt
+      } = parseFlags(rawText);
       if (flags.setchar) {
         const charId = String(flags.setchar).trim();
         const charName = flags.name || charId;
-
         if (!global.db.gochuAi[chatId]) global.db.gochuAi[chatId] = {};
         global.db.gochuAi[chatId].char_id = charId;
         global.db.gochuAi[chatId].char_name = charName;
         global.db.gochuAi[chatId].updatedAt = Date.now();
         global.db.gochuAi[chatId].expireTime = Date.now() + SESSION_TIMEOUT;
         saveDB();
-
         await ctx.react("✅");
         return ctx.reply(`–  *G O C H U  A I*\n\n┌  ◦  *Karakter Aktif* : ${charName}\n└  ◦  *ID Karakter* : \`${charId}\`\n\n_Ketik \`${prefix}gochu <pesan>\` atau reply pesan untuk mulai berbicara._`);
       }
-
-      // CTA Pagination: Daftar Karakter
       if (flags.list || flags.characters || rawText.startsWith("--list") || flags.page) {
         await ctx.react("⏳");
         const charType = flags.type || "anime";
@@ -283,47 +269,39 @@ export default {
           action: "character",
           type: charType
         }, chatId);
-
         const allChars = Array.isArray(data?.result) ? data.result : [];
         if (!allChars.length) {
           await ctx.react("❌");
           return ctx.reply("❌ Gagal memuat daftar karakter dari server Gochu AI.");
         }
-
-        const searchQuery = flags.search || flags.query || (!flags.page && cleanPrompt) || "";
+        const searchQuery = flags.search || flags.query || !flags.page && cleanPrompt || "";
         let matchedChars = allChars;
         if (searchQuery && searchQuery !== "true") {
           const kw = searchQuery.toLowerCase();
           matchedChars = allChars.filter(c => (c.name || "").toLowerCase().includes(kw) || (c.description || "").toLowerCase().includes(kw));
         }
-
         if (!matchedChars.length) {
           await ctx.react("❌");
           return ctx.reply(`❌ Karakter tidak ditemukan dengan kata kunci "${searchQuery}".`);
         }
-
         const page = Math.max(1, Number(flags.page) || 1);
         const totalPages = Math.ceil(matchedChars.length / CONFIG.ITEMS_PER_PAGE) || 1;
         const pageItems = matchedChars.slice((page - 1) * CONFIG.ITEMS_PER_PAGE, page * CONFIG.ITEMS_PER_PAGE);
-
         const rows = pageItems.map((c, idx) => {
           const globalIdx = (page - 1) * CONFIG.ITEMS_PER_PAGE + idx + 1;
           const cid = String(c.id);
           const name = c.name || `Char #${cid}`;
           const cleanDesc = (c.description || "").replace(/[\r\n]+/g, " ");
-
           return {
             title: `${globalIdx}. ${name}`.slice(0, 24),
             id: `${prefix}gochu --setchar "${cid}" --name "${name}"`,
             description: `${cleanDesc.slice(0, 48)} • ID: ${cid}`.slice(0, 60)
           };
         });
-
         let baseCmd = `${prefix}gochu`;
         if (charType) baseCmd += ` --type ${charType}`;
         if (searchQuery && searchQuery !== "true") baseCmd += ` --search "${searchQuery}"`;
         else baseCmd += ` --list`;
-
         const buttons = [{
           name: "single_select",
           buttonParamsJson: JSON.stringify({
@@ -334,7 +312,6 @@ export default {
             }]
           })
         }];
-
         if (page > 1) {
           buttons.push({
             name: "quick_reply",
@@ -353,9 +330,7 @@ export default {
             })
           });
         }
-
         const bodyText = `–  *G O C H U  A I  -  R O S T E R*\n\n┌  ◦  *Kategori* : ${charType.toUpperCase()}\n├  ◦  *Total Karakter* : ${matchedChars.length}\n└  ◦  *Halaman* : ${page} / ${totalPages}\n\n_Pilih karakter dari menu tombol di bawah untuk mengobrol:_`;
-
         const options = {
           params: {
             bottom_sheet: {
@@ -367,7 +342,6 @@ export default {
           },
           quoted: quotedMsg
         };
-
         if (typeof ctx.sendCta === "function") {
           await ctx.sendCta(bodyText, "", buttons, options);
         } else {
@@ -377,11 +351,9 @@ export default {
           }
           await ctx.reply(fallback);
         }
-
         await ctx.react("✅");
         return;
       }
-
       const isMedia = ctx.isMedia || ctx.quoted?.isMedia;
       if (!rawText && !isMedia) {
         const sessionData = global.db.gochuAi[chatId];
@@ -411,14 +383,11 @@ Asisten roleplay cerdas dan interaktif berbasis karakter virtual Gochu AI.
    ├ \`--search <nama>\` (Cari nama karakter)
    ├ \`--media <image_url>\` (Kirim URL gambar eksplisit)
    └ \`--reset\` (Hapus sesi percakapan aktif)`;
-
         return ctx.reply(guideText, {
           quoted: quotedMsg
         });
       }
-
       await ctx.react("💭");
-
       let uploadedMediaUrl = null;
       if (isMedia) {
         const buffer = await ctx.download();
@@ -429,29 +398,28 @@ Asisten roleplay cerdas dan interaktif berbasis karakter virtual Gochu AI.
           }
         }
       }
-
       const existingSession = global.db.gochuAi[chatId];
       const targetCharId = flags.char_id || existingSession?.char_id || "suzume";
       const targetCharName = existingSession?.char_name || targetCharId;
       const promptText = cleanPrompt || flags.prompt || (uploadedMediaUrl ? "Look at this image" : "Hello");
-
       const payload = {
         action: "chat",
         prompt: promptText,
         char_id: targetCharId,
-        ...uploadedMediaUrl ? { media: uploadedMediaUrl } : flags.media ? { media: flags.media } : {}
+        ...uploadedMediaUrl ? {
+          media: uploadedMediaUrl
+        } : flags.media ? {
+          media: flags.media
+        } : {}
       };
-
       const data = await requestGochuAi(payload, chatId);
       const answerText = (data?.result || "Tidak ada respon teks.").trim();
       const bodyText = answerText;
-
       const buttons = [{
         name: "cta_copy",
         display_text: "📄 Salin Jawaban",
         copy_code: answerText
       }];
-
       let sentMsg;
       if (typeof ctx.sendCta === "function") {
         sentMsg = await ctx.sendCta(bodyText, `_Karakter: ${targetCharName}_`, buttons, {
@@ -460,18 +428,22 @@ Asisten roleplay cerdas dan interaktif berbasis karakter virtual Gochu AI.
         });
       } else if (uploadedMediaUrl) {
         sentMsg = await sock.sendMessage(ctx.id, {
-          image: { url: uploadedMediaUrl },
+          image: {
+            url: uploadedMediaUrl
+          },
           caption: bodyText
-        }, { quoted: quotedMsg });
+        }, {
+          quoted: quotedMsg
+        });
       } else {
         sentMsg = await sock.sendMessage(ctx.id, {
           text: bodyText
-        }, { quoted: quotedMsg });
+        }, {
+          quoted: quotedMsg
+        });
       }
-
       const sentMsgId = sentMsg?.key?.id;
       recordSession(chatId, sentMsgId, data.state || existingSession?.state, targetCharId, targetCharName);
-
       await ctx.react("✨");
     } catch (error) {
       console.error("[Gochu AI Error]:", error?.message || error);

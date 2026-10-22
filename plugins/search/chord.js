@@ -1,9 +1,10 @@
 import axios from "axios";
 import db from "../../data/db.js";
-import { simpleQuoted } from "../../lib/quoted.js";
-
+import {
+  simpleQuoted
+} from "../../lib/quoted.js";
 const API_URL = `${global.bot?.api?.wudysoft}/api/search/chord/v4`;
-const SESSION_TIMEOUT = 25 * 60 * 1e3; // 25 Menit
+const SESSION_TIMEOUT = 25 * 60 * 1e3;
 const CONFIG = {
   TIMEOUT: 45e3,
   USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -37,16 +38,14 @@ function parseFlags(input = "") {
     let key = match[1].toLowerCase();
     let rawVal = match[2];
     let val = true;
-
     if (["q", "query", "cari"].includes(key)) key = "query";
     if (["id", "chordid", "detail"].includes(key)) key = "id";
     if (["singer", "artist", "penyanyi"].includes(key)) key = "singer_id";
     if (["populer", "pop"].includes(key)) key = "popular";
     if (["terbaru", "new"].includes(key)) key = "latest";
     if (["rek", "rekomendasi"].includes(key)) key = "chord_rec";
-
     if (rawVal !== undefined) {
-      if ((rawVal.startsWith('"') && rawVal.endsWith('"')) || (rawVal.startsWith("'") && rawVal.endsWith("'"))) {
+      if (rawVal.startsWith('"') && rawVal.endsWith('"') || rawVal.startsWith("'") && rawVal.endsWith("'")) {
         rawVal = rawVal.slice(1, -1);
       }
       if (rawVal === "true") val = true;
@@ -58,12 +57,10 @@ function parseFlags(input = "") {
   }
   const cleanPrompt = input.replace(flagRegex, "").trim();
   return {
-    flags,
-    cleanPrompt
+    flags: flags,
+    cleanPrompt: cleanPrompt
   };
 }
-
-// Render HTML Canvas Chord ke Gambar via html2img Wudysoft
 async function renderHtmlToImage(htmlContent) {
   const rawApi = global.bot?.api?.wudysoft || "";
   const cleanApi = rawApi.replace(/^https?:\/\//i, "").replace(/\/+$/, "");
@@ -81,7 +78,7 @@ async function renderHtmlToImage(htmlContent) {
   for (const ver of versions) {
     try {
       const res = await axios.post(`${baseUrl}${ver}`, payload, {
-        headers,
+        headers: headers,
         timeout: 15e3
       });
       const imgUrl = res.data?.url || res.data?.result || (typeof res.data === "string" ? res.data : null);
@@ -96,7 +93,7 @@ async function renderHtmlToImage(htmlContent) {
         } catch {}
         return {
           url: imgUrl,
-          buffer
+          buffer: buffer
         };
       }
     } catch {
@@ -109,12 +106,8 @@ async function renderHtmlToImage(htmlContent) {
   };
 }
 
-// Template HTML Guitar Chord Canvas Card Aesthetic
 function generateChordCanvasHtml(title, singer, chordText) {
-  const cleanChord = chordText
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-
+  const cleanChord = chordText.replace(/</g, "&lt;").replace(/>/g, "&gt;");
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -222,11 +215,11 @@ function generateChordCanvasHtml(title, singer, chordText) {
 </body>
 </html>`;
 }
-
-// Request API Chord v4
 async function requestChord(params = {}) {
-  const { data } = await axios.get(API_URL, {
-    params,
+  const {
+    data
+  } = await axios.get(API_URL, {
+    params: params,
     headers: {
       "User-Agent": CONFIG.USER_AGENT
     },
@@ -262,7 +255,6 @@ function recordSession(chatId, messageId, lastQuery, lastChordId, chordTitle) {
   s.expireTime = Date.now() + SESSION_TIMEOUT;
   saveDB();
 }
-
 export default {
   name: "chord",
   aliases: ["kuncigitar", "chordgitar", "kunci", "chords"],
@@ -270,61 +262,49 @@ export default {
   category: "Search",
   limit: true,
   example: "chord Last Child\nchord --id 65fcd0dfcbaed95a8882bc98\nchord --populer atau chord --rekomendasi",
-
-  before: async (msg, { sock, ctx }) => {
+  before: async (msg, {
+    sock,
+    ctx
+  }) => {
     try {
       const chatId = ctx?.id || msg?.key?.remoteJid;
       if (!chatId) return;
       initDB();
       if (!global.db.chordGuitar[chatId]) return;
-
       const isFromMe = Boolean(msg?.key?.fromMe || ctx?.isFromMe);
       if (isFromMe) return;
-
       const sessionData = global.db.chordGuitar[chatId];
       if (Date.now() > sessionData.expireTime) {
         delete global.db.chordGuitar[chatId];
         saveDB();
         return;
       }
-
       const quotedStanzaId = ctx?.quoted?.id || msg?.message?.extendedTextMessage?.contextInfo?.stanzaId;
-      const isQuoting = quotedStanzaId && (
-        quotedStanzaId === sessionData.lastMsgId ||
-        (Array.isArray(sessionData.msgIds) && sessionData.msgIds.includes(quotedStanzaId))
-      );
-
+      const isQuoting = quotedStanzaId && (quotedStanzaId === sessionData.lastMsgId || Array.isArray(sessionData.msgIds) && sessionData.msgIds.includes(quotedStanzaId));
       if (!isQuoting) return;
-
       const userText = (ctx?.text || ctx?.query || msg?.message?.conversation || msg?.message?.extendedTextMessage?.text || "").trim();
       const prefixList = [".", "#", "!", "/", ctx?.prefix].filter(Boolean);
       if (prefixList.some(p => userText.startsWith(p))) return;
       if (!userText) return;
-
-      // Jika user mereply dengan ID chord (24 char hex mongo id)
       if (/^[a-f0-9]{24}$/i.test(userText.trim())) {
         if (typeof ctx?.react === "function") await ctx.react("⏳");
-        const res = await requestChord({ action: "detail", id: userText.trim() });
+        const res = await requestChord({
+          action: "detail",
+          id: userText.trim()
+        });
         const item = res?.data;
         if (!item || !item.chord) return;
-
         const html = generateChordCanvasHtml(item.full_title, item.singer, item.chord);
-        const { url: canvasUrl, buffer: canvasBuffer } = await renderHtmlToImage(html);
-
-        const bodyText = `–  *C H O R D  G I T A R*\n\n` +
-          `┌  ◦  *Judul* : ${item.full_title}\n` +
-          `├  ◦  *Penyanyi* : ${item.singer || "-"}\n` +
-          `├  ◦  *Dilihat* : 👁️ ${item.views || 0}x\n` +
-          `└  ◦  *ID* : \`${item._id}\`\n\n` +
-          `───  *K U N C I  G I T A R*  ───\n\n` +
-          item.chord.trim();
-
+        const {
+          url: canvasUrl,
+          buffer: canvasBuffer
+        } = await renderHtmlToImage(html);
+        const bodyText = `–  *C H O R D  G I T A R*\n\n` + `┌  ◦  *Judul* : ${item.full_title}\n` + `├  ◦  *Penyanyi* : ${item.singer || "-"}\n` + `├  ◦  *Dilihat* : 👁️ ${item.views || 0}x\n` + `└  ◦  *ID* : \`${item._id}\`\n\n` + `───  *K U N C I  G I T A R*  ───\n\n` + item.chord.trim();
         const buttons = [{
           name: "cta_copy",
           display_text: "📄 Salin Chord",
           copy_code: item.chord.trim()
         }];
-
         if (canvasUrl) {
           buttons.push({
             name: "cta_url",
@@ -332,7 +312,6 @@ export default {
             url: canvasUrl
           });
         }
-
         let sentMsg;
         if (typeof ctx.sendCta === "function") {
           sentMsg = await ctx.sendCta(bodyText, `_Chord Guitar Canvas_`, buttons, {
@@ -343,11 +322,16 @@ export default {
           sentMsg = await sock.sendMessage(ctx.id, {
             image: canvasBuffer,
             caption: bodyText
-          }, { quoted: msg });
+          }, {
+            quoted: msg
+          });
         } else {
-          sentMsg = await sock.sendMessage(ctx.id, { text: bodyText }, { quoted: msg });
+          sentMsg = await sock.sendMessage(ctx.id, {
+            text: bodyText
+          }, {
+            quoted: msg
+          });
         }
-
         const newMsgId = sentMsg?.key?.id;
         recordSession(chatId, newMsgId, sessionData.query, item._id, item.full_title);
         if (typeof ctx?.react === "function") await ctx.react("✨");
@@ -357,13 +341,11 @@ export default {
       console.error("[CHORD BEFORE ERROR]:", e.message);
     }
   },
-
   execute: async (sock, ctx, msg) => {
     try {
       const chatId = ctx.id;
       const senderId = ctx.sender || ctx.author || msg.key?.participant || msg.key?.remoteJid || ctx.id;
       initDB(senderId, ctx.pushName);
-
       let rawText = ctx.args?.join(" ")?.trim() || "";
       if (!rawText && ctx.text) {
         const raw = ctx.text.trim();
@@ -372,13 +354,10 @@ export default {
           rawText = raw.slice(firstWord.length).trim();
         }
       }
-
       const prefix = ctx.prefix || ".";
       const botName = global.bot?.name || "WudysoftBot";
       const footer = global.footer || global.bot?.footer || `_${botName}_`;
       const quotedMsg = typeof simpleQuoted === "function" ? simpleQuoted(ctx) : msg;
-
-      // 1. Reset Sesi
       if (rawText === "--reset" || rawText === "--clear" || rawText === "reset" || rawText === "clear") {
         if (global.db.chordGuitar[chatId]) {
           delete global.db.chordGuitar[chatId];
@@ -387,40 +366,33 @@ export default {
         }
         return ctx.reply("ℹ️ Tidak ada sesi pencarian chord aktif.");
       }
-
-      const { flags, cleanPrompt } = parseFlags(rawText);
-
-      // 2. Action: DETAIL CHORD (BY ID)
+      const {
+        flags,
+        cleanPrompt
+      } = parseFlags(rawText);
       if (flags.id || /^[a-f0-9]{24}$/i.test(cleanPrompt)) {
         await ctx.react("⏳");
         const chordId = flags.id || cleanPrompt;
-        const res = await requestChord({ action: "detail", id: chordId });
+        const res = await requestChord({
+          action: "detail",
+          id: chordId
+        });
         const item = res?.data;
-
         if (!item || !item.chord) {
           await ctx.react("❌");
           return ctx.reply(`–  *C H O R D  N O T  F O U N D*\n\n┌  ◦  ID: ${chordId}\n└  ◦  Status: Chord tidak ditemukan.\n\n${footer}`);
         }
-
-        // Render HTML Chord ke Canvas Gambar
         const html = generateChordCanvasHtml(item.full_title, item.singer, item.chord);
-        const { url: canvasUrl, buffer: canvasBuffer } = await renderHtmlToImage(html);
-
-        const bodyText = `–  *C H O R D  G I T A R*\n\n` +
-          `┌  ◦  *Judul* : ${item.full_title}\n` +
-          `├  ◦  *Penyanyi* : ${item.singer || "-"}\n` +
-          `├  ◦  *Dilihat* : 👁️ ${item.views || 0}x\n` +
-          `└  ◦  *ID* : \`${item._id}\`\n\n` +
-          `───  *K U N C I  G I T A R*  ───\n\n` +
-          item.chord.trim() + `\n\n` +
-          `${footer}`;
-
+        const {
+          url: canvasUrl,
+          buffer: canvasBuffer
+        } = await renderHtmlToImage(html);
+        const bodyText = `–  *C H O R D  G I T A R*\n\n` + `┌  ◦  *Judul* : ${item.full_title}\n` + `├  ◦  *Penyanyi* : ${item.singer || "-"}\n` + `├  ◦  *Dilihat* : 👁️ ${item.views || 0}x\n` + `└  ◦  *ID* : \`${item._id}\`\n\n` + `───  *K U N C I  G I T A R*  ───\n\n` + item.chord.trim() + `\n\n` + `${footer}`;
         const buttons = [{
           name: "cta_copy",
           display_text: "📄 Salin Chord",
           copy_code: item.chord.trim()
         }];
-
         if (canvasUrl) {
           buttons.push({
             name: "cta_url",
@@ -428,7 +400,6 @@ export default {
             url: canvasUrl
           });
         }
-
         let sentMsg;
         if (typeof ctx.sendCta === "function") {
           sentMsg = await ctx.sendCta(bodyText, `_Chord Guitar Canvas_`, buttons, {
@@ -439,21 +410,23 @@ export default {
           sentMsg = await sock.sendMessage(ctx.id, {
             image: canvasBuffer,
             caption: bodyText
-          }, { quoted: quotedMsg });
+          }, {
+            quoted: quotedMsg
+          });
         } else {
-          sentMsg = await sock.sendMessage(ctx.id, { text: bodyText }, { quoted: quotedMsg });
+          sentMsg = await sock.sendMessage(ctx.id, {
+            text: bodyText
+          }, {
+            quoted: quotedMsg
+          });
         }
-
         const sentMsgId = sentMsg?.key?.id;
         recordSession(chatId, sentMsgId, null, item._id, item.full_title);
         await ctx.react("✨");
         return;
       }
-
-      // 3. Action: POPULER / TERBARU / REKOMENDASI / BY SINGER
       let actionType = "search";
       let requestParams = {};
-
       if (flags.popular || flags.populer) {
         actionType = "popular";
       } else if (flags.latest || flags.terbaru) {
@@ -464,9 +437,7 @@ export default {
         actionType = "by_singer";
         requestParams.id = flags.singer_id;
       }
-
       const searchQuery = flags.query || cleanPrompt;
-
       if (!searchQuery && actionType === "search") {
         const guideText = `–  *C H O R D  G I T A R*
 
@@ -479,26 +450,22 @@ Cari kunci gitar lagu lengkap dengan visual canvas card & tombol salin otomatis.
 └  ◦  *Ambil via ID* : \`${prefix}chord --id <chord_id>\`
 
 ${footer}`;
-        return ctx.reply(guideText, { quoted: quotedMsg });
+        return ctx.reply(guideText, {
+          quoted: quotedMsg
+        });
       }
-
       await ctx.react("🔍");
-
       requestParams.action = actionType;
       if (actionType === "search") requestParams.query = searchQuery;
-
       const res = await requestChord(requestParams);
       const listData = Array.isArray(res?.data) ? res.data : [];
-
       if (!listData.length) {
         await ctx.react("❌");
         return ctx.reply(`–  *C H O R D  N O T  F O U N D*\n\n┌  ◦  Query: "${searchQuery}"\n└  ◦  Status: Chord lagu tidak ditemukan.\n\n${footer}`);
       }
-
       const page = Math.max(1, Number(flags.page) || 1);
       const totalPages = Math.ceil(listData.length / CONFIG.ITEMS_PER_PAGE) || 1;
       const pageItems = listData.slice((page - 1) * CONFIG.ITEMS_PER_PAGE, page * CONFIG.ITEMS_PER_PAGE);
-
       const rows = pageItems.map((item, idx) => {
         const globalIdx = (page - 1) * CONFIG.ITEMS_PER_PAGE + idx + 1;
         const title = (item.full_title || "Untitled").slice(0, 24);
@@ -509,11 +476,9 @@ ${footer}`;
           description: `${singer} • ID: ${item._id}`.slice(0, 60)
         };
       });
-
       let baseCmd = `${prefix}chord`;
       if (actionType === "search") baseCmd += ` ${searchQuery}`;
       else baseCmd += ` --${actionType}`;
-
       const buttons = [{
         name: "single_select",
         buttonParamsJson: JSON.stringify({
@@ -524,7 +489,6 @@ ${footer}`;
           }]
         })
       }];
-
       if (page > 1) {
         buttons.push({
           name: "quick_reply",
@@ -543,14 +507,7 @@ ${footer}`;
           })
         });
       }
-
-      const bodyText = `–  *C H O R D  -  R E S U L T*\n\n` +
-        `┌  ◦  *Kategori* : ${actionType.toUpperCase()}\n` +
-        (searchQuery ? `├  ◦  *Query* : "${searchQuery}"\n` : "") +
-        `├  ◦  *Total Ditemukan* : ${listData.length} Chord\n` +
-        `└  ◦  *Halaman* : ${page} / ${totalPages}\n\n` +
-        `_Pilih lagu melalui tombol menu di bawah untuk membuka kunci gitar dan canvas card:_`;
-
+      const bodyText = `–  *C H O R D  -  R E S U L T*\n\n` + `┌  ◦  *Kategori* : ${actionType.toUpperCase()}\n` + (searchQuery ? `├  ◦  *Query* : "${searchQuery}"\n` : "") + `├  ◦  *Total Ditemukan* : ${listData.length} Chord\n` + `└  ◦  *Halaman* : ${page} / ${totalPages}\n\n` + `_Pilih lagu melalui tombol menu di bawah untuk membuka kunci gitar dan canvas card:_`;
       const options = {
         params: {
           bottom_sheet: {
@@ -562,7 +519,6 @@ ${footer}`;
         },
         quoted: quotedMsg
       };
-
       let sentMsg;
       if (typeof ctx.sendCta === "function") {
         sentMsg = await ctx.sendCta(bodyText, footer, buttons, options);
@@ -573,10 +529,8 @@ ${footer}`;
         }
         sentMsg = await ctx.reply(fallback);
       }
-
       const sentMsgId = sentMsg?.key?.id;
       recordSession(chatId, sentMsgId, searchQuery);
-
       await ctx.react("✨");
     } catch (error) {
       console.error("[Chord Error]:", error?.message || error);
