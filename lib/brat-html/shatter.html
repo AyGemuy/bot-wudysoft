@@ -282,7 +282,8 @@
     <div class="flash"></div>
   </div>
   <script>
-    ! function() { var e = document.getElementById("kalimat-src"),
+    ! function() {
+      var e = document.getElementById("kalimat-src"),
         t = (e && e.dataset.text || "GLASS BREAK").trim() || "GLASS BREAK",
         n = document.getElementById("stage"),
         i = document.getElementById("fx").getContext("2d"),
@@ -292,7 +293,8 @@
         l = a.querySelector(".fly"),
         s = document.getElementById("textLeft"),
         c = document.getElementById("textRight"),
-        f = document.createElement("canvas").getContext("2d"); var m = [],
+        f = document.createElement("canvas").getContext("2d");
+      var m = [],
         d = [
           [200, 240, 255],
           [160, 220, 255],
@@ -302,24 +304,63 @@
           [255, 200, 240]
         ];
 
-      function h() { n.classList.remove("impact", "run"), m = [], i.clearRect(0, 0, 512, 512), [r, l].forEach(function(e) { e.style.animation = "none", e.offsetWidth, e.style.animation = "" }), requestAnimationFrame(function() { n.classList.add("run"); var e = function() { r.removeEventListener("animationend", e), n.classList.add("impact"),
-              function() { for (var e = 0; e < 180; e++) { var t = Math.random() * Math.PI * 2,
+      function h() {
+        n.classList.remove("impact", "run"), m = [], i.clearRect(0, 0, 512, 512), [r, l].forEach(function(e) { e.style.animation = "none", e.offsetWidth, e.style.animation = "" }), requestAnimationFrame(function() {
+          n.classList.add("run");
+          var e = function() {
+            r.removeEventListener("animationend", e), n.classList.add("impact"),
+              function() {
+                for (var e = 0; e < 180; e++) {
+                  var t = Math.random() * Math.PI * 2,
                     n = 22 * Math.random() + 3,
                     i = d[Math.floor(Math.random() * d.length)];
-                  m.push({ x: 256 + 240 * (Math.random() - .5), y: 256 + 120 * (Math.random() - .5), vx: Math.cos(t) * n, vy: Math.sin(t) * n - 3, life: 1, decay: .008 + .012 * Math.random(), size: 6 + 14 * Math.random(), rot: Math.random() * Math.PI * 2, vr: .25 * (Math.random() - .5), color: i }) } }(), setTimeout(h, 3400) };
-          r.addEventListener("animationend", e, { once: !0 }) }) }
+                  m.push({ x: 256 + 240 * (Math.random() - .5), y: 256 + 120 * (Math.random() - .5), vx: Math.cos(t) * n, vy: Math.sin(t) * n - 3, life: 1, decay: .008 + .012 * Math.random(), size: 6 + 14 * Math.random(), rot: Math.random() * Math.PI * 2, vr: .25 * (Math.random() - .5), color: i })
+                }
+              }(), setTimeout(h, 3400)
+          };
+          r.addEventListener("animationend", e, { once: !0 })
+        })
+      }
 
       function u() {
-        (function() { var e = function(e) { var t = String(e).trim().split(/\s+/).filter(Boolean); if (!t.length) return ["", ""]; if (1 === t.length) { var n = t[0]; if (n.length < 2) return [n, n]; var i = Math.ceil(n.length / 2); return [n.slice(0, i), n.slice(i)] } if (2 === t.length) return [t[0], t[1]]; for (var o = 1, a = 1 / 0, r = 1; r < t.length; r++) { var l = t.slice(0, r).join("").length,
+        (function() {
+          var e = function(e) {
+            var t = String(e).trim().split(/\s+/).filter(Boolean);
+            if (!t.length) return ["", ""];
+            if (1 === t.length) { var n = t[0]; if (n.length < 2) return [n, n]; var i = Math.ceil(n.length / 2); return [n.slice(0, i), n.slice(i)] }
+            if (2 === t.length) return [t[0], t[1]];
+            for (var o = 1, a = 1 / 0, r = 1; r < t.length; r++) {
+              var l = t.slice(0, r).join("").length,
                 s = t.slice(r).join("").length,
                 c = Math.abs(l - s);
-              c < a && (a = c, o = r) } return [t.slice(0, o).join(" "), t.slice(o).join(" ")] }(t);
-          s.textContent = e[0], c.textContent = e[1]; var n = function(e, t) { if (!e && !t) return 180;
-            f.font = '400 100px "Bebas Neue", sans-serif'; var n = e ? f.measureText(e).width || 1 : 0,
-              i = t ? f.measureText(t).width || 1 : 0; return Math.min(46e3 / (n + i || 1), 180) }(e[0], e[1]);
-          o.style.fontSize = n + "px", a.style.fontSize = n + "px" })(), h() }! function e() { i.clearRect(0, 0, 512, 512), i.globalCompositeOperation = "lighter"; for (var t = m.length - 1; t >= 0; t--) { var n = m[t]; if (n.x += n.vx, n.y += n.vy, n.vx *= .97, n.vy *= .97, n.vy += .25, n.rot += n.vr, n.life -= n.decay, n.life <= 0) m.splice(t, 1);
-          else { i.save(), i.translate(n.x, n.y), i.rotate(n.rot), i.globalAlpha = n.life, i.fillStyle = "rgba(255,80,140," + .45 * n.life + ")", i.beginPath(), i.moveTo(.5 * -n.size - 3, .5 * -n.size), i.lineTo(.5 * n.size - 3, .6 * -n.size), i.lineTo(.1 * n.size - 3, .5 * n.size), i.closePath(), i.fill(), i.fillStyle = "rgba(80,255,255," + .45 * n.life + ")", i.beginPath(), i.moveTo(.5 * -n.size + 3, .5 * -n.size), i.lineTo(.5 * n.size + 3, .6 * -n.size), i.lineTo(.1 * n.size + 3, .5 * n.size), i.closePath(), i.fill(); var o = n.color;
-            i.fillStyle = "rgba(" + o[0] + "," + o[1] + "," + o[2] + "," + .85 * n.life + ")", i.beginPath(), i.moveTo(.5 * -n.size, .5 * -n.size), i.lineTo(.5 * n.size, .6 * -n.size), i.lineTo(.1 * n.size, .5 * n.size), i.closePath(), i.fill(), i.strokeStyle = "rgba(255,255,255," + .85 * n.life + ")", i.lineWidth = .8, i.stroke(), i.restore() } } i.globalAlpha = 1, i.globalCompositeOperation = "source-over", requestAnimationFrame(e) }(), document.fonts && document.fonts.load ? document.fonts.load('400 100px "Bebas Neue"').then(u).catch(u) : u() }()
+              c < a && (a = c, o = r)
+            }
+            return [t.slice(0, o).join(" "), t.slice(o).join(" ")]
+          }(t);
+          s.textContent = e[0], c.textContent = e[1];
+          var n = function(e, t) {
+            if (!e && !t) return 180;
+            f.font = '400 100px "Bebas Neue", sans-serif';
+            var n = e ? f.measureText(e).width || 1 : 0,
+              i = t ? f.measureText(t).width || 1 : 0;
+            return Math.min(46e3 / (n + i || 1), 180)
+          }(e[0], e[1]);
+          o.style.fontSize = n + "px", a.style.fontSize = n + "px"
+        })(), h()
+      }! function e() {
+        i.clearRect(0, 0, 512, 512), i.globalCompositeOperation = "lighter";
+        for (var t = m.length - 1; t >= 0; t--) {
+          var n = m[t];
+          if (n.x += n.vx, n.y += n.vy, n.vx *= .97, n.vy *= .97, n.vy += .25, n.rot += n.vr, n.life -= n.decay, n.life <= 0) m.splice(t, 1);
+          else {
+            i.save(), i.translate(n.x, n.y), i.rotate(n.rot), i.globalAlpha = n.life, i.fillStyle = "rgba(255,80,140," + .45 * n.life + ")", i.beginPath(), i.moveTo(.5 * -n.size - 3, .5 * -n.size), i.lineTo(.5 * n.size - 3, .6 * -n.size), i.lineTo(.1 * n.size - 3, .5 * n.size), i.closePath(), i.fill(), i.fillStyle = "rgba(80,255,255," + .45 * n.life + ")", i.beginPath(), i.moveTo(.5 * -n.size + 3, .5 * -n.size), i.lineTo(.5 * n.size + 3, .6 * -n.size), i.lineTo(.1 * n.size + 3, .5 * n.size), i.closePath(), i.fill();
+            var o = n.color;
+            i.fillStyle = "rgba(" + o[0] + "," + o[1] + "," + o[2] + "," + .85 * n.life + ")", i.beginPath(), i.moveTo(.5 * -n.size, .5 * -n.size), i.lineTo(.5 * n.size, .6 * -n.size), i.lineTo(.1 * n.size, .5 * n.size), i.closePath(), i.fill(), i.strokeStyle = "rgba(255,255,255," + .85 * n.life + ")", i.lineWidth = .8, i.stroke(), i.restore()
+          }
+        }
+        i.globalAlpha = 1, i.globalCompositeOperation = "source-over", requestAnimationFrame(e)
+      }(), document.fonts && document.fonts.load ? document.fonts.load('400 100px "Bebas Neue"').then(u).catch(u) : u()
+    }()
   </script>
 </body>
 

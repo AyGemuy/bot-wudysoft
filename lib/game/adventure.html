@@ -488,20 +488,27 @@
 
     function initAudio() { try { audioCtx || (audioCtx = new(window.AudioContext || window.webkitAudioContext)), "suspended" === audioCtx.state && audioCtx.resume() } catch (t) {} }
 
-    function playSound(t) { if (audioCtx) try { const e = audioCtx.currentTime,
+    function playSound(t) {
+      if (audioCtx) try {
+        const e = audioCtx.currentTime,
           i = audioCtx.createOscillator(),
           a = audioCtx.createGain();
-        i.connect(a), a.connect(audioCtx.destination), "jump" === t ? (i.type = "sine", i.frequency.setValueAtTime(180, e), i.frequency.exponentialRampToValueAtTime(440, e + .12), a.gain.setValueAtTime(.08, e), a.gain.exponentialRampToValueAtTime(.001, e + .14), i.start(e), i.stop(e + .15)) : "slash" === t ? (i.type = "triangle", i.frequency.setValueAtTime(540, e), i.frequency.exponentialRampToValueAtTime(140, e + .1), a.gain.setValueAtTime(.1, e), a.gain.exponentialRampToValueAtTime(.001, e + .11), i.start(e), i.stop(e + .12)) : "coin" === t ? (i.type = "sine", i.frequency.setValueAtTime(800, e), i.frequency.setValueAtTime(1200, e + .06), a.gain.setValueAtTime(.07, e), a.gain.exponentialRampToValueAtTime(.001, e + .15), i.start(e), i.stop(e + .16)) : "relic" === t ? (i.type = "sine", i.frequency.setValueAtTime(523.25, e), i.frequency.setValueAtTime(659.25, e + .08), i.frequency.setValueAtTime(783.99, e + .16), i.frequency.setValueAtTime(1046.5, e + .24), a.gain.setValueAtTime(.12, e), a.gain.exponentialRampToValueAtTime(.001, e + .4), i.start(e), i.stop(e + .42)) : "hit" === t ? (i.type = "square", i.frequency.setValueAtTime(150, e), i.frequency.linearRampToValueAtTime(40, e + .2), a.gain.setValueAtTime(.12, e), a.gain.exponentialRampToValueAtTime(.001, e + .22), i.start(e), i.stop(e + .23)) : "win" === t && (i.type = "triangle", i.frequency.setValueAtTime(440, e), i.frequency.setValueAtTime(554.37, e + .12), i.frequency.setValueAtTime(659.25, e + .24), i.frequency.setValueAtTime(880, e + .36), a.gain.setValueAtTime(.14, e), a.gain.exponentialRampToValueAtTime(.001, e + .65), i.start(e), i.stop(e + .7)) } catch (t) {} }
+        i.connect(a), a.connect(audioCtx.destination), "jump" === t ? (i.type = "sine", i.frequency.setValueAtTime(180, e), i.frequency.exponentialRampToValueAtTime(440, e + .12), a.gain.setValueAtTime(.08, e), a.gain.exponentialRampToValueAtTime(.001, e + .14), i.start(e), i.stop(e + .15)) : "slash" === t ? (i.type = "triangle", i.frequency.setValueAtTime(540, e), i.frequency.exponentialRampToValueAtTime(140, e + .1), a.gain.setValueAtTime(.1, e), a.gain.exponentialRampToValueAtTime(.001, e + .11), i.start(e), i.stop(e + .12)) : "coin" === t ? (i.type = "sine", i.frequency.setValueAtTime(800, e), i.frequency.setValueAtTime(1200, e + .06), a.gain.setValueAtTime(.07, e), a.gain.exponentialRampToValueAtTime(.001, e + .15), i.start(e), i.stop(e + .16)) : "relic" === t ? (i.type = "sine", i.frequency.setValueAtTime(523.25, e), i.frequency.setValueAtTime(659.25, e + .08), i.frequency.setValueAtTime(783.99, e + .16), i.frequency.setValueAtTime(1046.5, e + .24), a.gain.setValueAtTime(.12, e), a.gain.exponentialRampToValueAtTime(.001, e + .4), i.start(e), i.stop(e + .42)) : "hit" === t ? (i.type = "square", i.frequency.setValueAtTime(150, e), i.frequency.linearRampToValueAtTime(40, e + .2), a.gain.setValueAtTime(.12, e), a.gain.exponentialRampToValueAtTime(.001, e + .22), i.start(e), i.stop(e + .23)) : "win" === t && (i.type = "triangle", i.frequency.setValueAtTime(440, e), i.frequency.setValueAtTime(554.37, e + .12), i.frequency.setValueAtTime(659.25, e + .24), i.frequency.setValueAtTime(880, e + .36), a.gain.setValueAtTime(.14, e), a.gain.exponentialRampToValueAtTime(.001, e + .65), i.start(e), i.stop(e + .7))
+      } catch (t) {}
+    }
     const canvas = document.getElementById("gameCanvas"),
       ctx = canvas.getContext("2d", { alpha: !1 }),
       W = 640,
       H = 360;
 
-    function fitCanvas() { const t = canvas.getBoundingClientRect(),
+    function fitCanvas() {
+      const t = canvas.getBoundingClientRect(),
         e = Math.max(t.width || W, 1),
         i = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = Math.round(e * i), canvas.height = Math.round(e * (H / W) * i); const a = e / W * i;
-      ctx.setTransform(a, 0, 0, a, 0, 0), ctx.imageSmoothingEnabled = !0 }
+      canvas.width = Math.round(e * i), canvas.height = Math.round(e * (H / W) * i);
+      const a = e / W * i;
+      ctx.setTransform(a, 0, 0, a, 0, 0), ctx.imageSmoothingEnabled = !0
+    }
     const clamp = (t, e, i) => t < e ? e : t > i ? i : t,
       WORLD_W = 2200,
       WORLD_H = 460,
@@ -519,28 +526,53 @@
       enemies = [],
       portal = { x: 2040, y: 120, w: 46, h: 70, active: !1 };
 
-    function initWorldEntities() { items = [{ type: "relic", x: 650, y: 160, r: 12, id: 1, taken: !1 }, { type: "relic", x: 990, y: 110, r: 12, id: 2, taken: !1 }, { type: "relic", x: 1700, y: 180, r: 12, id: 3, taken: !1 }, { type: "chest", x: 420, y: 222, w: 28, h: 22, opened: !1 }, { type: "chest", x: 1300, y: 172, w: 28, h: 22, opened: !1 }, { type: "chest", x: 1900, y: 252, w: 28, h: 22, opened: !1 }, { type: "coin", x: 220, y: 275, val: 50, taken: !1 }, { type: "coin", x: 260, y: 275, val: 50, taken: !1 }, { type: "coin", x: 820, y: 245, val: 50, taken: !1 }, { type: "coin", x: 860, y: 245, val: 50, taken: !1 }, { type: "coin", x: 1060, y: 205, val: 50, taken: !1 }, { type: "coin", x: 1470, y: 245, val: 50, taken: !1 }, { type: "coin", x: 1650, y: 355, val: 50, taken: !1 }, { type: "coin", x: 1720, y: 355, val: 50, taken: !1 }], enemies = [{ type: "slime", x: 300, y: 366, minX: 200, maxX: 480, vx: 1.2, w: 28, h: 24, hp: 1, alive: !0 }, { type: "slime", x: 900, y: 366, minX: 820, maxX: 1020, vx: 1.4, w: 28, h: 24, hp: 1, alive: !0 }, { type: "slime", x: 1180, y: 366, minX: 1120, maxX: 1350, vx: 1.5, w: 28, h: 24, hp: 1, alive: !0 }, { type: "goblin", x: 840, y: 246, minX: 800, maxX: 940, vx: 1.6, w: 26, h: 34, hp: 2, alive: !0 }, { type: "goblin", x: 1660, y: 186, minX: 1630, maxX: 1760, vx: 1.8, w: 26, h: 34, hp: 2, alive: !0 }], portal.active = !1, relicsCollected = 0 } class Knight { constructor() { this.reset() } reset() { this.x = 80, this.y = 330, this.w = 28, this.h = 42, this.vx = 0, this.vy = 0, this.speed = 3.6, this.jumpPower = -10.2, this.grounded = !1, this.facing = 1, this.hp = 4, this.maxHp = 4, this.isAttacking = !1, this.attackTimer = 0, this.invulnTimer = 0, this.walkCycle = 0 } jump() { this.grounded && (this.vy = this.jumpPower, this.grounded = !1, playSound("jump"), spawnDust(this.x + this.w / 2, this.y + this.h, 6, "rgba(200,200,255,0.7)")) } attack() { if (this.attackTimer <= 0) { this.isAttacking = !0, this.attackTimer = 14, playSound("slash"); const t = 1 === this.facing ? this.x + this.w : this.x - 32,
+    function initWorldEntities() { items = [{ type: "relic", x: 650, y: 160, r: 12, id: 1, taken: !1 }, { type: "relic", x: 990, y: 110, r: 12, id: 2, taken: !1 }, { type: "relic", x: 1700, y: 180, r: 12, id: 3, taken: !1 }, { type: "chest", x: 420, y: 222, w: 28, h: 22, opened: !1 }, { type: "chest", x: 1300, y: 172, w: 28, h: 22, opened: !1 }, { type: "chest", x: 1900, y: 252, w: 28, h: 22, opened: !1 }, { type: "coin", x: 220, y: 275, val: 50, taken: !1 }, { type: "coin", x: 260, y: 275, val: 50, taken: !1 }, { type: "coin", x: 820, y: 245, val: 50, taken: !1 }, { type: "coin", x: 860, y: 245, val: 50, taken: !1 }, { type: "coin", x: 1060, y: 205, val: 50, taken: !1 }, { type: "coin", x: 1470, y: 245, val: 50, taken: !1 }, { type: "coin", x: 1650, y: 355, val: 50, taken: !1 }, { type: "coin", x: 1720, y: 355, val: 50, taken: !1 }], enemies = [{ type: "slime", x: 300, y: 366, minX: 200, maxX: 480, vx: 1.2, w: 28, h: 24, hp: 1, alive: !0 }, { type: "slime", x: 900, y: 366, minX: 820, maxX: 1020, vx: 1.4, w: 28, h: 24, hp: 1, alive: !0 }, { type: "slime", x: 1180, y: 366, minX: 1120, maxX: 1350, vx: 1.5, w: 28, h: 24, hp: 1, alive: !0 }, { type: "goblin", x: 840, y: 246, minX: 800, maxX: 940, vx: 1.6, w: 26, h: 34, hp: 2, alive: !0 }, { type: "goblin", x: 1660, y: 186, minX: 1630, maxX: 1760, vx: 1.8, w: 26, h: 34, hp: 2, alive: !0 }], portal.active = !1, relicsCollected = 0 } class Knight {
+      constructor() { this.reset() } reset() { this.x = 80, this.y = 330, this.w = 28, this.h = 42, this.vx = 0, this.vy = 0, this.speed = 3.6, this.jumpPower = -10.2, this.grounded = !1, this.facing = 1, this.hp = 4, this.maxHp = 4, this.isAttacking = !1, this.attackTimer = 0, this.invulnTimer = 0, this.walkCycle = 0 } jump() { this.grounded && (this.vy = this.jumpPower, this.grounded = !1, playSound("jump"), spawnDust(this.x + this.w / 2, this.y + this.h, 6, "rgba(200,200,255,0.7)")) } attack() {
+        if (this.attackTimer <= 0) {
+          this.isAttacking = !0, this.attackTimer = 14, playSound("slash");
+          const t = 1 === this.facing ? this.x + this.w : this.x - 32,
             e = this.y + 6,
             i = 32,
             a = 30;
-          enemies.forEach(n => { n.alive && aabb({ x: t, y: e, w: i, h: a }, n) && (n.hp--, playSound("hit"), spawnSparks(n.x + n.w / 2, n.y + n.h / 2, "#f43f5e", 10), n.hp <= 0 && (n.alive = !1, goldScore += "goblin" === n.type ? 150 : 80, spawnSparks(n.x + n.w / 2, n.y + n.h / 2, "#fbbf24", 16))) }), items.forEach(n => { "chest" === n.type && !n.opened && aabb({ x: t, y: e, w: i, h: a }, n) && (n.opened = !0, goldScore += 250, playSound("coin"), this.hp < this.maxHp && this.hp++, spawnSparks(n.x + n.w / 2, n.y, "#38bdf8", 14)) }) } } takeDamage(t) { this.invulnTimer > 0 || "playing" !== state || (this.hp -= t, this.invulnTimer = 45, this.vy = -6, this.vx = 4 * -this.facing, playSound("hit"), spawnSparks(this.x + this.w / 2, this.y + this.h / 2, "#f43f5e", 12), this.hp <= 0 && (this.hp = 0, endGame(!1))) } update(t, e) { this.invulnTimer > 0 && (this.invulnTimer -= t), this.attackTimer > 0 && (this.attackTimer -= t, this.attackTimer <= 0 && (this.isAttacking = !1)); let i = 0;
-        e.left && (i -= 1, this.facing = -1), e.right && (i += 1, this.facing = 1), this.vx = i * this.speed, 0 !== i && this.grounded ? this.walkCycle += .22 * t : this.walkCycle = 0, this.vy += .48 * t, this.vy > 12 && (this.vy = 12), this.x += this.vx * t, this.checkHorizontalCollisions(), this.y += this.vy * t, this.grounded = !1, this.checkVerticalCollisions(), this.y > 540 && this.takeDamage(this.hp) } checkHorizontalCollisions() { platforms.forEach(t => { aabb(this, t) && (this.vx > 0 ? this.x = t.x - this.w : this.vx < 0 && (this.x = t.x + t.w)) }), this.x = clamp(this.x, 0, 2200 - this.w) } checkVerticalCollisions() { platforms.forEach(t => { aabb(this, t) && (this.vy > 0 ? (this.y = t.y - this.h, this.vy = 0, this.grounded = !0) : this.vy < 0 && (this.y = t.y + t.h, this.vy = 0)) }) } draw() { if (this.invulnTimer > 0 && Math.floor(.4 * time) % 2 == 0) return;
-        ctx.save(), ctx.translate(this.x + this.w / 2, this.y + this.h), ctx.scale(this.facing, 1), ctx.fillStyle = "rgba(0,0,0,0.3)", ctx.beginPath(), ctx.ellipse(0, -2, 12, 4, 0, 0, 2 * Math.PI), ctx.fill(); const t = 5 * Math.sin(this.walkCycle);
-        ctx.fillStyle = "#1e293b", ctx.fillRect(-7, -14 + t, 5, 14 - t), ctx.fillRect(2, -14 - t, 5, 14 + t), ctx.fillStyle = "#6366f1", ctx.beginPath(), ctx.moveTo(-6, -34), ctx.lineTo(-15 - 1.5 * Math.abs(this.vx), -16), ctx.lineTo(-6, -14), ctx.fill(), ctx.fillStyle = "#94a3b8", ctx.fillRect(-9, -34, 18, 22), ctx.fillStyle = "#fbbf24", ctx.fillRect(-3, -28, 6, 8), ctx.fillStyle = "#cbd5e1", ctx.beginPath(), ctx.arc(0, -38, 8, Math.PI, 0), ctx.fill(), ctx.fillStyle = "#0f172a", ctx.fillRect(0, -39, 7, 3), ctx.fillStyle = "#ec4899", ctx.beginPath(), ctx.arc(-2, -45, 3.5, 0, 2 * Math.PI), ctx.fill(), this.isAttacking ? (ctx.strokeStyle = "#38bdf8", ctx.lineWidth = 3, ctx.beginPath(), ctx.arc(8, -20, 24, -Math.PI / 3, Math.PI / 3), ctx.stroke(), ctx.fillStyle = "#f8fafc", ctx.fillRect(10, -26, 26, 4), ctx.fillStyle = "#fbbf24", ctx.fillRect(8, -29, 3, 10)) : (ctx.fillStyle = "#cbd5e1", ctx.fillRect(6, -24, 4, 18)), ctx.restore() } }
+          enemies.forEach(n => { n.alive && aabb({ x: t, y: e, w: i, h: a }, n) && (n.hp--, playSound("hit"), spawnSparks(n.x + n.w / 2, n.y + n.h / 2, "#f43f5e", 10), n.hp <= 0 && (n.alive = !1, goldScore += "goblin" === n.type ? 150 : 80, spawnSparks(n.x + n.w / 2, n.y + n.h / 2, "#fbbf24", 16))) }), items.forEach(n => { "chest" === n.type && !n.opened && aabb({ x: t, y: e, w: i, h: a }, n) && (n.opened = !0, goldScore += 250, playSound("coin"), this.hp < this.maxHp && this.hp++, spawnSparks(n.x + n.w / 2, n.y, "#38bdf8", 14)) })
+        }
+      }
+      takeDamage(t) { this.invulnTimer > 0 || "playing" !== state || (this.hp -= t, this.invulnTimer = 45, this.vy = -6, this.vx = 4 * -this.facing, playSound("hit"), spawnSparks(this.x + this.w / 2, this.y + this.h / 2, "#f43f5e", 12), this.hp <= 0 && (this.hp = 0, endGame(!1))) } update(t, e) {
+        this.invulnTimer > 0 && (this.invulnTimer -= t), this.attackTimer > 0 && (this.attackTimer -= t, this.attackTimer <= 0 && (this.isAttacking = !1));
+        let i = 0;
+        e.left && (i -= 1, this.facing = -1), e.right && (i += 1, this.facing = 1), this.vx = i * this.speed, 0 !== i && this.grounded ? this.walkCycle += .22 * t : this.walkCycle = 0, this.vy += .48 * t, this.vy > 12 && (this.vy = 12), this.x += this.vx * t, this.checkHorizontalCollisions(), this.y += this.vy * t, this.grounded = !1, this.checkVerticalCollisions(), this.y > 540 && this.takeDamage(this.hp)
+      }
+      checkHorizontalCollisions() { platforms.forEach(t => { aabb(this, t) && (this.vx > 0 ? this.x = t.x - this.w : this.vx < 0 && (this.x = t.x + t.w)) }), this.x = clamp(this.x, 0, 2200 - this.w) } checkVerticalCollisions() { platforms.forEach(t => { aabb(this, t) && (this.vy > 0 ? (this.y = t.y - this.h, this.vy = 0, this.grounded = !0) : this.vy < 0 && (this.y = t.y + t.h, this.vy = 0)) }) } draw() {
+        if (this.invulnTimer > 0 && Math.floor(.4 * time) % 2 == 0) return;
+        ctx.save(), ctx.translate(this.x + this.w / 2, this.y + this.h), ctx.scale(this.facing, 1), ctx.fillStyle = "rgba(0,0,0,0.3)", ctx.beginPath(), ctx.ellipse(0, -2, 12, 4, 0, 0, 2 * Math.PI), ctx.fill();
+        const t = 5 * Math.sin(this.walkCycle);
+        ctx.fillStyle = "#1e293b", ctx.fillRect(-7, -14 + t, 5, 14 - t), ctx.fillRect(2, -14 - t, 5, 14 + t), ctx.fillStyle = "#6366f1", ctx.beginPath(), ctx.moveTo(-6, -34), ctx.lineTo(-15 - 1.5 * Math.abs(this.vx), -16), ctx.lineTo(-6, -14), ctx.fill(), ctx.fillStyle = "#94a3b8", ctx.fillRect(-9, -34, 18, 22), ctx.fillStyle = "#fbbf24", ctx.fillRect(-3, -28, 6, 8), ctx.fillStyle = "#cbd5e1", ctx.beginPath(), ctx.arc(0, -38, 8, Math.PI, 0), ctx.fill(), ctx.fillStyle = "#0f172a", ctx.fillRect(0, -39, 7, 3), ctx.fillStyle = "#ec4899", ctx.beginPath(), ctx.arc(-2, -45, 3.5, 0, 2 * Math.PI), ctx.fill(), this.isAttacking ? (ctx.strokeStyle = "#38bdf8", ctx.lineWidth = 3, ctx.beginPath(), ctx.arc(8, -20, 24, -Math.PI / 3, Math.PI / 3), ctx.stroke(), ctx.fillStyle = "#f8fafc", ctx.fillRect(10, -26, 26, 4), ctx.fillStyle = "#fbbf24", ctx.fillRect(8, -29, 3, 10)) : (ctx.fillStyle = "#cbd5e1", ctx.fillRect(6, -24, 4, 18)), ctx.restore()
+      }
+    }
 
     function aabb(t, e) { return t.x < e.x + e.w && t.x + t.w > e.x && t.y < e.y + e.h && t.y + t.h > e.y }
 
-    function spawnSparks(t, e, i, a) { for (let n = 0; n < a; n++) { const a = Math.random() * Math.PI * 2,
+    function spawnSparks(t, e, i, a) {
+      for (let n = 0; n < a; n++) {
+        const a = Math.random() * Math.PI * 2,
           n = 1.5 + 3.5 * Math.random();
-        particles.push({ x: t, y: e, vx: Math.cos(a) * n, vy: Math.sin(a) * n - 1, life: 1, decay: .03 + .03 * Math.random(), col: i, size: 2 + 2.5 * Math.random() }) } }
+        particles.push({ x: t, y: e, vx: Math.cos(a) * n, vy: Math.sin(a) * n - 1, life: 1, decay: .03 + .03 * Math.random(), col: i, size: 2 + 2.5 * Math.random() })
+      }
+    }
 
     function spawnDust(t, e, i, a) { for (let n = 0; n < i; n++) particles.push({ x: t + 8 * (Math.random() - .5), y: e - 2 * Math.random(), vx: 2 * (Math.random() - .5), vy: 1.5 * -Math.random(), life: 1, decay: .04, col: a || "#94a3b8", size: 2 + 2 * Math.random() }) }
 
-    function updateParticles(t) { for (let e = particles.length - 1; e >= 0; e--) { const i = particles[e];
-        i.x += i.vx * t, i.y += i.vy * t, i.life -= i.decay * t, i.life <= 0 && particles.splice(e, 1) } }
+    function updateParticles(t) {
+      for (let e = particles.length - 1; e >= 0; e--) {
+        const i = particles[e];
+        i.x += i.vx * t, i.y += i.vy * t, i.life -= i.decay * t, i.life <= 0 && particles.splice(e, 1)
+      }
+    }
 
-    function drawParticles() { for (const t of particles) ctx.globalAlpha = clamp(t.life, 0, 1), ctx.fillStyle = t.col, ctx.beginPath(), ctx.arc(t.x, t.y, t.size * t.life, 0, 2 * Math.PI), ctx.fill();
-      ctx.globalAlpha = 1 }
+    function drawParticles() {
+      for (const t of particles) ctx.globalAlpha = clamp(t.life, 0, 1), ctx.fillStyle = t.col, ctx.beginPath(), ctx.arc(t.x, t.y, t.size * t.life, 0, 2 * Math.PI), ctx.fill();
+      ctx.globalAlpha = 1
+    }
     const knight = new Knight,
       inputState = { left: !1, right: !1 };
 
@@ -550,30 +582,62 @@
 
     function setStatus(t, e) { document.getElementById("statusBox").className = "status " + t, document.getElementById("statusLabel").textContent = e }
 
-    function update(t) { if (time += t, "playing" === state) { knight.update(t, inputState); const e = clamp(knight.x + knight.w / 2 - 320, 0, 1560),
+    function update(t) {
+      if (time += t, "playing" === state) {
+        knight.update(t, inputState);
+        const e = clamp(knight.x + knight.w / 2 - 320, 0, 1560),
           i = clamp(knight.y + knight.h / 2 - 180, 0, 100);
-        cameraX += .12 * (e - cameraX) * t, cameraY += .12 * (i - cameraY) * t, hazards.forEach(t => { aabb(knight, t) && knight.takeDamage(1) }), enemies.forEach(e => { e.alive && (e.x += e.vx * t, (e.x < e.minX || e.x + e.w > e.maxX) && (e.vx = -e.vx), aabb(knight, e) && knight.takeDamage(1)) }), items.forEach(t => { t.taken || ("coin" === t.type ? aabb(knight, { x: t.x - 8, y: t.y - 8, w: 16, h: 16 }) && (t.taken = !0, goldScore += t.val, playSound("coin"), spawnSparks(t.x, t.y, "#fbbf24", 8), updateHUD()) : "relic" === t.type && aabb(knight, { x: t.x - 12, y: t.y - 12, w: 24, h: 24 }) && (t.taken = !0, relicsCollected++, goldScore += 300, playSound("relic"), spawnSparks(t.x, t.y, "#38bdf8", 22), relicsCollected >= 3 && (portal.active = !0, spawnSparks(portal.x + portal.w / 2, portal.y + portal.h / 2, "#a855f7", 30)), updateHUD())) }), portal.active && aabb(knight, portal) && (goldScore += 1e3, endGame(!0)) } updateParticles(t) }
+        cameraX += .12 * (e - cameraX) * t, cameraY += .12 * (i - cameraY) * t, hazards.forEach(t => { aabb(knight, t) && knight.takeDamage(1) }), enemies.forEach(e => { e.alive && (e.x += e.vx * t, (e.x < e.minX || e.x + e.w > e.maxX) && (e.vx = -e.vx), aabb(knight, e) && knight.takeDamage(1)) }), items.forEach(t => { t.taken || ("coin" === t.type ? aabb(knight, { x: t.x - 8, y: t.y - 8, w: 16, h: 16 }) && (t.taken = !0, goldScore += t.val, playSound("coin"), spawnSparks(t.x, t.y, "#fbbf24", 8), updateHUD()) : "relic" === t.type && aabb(knight, { x: t.x - 12, y: t.y - 12, w: 24, h: 24 }) && (t.taken = !0, relicsCollected++, goldScore += 300, playSound("relic"), spawnSparks(t.x, t.y, "#38bdf8", 22), relicsCollected >= 3 && (portal.active = !0, spawnSparks(portal.x + portal.w / 2, portal.y + portal.h / 2, "#a855f7", 30)), updateHUD())) }), portal.active && aabb(knight, portal) && (goldScore += 1e3, endGame(!0))
+      }
+      updateParticles(t)
+    }
 
-    function render() { ctx.fillStyle = "#060913", ctx.fillRect(0, 0, W, H), ctx.save(), ctx.translate(-Math.round(cameraX), -Math.round(cameraY)), drawBackgroundHills(), platforms.forEach(t => { ctx.fillStyle = "#1e293b", ctx.fillRect(t.x, t.y, t.w, t.h), ctx.fillStyle = "#8b5cf6", ctx.fillRect(t.x, t.y, t.w, 4), ctx.strokeStyle = "rgba(255,255,255,0.06)", ctx.lineWidth = 1.5; for (let e = t.x + 20; e < t.x + t.w; e += 32) ctx.beginPath(), ctx.moveTo(e, t.y + 4), ctx.lineTo(e, t.y + t.h), ctx.stroke() }), ctx.fillStyle = "#ef4444", hazards.forEach(t => { for (let e = t.x; e < t.x + t.w; e += 12) ctx.beginPath(), ctx.moveTo(e, t.y + t.h), ctx.lineTo(e + 6, t.y), ctx.lineTo(e + 12, t.y + t.h), ctx.fill() }), items.forEach(t => { if (!t.taken)
+    function render() {
+      ctx.fillStyle = "#060913", ctx.fillRect(0, 0, W, H), ctx.save(), ctx.translate(-Math.round(cameraX), -Math.round(cameraY)), drawBackgroundHills(), platforms.forEach(t => { ctx.fillStyle = "#1e293b", ctx.fillRect(t.x, t.y, t.w, t.h), ctx.fillStyle = "#8b5cf6", ctx.fillRect(t.x, t.y, t.w, 4), ctx.strokeStyle = "rgba(255,255,255,0.06)", ctx.lineWidth = 1.5; for (let e = t.x + 20; e < t.x + t.w; e += 32) ctx.beginPath(), ctx.moveTo(e, t.y + 4), ctx.lineTo(e, t.y + t.h), ctx.stroke() }), ctx.fillStyle = "#ef4444", hazards.forEach(t => { for (let e = t.x; e < t.x + t.w; e += 12) ctx.beginPath(), ctx.moveTo(e, t.y + t.h), ctx.lineTo(e + 6, t.y), ctx.lineTo(e + 12, t.y + t.h), ctx.fill() }), items.forEach(t => {
+        if (!t.taken)
           if ("coin" === t.type) ctx.fillStyle = "#fbbf24", ctx.beginPath(), ctx.arc(t.x, t.y + 3 * Math.sin(.1 * time), 7, 0, 2 * Math.PI), ctx.fill(), ctx.fillStyle = "#fff", ctx.beginPath(), ctx.arc(t.x, t.y + 3 * Math.sin(.1 * time), 3, 0, 2 * Math.PI), ctx.fill();
-          else if ("relic" === t.type) { const e = 4 * Math.sin(.08 * time + t.id);
-          ctx.save(), ctx.shadowColor = "#38bdf8", ctx.shadowBlur = 14, ctx.fillStyle = "#38bdf8", ctx.beginPath(), ctx.arc(t.x, t.y + e, 10, 0, 2 * Math.PI), ctx.fill(), ctx.fillStyle = "#ffffff", ctx.beginPath(), ctx.arc(t.x, t.y + e, 4.5, 0, 2 * Math.PI), ctx.fill(), ctx.restore() } else "chest" === t.type && (ctx.fillStyle = t.opened ? "#475569" : "#d97706", ctx.fillRect(t.x, t.y, t.w, t.h), ctx.fillStyle = "#fbbf24", ctx.fillRect(t.x + t.w / 2 - 3, t.y + 6, 6, 6)) }), enemies.forEach(t => { if (t.alive) { if (ctx.save(), ctx.translate(t.x, t.y), "slime" === t.type) { ctx.fillStyle = "#ec4899"; const e = 2 * Math.sin(.2 * time);
-            ctx.beginPath(), ctx.ellipse(t.w / 2, t.h / 2 + e, t.w / 2, t.h / 2 - e, 0, 0, 2 * Math.PI), ctx.fill(), ctx.fillStyle = "#fff", ctx.fillRect(6, 6, 4, 4), ctx.fillRect(16, 6, 4, 4) } else "goblin" === t.type && (ctx.fillStyle = "#15803d", ctx.fillRect(4, 10, 18, 24), ctx.fillStyle = "#dc2626", ctx.fillRect(t.vx > 0 ? 14 : 6, 14, 4, 3));
-          ctx.restore() } }), drawPortal(), knight.draw(), drawParticles(), ctx.restore(); const t = ctx.createRadialGradient(320, 180, .35 * H, 320, 180, 352);
-      t.addColorStop(0, "rgba(0,0,0,0)"), t.addColorStop(1, "rgba(0,0,0,0.5)"), ctx.fillStyle = t, ctx.fillRect(0, 0, W, H) }
+          else if ("relic" === t.type) {
+          const e = 4 * Math.sin(.08 * time + t.id);
+          ctx.save(), ctx.shadowColor = "#38bdf8", ctx.shadowBlur = 14, ctx.fillStyle = "#38bdf8", ctx.beginPath(), ctx.arc(t.x, t.y + e, 10, 0, 2 * Math.PI), ctx.fill(), ctx.fillStyle = "#ffffff", ctx.beginPath(), ctx.arc(t.x, t.y + e, 4.5, 0, 2 * Math.PI), ctx.fill(), ctx.restore()
+        } else "chest" === t.type && (ctx.fillStyle = t.opened ? "#475569" : "#d97706", ctx.fillRect(t.x, t.y, t.w, t.h), ctx.fillStyle = "#fbbf24", ctx.fillRect(t.x + t.w / 2 - 3, t.y + 6, 6, 6))
+      }), enemies.forEach(t => {
+        if (t.alive) {
+          if (ctx.save(), ctx.translate(t.x, t.y), "slime" === t.type) {
+            ctx.fillStyle = "#ec4899";
+            const e = 2 * Math.sin(.2 * time);
+            ctx.beginPath(), ctx.ellipse(t.w / 2, t.h / 2 + e, t.w / 2, t.h / 2 - e, 0, 0, 2 * Math.PI), ctx.fill(), ctx.fillStyle = "#fff", ctx.fillRect(6, 6, 4, 4), ctx.fillRect(16, 6, 4, 4)
+          } else "goblin" === t.type && (ctx.fillStyle = "#15803d", ctx.fillRect(4, 10, 18, 24), ctx.fillStyle = "#dc2626", ctx.fillRect(t.vx > 0 ? 14 : 6, 14, 4, 3));
+          ctx.restore()
+        }
+      }), drawPortal(), knight.draw(), drawParticles(), ctx.restore();
+      const t = ctx.createRadialGradient(320, 180, .35 * H, 320, 180, 352);
+      t.addColorStop(0, "rgba(0,0,0,0)"), t.addColorStop(1, "rgba(0,0,0,0.5)"), ctx.fillStyle = t, ctx.fillRect(0, 0, W, H)
+    }
 
-    function drawPortal() { ctx.save(), ctx.translate(portal.x + portal.w / 2, portal.y + portal.h / 2); const t = portal.active ? "#a855f7" : "#334155";
-      ctx.shadowColor = t, ctx.shadowBlur = portal.active ? 22 : 6, ctx.strokeStyle = t, ctx.lineWidth = 4, ctx.beginPath(), ctx.ellipse(0, 0, portal.w / 2, portal.h / 2, 0, 0, 2 * Math.PI), ctx.stroke(), portal.active && (ctx.fillStyle = "rgba(168, 85, 247, 0.45)", ctx.fill(), ctx.fillStyle = "#ffffff", ctx.beginPath(), ctx.arc(0, 8 * Math.sin(.1 * time), 8, 0, 2 * Math.PI), ctx.fill()), ctx.restore() }
+    function drawPortal() {
+      ctx.save(), ctx.translate(portal.x + portal.w / 2, portal.y + portal.h / 2);
+      const t = portal.active ? "#a855f7" : "#334155";
+      ctx.shadowColor = t, ctx.shadowBlur = portal.active ? 22 : 6, ctx.strokeStyle = t, ctx.lineWidth = 4, ctx.beginPath(), ctx.ellipse(0, 0, portal.w / 2, portal.h / 2, 0, 0, 2 * Math.PI), ctx.stroke(), portal.active && (ctx.fillStyle = "rgba(168, 85, 247, 0.45)", ctx.fill(), ctx.fillStyle = "#ffffff", ctx.beginPath(), ctx.arc(0, 8 * Math.sin(.1 * time), 8, 0, 2 * Math.PI), ctx.fill()), ctx.restore()
+    }
 
-    function drawBackgroundHills() { ctx.fillStyle = "#0c1222", ctx.beginPath(), ctx.moveTo(0, 460); for (let t = 0; t <= 2200; t += 180) ctx.lineTo(t, 260 + 60 * Math.sin(.005 * t));
-      ctx.lineTo(2200, 460), ctx.closePath(), ctx.fill() }
+    function drawBackgroundHills() {
+      ctx.fillStyle = "#0c1222", ctx.beginPath(), ctx.moveTo(0, 460);
+      for (let t = 0; t <= 2200; t += 180) ctx.lineTo(t, 260 + 60 * Math.sin(.005 * t));
+      ctx.lineTo(2200, 460), ctx.closePath(), ctx.fill()
+    }
 
-    function updateHUD() { let t = ""; for (let e = 0; e < knight.maxHp; e++) t += e < knight.hp ? "❤️" : "🖤";
-      document.getElementById("hpVal").textContent = t, document.getElementById("relicVal").textContent = relicsCollected + " / 3", document.getElementById("goldVal").textContent = String(goldScore).padStart(5, "0") }
+    function updateHUD() {
+      let t = "";
+      for (let e = 0; e < knight.maxHp; e++) t += e < knight.hp ? "❤️" : "🖤";
+      document.getElementById("hpVal").textContent = t, document.getElementById("relicVal").textContent = relicsCollected + " / 3", document.getElementById("goldVal").textContent = String(goldScore).padStart(5, "0")
+    }
     let lastT = 0;
 
-    function loop(t) { lastT || (lastT = t); let e = (t - lastT) / 16.6667;
-      lastT = t, (!isFinite(e) || e <= 0) && (e = 1), e = Math.min(e, 2.5), update(e), render(), requestAnimationFrame(loop) }
+    function loop(t) {
+      lastT || (lastT = t);
+      let e = (t - lastT) / 16.6667;
+      lastT = t, (!isFinite(e) || e <= 0) && (e = 1), e = Math.min(e, 2.5), update(e), render(), requestAnimationFrame(loop)
+    }
 
     function doJump() { initAudio(), "playing" === state ? knight.jump() : resetGame() }
 

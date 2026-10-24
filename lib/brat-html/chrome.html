@@ -300,7 +300,8 @@
     <div class="vignette"></div>
   </div>
   <script>
-    ! function() { var e = document.getElementById("kalimat-src"),
+    ! function() {
+      var e = document.getElementById("kalimat-src"),
         t = (e && e.dataset.text || "LIQUID CHROME").trim() || "LIQUID CHROME",
         n = document.getElementById("stage"),
         a = document.getElementById("fx").getContext("2d"),
@@ -310,34 +311,83 @@
         l = o.querySelector(".fly"),
         s = document.getElementById("textLeft"),
         c = document.getElementById("textRight"),
-        d = document.createElement("canvas").getContext("2d"); var f = [],
+        d = document.createElement("canvas").getContext("2d");
+      var f = [],
         m = [];
 
-      function h() { n.classList.remove("impact", "run"), f = [], m = [], a.clearRect(0, 0, 512, 512), [i, l].forEach(function(e) { e.style.animation = "none", e.offsetWidth, e.style.animation = "" }), requestAnimationFrame(function() { n.classList.add("run"); var e = function() { i.removeEventListener("animationend", e), n.classList.add("impact"),
-              function() { for (var e = 0; e < 100; e++) { var t = Math.random() * Math.PI * 2,
+      function h() {
+        n.classList.remove("impact", "run"), f = [], m = [], a.clearRect(0, 0, 512, 512), [i, l].forEach(function(e) { e.style.animation = "none", e.offsetWidth, e.style.animation = "" }), requestAnimationFrame(function() {
+          n.classList.add("run");
+          var e = function() {
+            i.removeEventListener("animationend", e), n.classList.add("impact"),
+              function() {
+                for (var e = 0; e < 100; e++) {
+                  var t = Math.random() * Math.PI * 2,
                     n = 18 * Math.random() + 2,
                     a = Math.random() > .5 ? [192, 192, 192] : Math.random() > .5 ? [0, 255, 240] : [255, 0, 229];
-                  f.push({ x: 256, y: 256, vx: Math.cos(t) * n, vy: Math.sin(t) * n - 3, life: 1, decay: .011 + .013 * Math.random(), size: 10 + 22 * Math.random(), color: a, shrink: .975 + .012 * Math.random() }) } for (var r = 0; r < 100; r++) { var o = Math.random() * Math.PI * 2,
+                  f.push({ x: 256, y: 256, vx: Math.cos(t) * n, vy: Math.sin(t) * n - 3, life: 1, decay: .011 + .013 * Math.random(), size: 10 + 22 * Math.random(), color: a, shrink: .975 + .012 * Math.random() })
+                }
+                for (var r = 0; r < 100; r++) {
+                  var o = Math.random() * Math.PI * 2,
                     i = 28 * Math.random() + 6;
-                  m.push({ x: 256, y: 256, vx: Math.cos(o) * i, vy: Math.sin(o) * i - 3, life: 1, decay: .018 + .022 * Math.random(), size: 1 + 2.5 * Math.random(), color: Math.random() > .5 ? [255, 255, 255] : [192, 192, 192] }) } }(), setTimeout(h, 3200) };
-          i.addEventListener("animationend", e, { once: !0 }) }) }
+                  m.push({ x: 256, y: 256, vx: Math.cos(o) * i, vy: Math.sin(o) * i - 3, life: 1, decay: .018 + .022 * Math.random(), size: 1 + 2.5 * Math.random(), color: Math.random() > .5 ? [255, 255, 255] : [192, 192, 192] })
+                }
+              }(), setTimeout(h, 3200)
+          };
+          i.addEventListener("animationend", e, { once: !0 })
+        })
+      }
 
       function u() {
-        (function() { var e = function(e) { var t = String(e).trim().split(/\s+/).filter(Boolean); if (!t.length) return ["", ""]; if (1 === t.length) { var n = t[0]; if (n.length < 2) return [n, n]; var a = Math.ceil(n.length / 2); return [n.slice(0, a), n.slice(a)] } if (2 === t.length) return [t[0], t[1]]; for (var r = 1, o = 1 / 0, i = 1; i < t.length; i++) { var l = t.slice(0, i).join("").length,
+        (function() {
+          var e = function(e) {
+              var t = String(e).trim().split(/\s+/).filter(Boolean);
+              if (!t.length) return ["", ""];
+              if (1 === t.length) { var n = t[0]; if (n.length < 2) return [n, n]; var a = Math.ceil(n.length / 2); return [n.slice(0, a), n.slice(a)] }
+              if (2 === t.length) return [t[0], t[1]];
+              for (var r = 1, o = 1 / 0, i = 1; i < t.length; i++) {
+                var l = t.slice(0, i).join("").length,
                   s = t.slice(i).join("").length,
                   c = Math.abs(l - s);
-                c < o && (o = c, r = i) } return [t.slice(0, r).join(" "), t.slice(r).join(" ")] }(t),
+                c < o && (o = c, r = i)
+              }
+              return [t.slice(0, r).join(" "), t.slice(r).join(" ")]
+            }(t),
             n = e[0],
             a = e[1];
-          s.textContent = n, c.textContent = a; var i = function(e, t) { if (!e && !t) return 175;
-            d.font = '800 100px "Syne", sans-serif'; var n = e ? d.measureText(e).width || 1 : 0,
-              a = t ? d.measureText(t).width || 1 : 0; return Math.min(46e3 / (n + a || 1), 175) }(n, a);
-          r.style.fontSize = i + "px", o.style.fontSize = i + "px" })(), h() }! function e() { a.clearRect(0, 0, 512, 512), a.globalCompositeOperation = "lighter", a.save(), a.filter = "blur(4px)"; for (var t = f.length - 1; t >= 0; t--) { var n = f[t]; if (n.x += n.vx, n.y += n.vy, n.vx *= .935, n.vy *= .935, n.vy += .1, n.life -= n.decay, n.size *= n.shrink, n.life <= 0 || n.size < 2) f.splice(t, 1);
-          else { var r = n.color,
+          s.textContent = n, c.textContent = a;
+          var i = function(e, t) {
+            if (!e && !t) return 175;
+            d.font = '800 100px "Syne", sans-serif';
+            var n = e ? d.measureText(e).width || 1 : 0,
+              a = t ? d.measureText(t).width || 1 : 0;
+            return Math.min(46e3 / (n + a || 1), 175)
+          }(n, a);
+          r.style.fontSize = i + "px", o.style.fontSize = i + "px"
+        })(), h()
+      }! function e() {
+        a.clearRect(0, 0, 512, 512), a.globalCompositeOperation = "lighter", a.save(), a.filter = "blur(4px)";
+        for (var t = f.length - 1; t >= 0; t--) {
+          var n = f[t];
+          if (n.x += n.vx, n.y += n.vy, n.vx *= .935, n.vy *= .935, n.vy += .1, n.life -= n.decay, n.size *= n.shrink, n.life <= 0 || n.size < 2) f.splice(t, 1);
+          else {
+            var r = n.color,
               o = a.createRadialGradient(n.x - .3 * n.size, n.y - .3 * n.size, 0, n.x, n.y, n.size);
-            o.addColorStop(0, "rgba(255,255,255," + .9 * n.life + ")"), o.addColorStop(.4, "rgba(" + r[0] + "," + r[1] + "," + r[2] + "," + .7 * n.life + ")"), o.addColorStop(1, "rgba(" + r[0] + "," + r[1] + "," + r[2] + ",0)"), a.fillStyle = o, a.beginPath(), a.arc(n.x, n.y, n.size, 0, 7), a.fill() } } a.restore(); for (var i = m.length - 1; i >= 0; i--) { var l = m[i]; if (l.x += l.vx, l.y += l.vy, l.vx *= .94, l.vy *= .94, l.vy += .12, l.life -= l.decay, l.life <= 0) m.splice(i, 1);
-          else { var s = l.color;
-            a.strokeStyle = "rgba(" + s[0] + "," + s[1] + "," + s[2] + "," + .7 * l.life + ")", a.lineWidth = l.size, a.lineCap = "round", a.beginPath(), a.moveTo(l.x, l.y), a.lineTo(l.x - 1.8 * l.vx, l.y - 1.8 * l.vy), a.stroke(), a.fillStyle = "rgba(255,255,255," + l.life + ")", a.beginPath(), a.arc(l.x, l.y, .8 * l.size, 0, 7), a.fill() } } a.globalCompositeOperation = "source-over", requestAnimationFrame(e) }(), document.fonts && document.fonts.load ? document.fonts.load('800 100px "Syne"').then(u).catch(u) : u() }()
+            o.addColorStop(0, "rgba(255,255,255," + .9 * n.life + ")"), o.addColorStop(.4, "rgba(" + r[0] + "," + r[1] + "," + r[2] + "," + .7 * n.life + ")"), o.addColorStop(1, "rgba(" + r[0] + "," + r[1] + "," + r[2] + ",0)"), a.fillStyle = o, a.beginPath(), a.arc(n.x, n.y, n.size, 0, 7), a.fill()
+          }
+        }
+        a.restore();
+        for (var i = m.length - 1; i >= 0; i--) {
+          var l = m[i];
+          if (l.x += l.vx, l.y += l.vy, l.vx *= .94, l.vy *= .94, l.vy += .12, l.life -= l.decay, l.life <= 0) m.splice(i, 1);
+          else {
+            var s = l.color;
+            a.strokeStyle = "rgba(" + s[0] + "," + s[1] + "," + s[2] + "," + .7 * l.life + ")", a.lineWidth = l.size, a.lineCap = "round", a.beginPath(), a.moveTo(l.x, l.y), a.lineTo(l.x - 1.8 * l.vx, l.y - 1.8 * l.vy), a.stroke(), a.fillStyle = "rgba(255,255,255," + l.life + ")", a.beginPath(), a.arc(l.x, l.y, .8 * l.size, 0, 7), a.fill()
+          }
+        }
+        a.globalCompositeOperation = "source-over", requestAnimationFrame(e)
+      }(), document.fonts && document.fonts.load ? document.fonts.load('800 100px "Syne"').then(u).catch(u) : u()
+    }()
   </script>
 </body>
 

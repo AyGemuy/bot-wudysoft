@@ -585,38 +585,77 @@
     <div class="grain"></div>
   </div>
   <script>
-    ! function() { var t = document.getElementById("kalimat-src"),
+    ! function() {
+      var t = document.getElementById("kalimat-src"),
         e = (t && t.dataset.text || "MOLTEN STEEL").trim() || "MOLTEN STEEL",
         a = document.getElementById("stage"),
         n = document.getElementById("word"),
         o = document.getElementById("sparks"),
         r = document.getElementById("embers"),
         s = document.createElement("canvas").getContext("2d");
-      s.font = "400 100px Anton"; var d = [];
+      s.font = "400 100px Anton";
+      var d = [];
 
-      function i() { var t, a, o;
-        n.innerHTML = "", d = [], n.style.fontSize = (t = e, a = s.measureText(t).width || 1, (o = Math.min(82, 426 / a * 100)) < 16 && (o = 16), o.toFixed(1) + "px"); for (var r = e.length, i = Math.min(.06, 1.05 / Math.max(1, r)), m = 0, l = 0; l < r; l++) { var c = e[l]; if (" " !== c) { var h = document.createElement("span");
-            h.className = "letter", h.textContent = c, h.style.setProperty("--d", (m * i).toFixed(3) + "s"), n.appendChild(h), d.push(h), m++ } else { var u = document.createElement("span");
-            u.className = "space", u.innerHTML = "&nbsp;", n.appendChild(u) } } } var m, l, c, h, u = [];
+      function i() {
+        var t, a, o;
+        n.innerHTML = "", d = [], n.style.fontSize = (t = e, a = s.measureText(t).width || 1, (o = Math.min(82, 426 / a * 100)) < 16 && (o = 16), o.toFixed(1) + "px");
+        for (var r = e.length, i = Math.min(.06, 1.05 / Math.max(1, r)), m = 0, l = 0; l < r; l++) {
+          var c = e[l];
+          if (" " !== c) {
+            var h = document.createElement("span");
+            h.className = "letter", h.textContent = c, h.style.setProperty("--d", (m * i).toFixed(3) + "s"), n.appendChild(h), d.push(h), m++
+          } else {
+            var u = document.createElement("span");
+            u.className = "space", u.innerHTML = "&nbsp;", n.appendChild(u)
+          }
+        }
+      }
+      var m, l, c, h, u = [];
 
-      function p() { clearTimeout(m), clearTimeout(l), a.classList.remove("impact", "run"), a.offsetWidth, a.classList.add("run"), m = setTimeout(function() { a.classList.add("impact"),
-            function() { for (var t = 0; t < u.length; t++) { var e = u[t],
+      function p() {
+        clearTimeout(m), clearTimeout(l), a.classList.remove("impact", "run"), a.offsetWidth, a.classList.add("run"), m = setTimeout(function() {
+          a.classList.add("impact"),
+            function() {
+              for (var t = 0; t < u.length; t++) {
+                var e = u[t],
                   a = Math.random() * Math.PI * 2,
                   n = 70 + 210 * Math.random(),
                   o = Math.cos(a) * n,
                   r = Math.sin(a) * n * .82 - 20;
-                e.style.setProperty("--tx", o.toFixed(1) + "px"), e.style.setProperty("--ty", r.toFixed(1) + "px"), e.style.setProperty("--delay", (.14 * Math.random()).toFixed(2) + "s"), e.style.animation = "none", e.offsetWidth, e.style.animation = "" } }(), l = setTimeout(p, h) }, c) }
+                e.style.setProperty("--tx", o.toFixed(1) + "px"), e.style.setProperty("--ty", r.toFixed(1) + "px"), e.style.setProperty("--delay", (.14 * Math.random()).toFixed(2) + "s"), e.style.animation = "none", e.offsetWidth, e.style.animation = ""
+              }
+            }(), l = setTimeout(p, h)
+        }, c)
+      }
 
-      function f() { i(),
-          function() { o.innerHTML = "", u = []; for (var t = 0; t < 50; t++) { var e = document.createElement("div");
-              e.className = "spark", o.appendChild(e), u.push(e) } }(),
-          function() { r.innerHTML = ""; for (var t = 0; t < 26; t++) { var e = document.createElement("div");
-              e.className = "ember"; var a = (2 + 3.5 * Math.random()).toFixed(1);
-              e.style.width = a + "px", e.style.height = a + "px", e.style.left = 96 * Math.random() + "%", e.style.animationDuration = (4 + 5 * Math.random()).toFixed(2) + "s", e.style.animationDelay = (8 * -Math.random()).toFixed(2) + "s", e.style.setProperty("--drift", (60 * Math.random() - 30).toFixed(1) + "px"), r.appendChild(e) } }(),
-          function() { var t = d.length,
+      function f() {
+        i(),
+          function() {
+            o.innerHTML = "", u = [];
+            for (var t = 0; t < 50; t++) {
+              var e = document.createElement("div");
+              e.className = "spark", o.appendChild(e), u.push(e)
+            }
+          }(),
+          function() {
+            r.innerHTML = "";
+            for (var t = 0; t < 26; t++) {
+              var e = document.createElement("div");
+              e.className = "ember";
+              var a = (2 + 3.5 * Math.random()).toFixed(1);
+              e.style.width = a + "px", e.style.height = a + "px", e.style.left = 96 * Math.random() + "%", e.style.animationDuration = (4 + 5 * Math.random()).toFixed(2) + "s", e.style.animationDelay = (8 * -Math.random()).toFixed(2) + "s", e.style.setProperty("--drift", (60 * Math.random() - 30).toFixed(1) + "px"), r.appendChild(e)
+            }
+          }(),
+          function() {
+            var t = d.length,
               e = Math.min(1.05, .06 * (t - 1));
-            c = Math.round(1e3 * (e + .65 + 1)); var a = .4 + (t - 1) * Math.min(.06, 1.05 / Math.max(1, t)) * .5 + .7;
-            h = Math.max(1500, Math.round(1e3 * (a + .3))) }(), p() } document.fonts && document.fonts.load ? Promise.all([document.fonts.load("400 100px Anton"), document.fonts.load("700 9px Oswald")]).then(f).catch(f) : f() }()
+            c = Math.round(1e3 * (e + .65 + 1));
+            var a = .4 + (t - 1) * Math.min(.06, 1.05 / Math.max(1, t)) * .5 + .7;
+            h = Math.max(1500, Math.round(1e3 * (a + .3)))
+          }(), p()
+      }
+      document.fonts && document.fonts.load ? Promise.all([document.fonts.load("400 100px Anton"), document.fonts.load("700 9px Oswald")]).then(f).catch(f) : f()
+    }()
   </script>
 </body>
 

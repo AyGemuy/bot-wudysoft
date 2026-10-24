@@ -457,7 +457,9 @@
     <div class="shine"></div>
   </div>
   <script>
-    ! function() { "use strict"; var t = document.getElementById("kalimat-src"),
+    ! function() {
+      "use strict";
+      var t = document.getElementById("kalimat-src"),
         e = (t && t.dataset.text || 'const vibe = "carbon";').trim() || 'const vibe = "carbon";',
         n = ["#61afef", "#c678dd", "#98c379", "#e5c07b", "#e06c75", "#56b6c2"],
         s = document.getElementById("stage"),
@@ -474,21 +476,47 @@
 
       function m() { s.classList.remove("shining"), s.offsetWidth, s.classList.add("shining"), f(function() { s.classList.remove("shining") }, 1050) }
 
-      function d() { for (var t = 1 + Math.floor(3 * Math.random()), e = {}, n = 0; n < t; n++) { var s = Math.floor(Math.random() * r.length); if (!e[s]) { e[s] = !0; var o = r[s];
-            o.classList.contains("glitch") || (o.classList.remove("glitch"), o.offsetWidth, o.classList.add("glitch"), function(t) { f(function() { t.classList.remove("glitch") }, 560) }(o)) } } }
+      function d() {
+        for (var t = 1 + Math.floor(3 * Math.random()), e = {}, n = 0; n < t; n++) {
+          var s = Math.floor(Math.random() * r.length);
+          if (!e[s]) {
+            e[s] = !0;
+            var o = r[s];
+            o.classList.contains("glitch") || (o.classList.remove("glitch"), o.offsetWidth, o.classList.add("glitch"), function(t) { f(function() { t.classList.remove("glitch") }, 560) }(o))
+          }
+        }
+      }
 
       function h() { a.classList.remove("rgb"), a.offsetWidth, a.classList.add("rgb"), f(function() { a.classList.remove("rgb") }, 420) }
 
-      function y() { i.forEach(clearTimeout), i = [], l.forEach(clearInterval), l = [], s.classList.remove("run", "shining", "settle"), r.forEach(function(t) { t.classList.remove("glitch"), t.style.opacity = "", t.style.transform = "", t.style.filter = "" }), a.classList.remove("rgb"), s.offsetWidth, s.classList.add("run"), f(function() {! function() { o.style.opacity = "1", o.style.transform = "scale(1) rotate(0)", document.querySelectorAll(".dot").forEach(function(t) { t.style.opacity = "1", t.style.transform = "scale(1)" }); var t = document.querySelector(".title");
-            t && (t.style.opacity = "1"); var e = document.querySelector(".line-num");
-            e && (e.style.opacity = "1", e.style.transform = "translateX(0)"), r.forEach(function(t) { t.style.opacity = "1", t.style.transform = "translateY(0) scale(1)", t.style.filter = "blur(0) brightness(1)" }) }(), s.classList.remove("run"), s.classList.add("settle"), f(m, 250), l.push(setInterval(m, 4200)), l.push(setInterval(d, 1700)), l.push(setInterval(h, 3400)) }, 950 + 45 * r.length + 620) }
+      function y() {
+        i.forEach(clearTimeout), i = [], l.forEach(clearInterval), l = [], s.classList.remove("run", "shining", "settle"), r.forEach(function(t) { t.classList.remove("glitch"), t.style.opacity = "", t.style.transform = "", t.style.filter = "" }), a.classList.remove("rgb"), s.offsetWidth, s.classList.add("run"), f(function() {
+          ! function() {
+            o.style.opacity = "1", o.style.transform = "scale(1) rotate(0)", document.querySelectorAll(".dot").forEach(function(t) { t.style.opacity = "1", t.style.transform = "scale(1)" });
+            var t = document.querySelector(".title");
+            t && (t.style.opacity = "1");
+            var e = document.querySelector(".line-num");
+            e && (e.style.opacity = "1", e.style.transform = "translateX(0)"), r.forEach(function(t) { t.style.opacity = "1", t.style.transform = "translateY(0) scale(1)", t.style.filter = "blur(0) brightness(1)" })
+          }(), s.classList.remove("run"), s.classList.add("settle"), f(m, 250), l.push(setInterval(m, 4200)), l.push(setInterval(d, 1700)), l.push(setInterval(h, 3400))
+        }, 950 + 45 * r.length + 620)
+      }
 
-      function v() {! function() { var t = e;
-          c.font = '700 100px "JetBrains Mono", monospace'; var n = c.measureText(t).width || 1,
+      function v() {
+        ! function() {
+          var t = e;
+          c.font = '700 100px "JetBrains Mono", monospace';
+          var n = c.measureText(t).width || 1,
             s = Math.min(34e3 / n, 56);
-          s = Math.max(s, 20), a.style.fontSize = s + "px", a.innerHTML = "", r = []; for (var o = 0; o < t.length; o++) { var i = " " === t[o] ? " " : t[o],
+          s = Math.max(s, 20), a.style.fontSize = s + "px", a.innerHTML = "", r = [];
+          for (var o = 0; o < t.length; o++) {
+            var i = " " === t[o] ? " " : t[o],
               l = document.createElement("span");
-            l.className = "ch", l.textContent = i, l.style.setProperty("--i", o), l.style.color = u(), a.appendChild(l), r.push(l) } }(), y() } document.fonts && document.fonts.load ? Promise.all([document.fonts.load('500 100px "JetBrains Mono"'), document.fonts.load('700 100px "JetBrains Mono"')]).then(v).catch(v) : v() }()
+            l.className = "ch", l.textContent = i, l.style.setProperty("--i", o), l.style.color = u(), a.appendChild(l), r.push(l)
+          }
+        }(), y()
+      }
+      document.fonts && document.fonts.load ? Promise.all([document.fonts.load('500 100px "JetBrains Mono"'), document.fonts.load('700 100px "JetBrains Mono"')]).then(v).catch(v) : v()
+    }()
   </script>
 </body>
 

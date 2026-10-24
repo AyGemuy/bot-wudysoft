@@ -290,9 +290,16 @@
 
     function initAudio() { audioCtx || (audioCtx = new(window.AudioContext || window.webkitAudioContext)), "suspended" === audioCtx.state && audioCtx.resume() }
 
-    function playSound(e) { try { initAudio(); const t = audioCtx.createOscillator(),
+    function playSound(e) {
+      try {
+        initAudio();
+        const t = audioCtx.createOscillator(),
           a = audioCtx.createGain();
-        t.connect(a), a.connect(audioCtx.destination); const i = audioCtx.currentTime; "steer" === e ? (t.type = "sine", t.frequency.setValueAtTime(300, i), a.gain.setValueAtTime(.05, i), a.gain.exponentialRampToValueAtTime(.01, i + .05), t.start(i), t.stop(i + .05)) : "crash" === e && (t.type = "sawtooth", t.frequency.setValueAtTime(120, i), t.frequency.linearRampToValueAtTime(20, i + .4), a.gain.setValueAtTime(.25, i), a.gain.exponentialRampToValueAtTime(.01, i + .4), t.start(i), t.stop(i + .4)) } catch (e) {} }
+        t.connect(a), a.connect(audioCtx.destination);
+        const i = audioCtx.currentTime;
+        "steer" === e ? (t.type = "sine", t.frequency.setValueAtTime(300, i), a.gain.setValueAtTime(.05, i), a.gain.exponentialRampToValueAtTime(.01, i + .05), t.start(i), t.stop(i + .05)) : "crash" === e && (t.type = "sawtooth", t.frequency.setValueAtTime(120, i), t.frequency.linearRampToValueAtTime(20, i + .4), a.gain.setValueAtTime(.25, i), a.gain.exponentialRampToValueAtTime(.01, i + .4), t.start(i), t.stop(i + .4))
+      } catch (e) {}
+    }
     const canvas = document.getElementById("gameCanvas"),
       ctx = canvas.getContext("2d"),
       CANVAS_WIDTH = 640,
@@ -311,8 +318,11 @@
 
     function update() { if (!gameOver) { frameCount++, score += Math.floor(gameSpeed), roadAnimOffset = (roadAnimOffset + gameSpeed) % 40, gameSpeed = 5 + .5 * Math.floor(score / 1e3), frameCount % Math.max(50, 110 - Math.floor(4 * gameSpeed)) === 0 && traffic.push(new TrafficCar); for (let e = traffic.length - 1; e >= 0; e--) traffic[e].update(), player.x - player.w / 2 < traffic[e].x + traffic[e].w / 2 && player.x + player.w / 2 > traffic[e].x - traffic[e].w / 2 && player.y < traffic[e].y + traffic[e].h && player.y + player.h > traffic[e].y && (gameOver = !0, playSound("crash"), endGame()), traffic[e].y > 410 && traffic.splice(e, 1) } }
 
-    function render() { ctx.clearRect(0, 0, 640, 360), ctx.fillStyle = "#15803d", ctx.fillRect(0, 0, 640, 360), ctx.fillStyle = "#334155", ctx.fillRect(120, 0, 400, 360), ctx.strokeStyle = "#f8fafc", ctx.lineWidth = 4, ctx.setLineDash([20, 20]), ctx.lineDashOffset = -roadAnimOffset, ctx.beginPath(), ctx.moveTo(255, 0), ctx.lineTo(255, 360), ctx.stroke(), ctx.beginPath(), ctx.moveTo(385, 0), ctx.lineTo(385, 360), ctx.stroke(), ctx.setLineDash([]); for (let e of traffic) e.draw();
-      player.draw(), updateUI() }
+    function render() {
+      ctx.clearRect(0, 0, 640, 360), ctx.fillStyle = "#15803d", ctx.fillRect(0, 0, 640, 360), ctx.fillStyle = "#334155", ctx.fillRect(120, 0, 400, 360), ctx.strokeStyle = "#f8fafc", ctx.lineWidth = 4, ctx.setLineDash([20, 20]), ctx.lineDashOffset = -roadAnimOffset, ctx.beginPath(), ctx.moveTo(255, 0), ctx.lineTo(255, 360), ctx.stroke(), ctx.beginPath(), ctx.moveTo(385, 0), ctx.lineTo(385, 360), ctx.stroke(), ctx.setLineDash([]);
+      for (let e of traffic) e.draw();
+      player.draw(), updateUI()
+    }
 
     function gameLoop() { update(), render(), requestAnimationFrame(gameLoop) }
 

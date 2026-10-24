@@ -285,9 +285,16 @@
 
     function initAudio() { audioCtx || (audioCtx = new(window.AudioContext || window.webkitAudioContext)), "suspended" === audioCtx.state && audioCtx.resume() }
 
-    function playSound(t) { try { initAudio(); const e = audioCtx.createOscillator(),
+    function playSound(t) {
+      try {
+        initAudio();
+        const e = audioCtx.createOscillator(),
           i = audioCtx.createGain();
-        e.connect(i), i.connect(audioCtx.destination); const a = audioCtx.currentTime; "flap" === t ? (e.type = "triangle", e.frequency.setValueAtTime(300, a), e.frequency.exponentialRampToValueAtTime(600, a + .1), i.gain.setValueAtTime(.12, a), i.gain.exponentialRampToValueAtTime(.01, a + .1), e.start(a), e.stop(a + .1)) : "score" === t ? (e.type = "sine", e.frequency.setValueAtTime(587, a), e.frequency.setValueAtTime(880, a + .08), i.gain.setValueAtTime(.1, a), i.gain.exponentialRampToValueAtTime(.01, a + .2), e.start(a), e.stop(a + .2)) : "hit" === t && (e.type = "sawtooth", e.frequency.setValueAtTime(140, a), e.frequency.linearRampToValueAtTime(30, a + .3), i.gain.setValueAtTime(.2, a), i.gain.exponentialRampToValueAtTime(.01, a + .3), e.start(a), e.stop(a + .3)) } catch (t) {} }
+        e.connect(i), i.connect(audioCtx.destination);
+        const a = audioCtx.currentTime;
+        "flap" === t ? (e.type = "triangle", e.frequency.setValueAtTime(300, a), e.frequency.exponentialRampToValueAtTime(600, a + .1), i.gain.setValueAtTime(.12, a), i.gain.exponentialRampToValueAtTime(.01, a + .1), e.start(a), e.stop(a + .1)) : "score" === t ? (e.type = "sine", e.frequency.setValueAtTime(587, a), e.frequency.setValueAtTime(880, a + .08), i.gain.setValueAtTime(.1, a), i.gain.exponentialRampToValueAtTime(.01, a + .2), e.start(a), e.stop(a + .2)) : "hit" === t && (e.type = "sawtooth", e.frequency.setValueAtTime(140, a), e.frequency.linearRampToValueAtTime(30, a + .3), i.gain.setValueAtTime(.2, a), i.gain.exponentialRampToValueAtTime(.01, a + .3), e.start(a), e.stop(a + .3))
+      } catch (t) {}
+    }
     const canvas = document.getElementById("gameCanvas"),
       ctx = canvas.getContext("2d"),
       CANVAS_WIDTH = 640,
@@ -305,8 +312,11 @@
 
     function update() { if (!gameOver) { gameStarted && (frameCount++, frameCount % 100 == 0 && pipes.push(new Pipe)), bird.update(); for (let t = pipes.length - 1; t >= 0; t--) pipes[t].update(), !pipes[t].passed && pipes[t].x + pipes[t].w < bird.x && (score++, pipes[t].passed = !0, playSound("score"), updateUI()), bird.x + bird.radius > pipes[t].x && bird.x - bird.radius < pipes[t].x + pipes[t].w && (bird.y - bird.radius < pipes[t].topHeight || bird.y + bird.radius > pipes[t].bottomY) && (gameOver = !0, playSound("hit"), endGame()), pipes[t].x + pipes[t].w < 0 && pipes.splice(t, 1) } }
 
-    function render() { ctx.clearRect(0, 0, 640, 360), ctx.fillStyle = "#38bdf8", ctx.fillRect(0, 0, 640, 360); for (let t of pipes) t.draw();
-      ctx.fillStyle = "#16a34a", ctx.fillRect(0, 320, 640, 40), ctx.fillStyle = "#15803d", ctx.fillRect(0, 320, 640, 12), bird.draw() }
+    function render() {
+      ctx.clearRect(0, 0, 640, 360), ctx.fillStyle = "#38bdf8", ctx.fillRect(0, 0, 640, 360);
+      for (let t of pipes) t.draw();
+      ctx.fillStyle = "#16a34a", ctx.fillRect(0, 320, 640, 40), ctx.fillStyle = "#15803d", ctx.fillRect(0, 320, 640, 12), bird.draw()
+    }
 
     function gameLoop() { update(), render(), requestAnimationFrame(gameLoop) }
 

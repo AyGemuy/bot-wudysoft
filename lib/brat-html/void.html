@@ -313,7 +313,8 @@
     <div class="flash"></div>
   </div>
   <script>
-    ! function() { var e = document.getElementById("kalimat-src"),
+    ! function() {
+      var e = document.getElementById("kalimat-src"),
         t = (e && e.dataset.text || "EVENT HORIZON").trim() || "EVENT HORIZON",
         a = 512,
         n = 512,
@@ -327,35 +328,83 @@
         h = document.getElementById("textRight"),
         u = document.createElement("canvas").getContext("2d"),
         f = '"Michroma", sans-serif',
-        m = 100; var g = [];
+        m = 100;
+      var g = [];
 
-      function p() { i.classList.remove("impact", "run"), g = [], r.style.opacity = "", l.style.opacity = "", r.style.animation = "", l.style.animation = "", o.clearRect(0, 0, a, n), [s, d].forEach(function(e) { e.style.animation = "none", e.offsetWidth, e.style.animation = "" }), requestAnimationFrame(function() { i.classList.add("run"); var e = function() { s.removeEventListener("animationend", e), i.classList.add("impact"), r.style.opacity = "0", l.style.opacity = "0", r.style.animation = "none", l.style.animation = "none", g = function() { var e = document.createElement("canvas");
-              e.width = a, e.height = n; var t = e.getContext("2d");
-              t.font = "400 " + m + "px " + f, t.textBaseline = "middle", t.fillStyle = "#fff", t.textAlign = "right", t.fillText(c.textContent, 270, 256), t.textAlign = "left", t.fillText(h.textContent, 242, 256); for (var i = t.getImageData(0, 0, a, n).data, o = [], r = 0; r < n; r += 3)
+      function p() {
+        i.classList.remove("impact", "run"), g = [], r.style.opacity = "", l.style.opacity = "", r.style.animation = "", l.style.animation = "", o.clearRect(0, 0, a, n), [s, d].forEach(function(e) { e.style.animation = "none", e.offsetWidth, e.style.animation = "" }), requestAnimationFrame(function() {
+          i.classList.add("run");
+          var e = function() {
+            s.removeEventListener("animationend", e), i.classList.add("impact"), r.style.opacity = "0", l.style.opacity = "0", r.style.animation = "none", l.style.animation = "none", g = function() {
+              var e = document.createElement("canvas");
+              e.width = a, e.height = n;
+              var t = e.getContext("2d");
+              t.font = "400 " + m + "px " + f, t.textBaseline = "middle", t.fillStyle = "#fff", t.textAlign = "right", t.fillText(c.textContent, 270, 256), t.textAlign = "left", t.fillText(h.textContent, 242, 256);
+              for (var i = t.getImageData(0, 0, a, n).data, o = [], r = 0; r < n; r += 3)
                 for (var l = 0; l < a; l += 3)
-                  if (i[4 * (r * a + l) + 3] > 128) { var s = l - 256,
+                  if (i[4 * (r * a + l) + 3] > 128) {
+                    var s = l - 256,
                       d = r - 256,
                       u = Math.sqrt(s * s + d * d),
                       g = Math.atan2(d, s);
-                    o.push({ startX: l, startY: r, angle: g, startRadius: u, radius: u, spin: .05 + .001 * (200 - u), shrink: .9, phase: "in", phaseT: 0, life: 1 }) } return o }(), console.log("[void] captured " + g.length + " points"), setTimeout(function() { for (var e = 0; e < g.length; e++) { var t = g[e]; "in" === t.phase && (t.phase = "out", t.phaseT = 0, t.angle = Math.random() * Math.PI * 2, t.radius = 3 + 8 * Math.random(), t.expSpeed = 6 + 22 * Math.random()) } }, 850), setTimeout(p, 4400) };
-          s.addEventListener("animationend", e, { once: !0 }) }) }
+                    o.push({ startX: l, startY: r, angle: g, startRadius: u, radius: u, spin: .05 + .001 * (200 - u), shrink: .9, phase: "in", phaseT: 0, life: 1 })
+                  } return o
+            }(), console.log("[void] captured " + g.length + " points"), setTimeout(function() { for (var e = 0; e < g.length; e++) { var t = g[e]; "in" === t.phase && (t.phase = "out", t.phaseT = 0, t.angle = Math.random() * Math.PI * 2, t.radius = 3 + 8 * Math.random(), t.expSpeed = 6 + 22 * Math.random()) } }, 850), setTimeout(p, 4400)
+          };
+          s.addEventListener("animationend", e, { once: !0 })
+        })
+      }
 
       function v() {
-        (function() { var e = function(e) { var t = String(e).trim().split(/\s+/).filter(Boolean); if (!t.length) return ["", ""]; if (1 === t.length) { var a = t[0]; if (a.length < 2) return [a, a]; var n = Math.ceil(a.length / 2); return [a.slice(0, n), a.slice(n)] } if (2 === t.length) return [t[0], t[1]]; for (var i = 1, o = 1 / 0, r = 1; r < t.length; r++) { var l = t.slice(0, r).join("").length,
+        (function() {
+          var e = function(e) {
+            var t = String(e).trim().split(/\s+/).filter(Boolean);
+            if (!t.length) return ["", ""];
+            if (1 === t.length) { var a = t[0]; if (a.length < 2) return [a, a]; var n = Math.ceil(a.length / 2); return [a.slice(0, n), a.slice(n)] }
+            if (2 === t.length) return [t[0], t[1]];
+            for (var i = 1, o = 1 / 0, r = 1; r < t.length; r++) {
+              var l = t.slice(0, r).join("").length,
                 s = t.slice(r).join("").length,
                 d = Math.abs(l - s);
-              d < o && (o = d, i = r) } return [t.slice(0, i).join(" "), t.slice(i).join(" ")] }(t);
-          c.textContent = e[0], h.textContent = e[1]; var a = function(e, t) { if (!e && !t) return 175;
-            u.font = `400 100px ${f}`; var a = e ? u.measureText(e).width || 1 : 0,
-              n = t ? u.measureText(t).width || 1 : 0; return Math.min(46e3 / (a + n || 1), 175) }(e[0], e[1]);
-          m = a, r.style.fontSize = a + "px", l.style.fontSize = a + "px" })(), p() }! function e() { o.clearRect(0, 0, a, n), o.globalCompositeOperation = "lighter"; for (var t = 256, i = 256, r = g.length - 1; r >= 0; r--) { var l = g[r]; if ("in" === l.phase) { l.angle += l.spin * (1 + 2 * l.phaseT), l.radius *= .955, l.phaseT += .02; var s = t + Math.cos(l.angle) * l.radius,
+              d < o && (o = d, i = r)
+            }
+            return [t.slice(0, i).join(" "), t.slice(i).join(" ")]
+          }(t);
+          c.textContent = e[0], h.textContent = e[1];
+          var a = function(e, t) {
+            if (!e && !t) return 175;
+            u.font = `400 100px ${f}`;
+            var a = e ? u.measureText(e).width || 1 : 0,
+              n = t ? u.measureText(t).width || 1 : 0;
+            return Math.min(46e3 / (a + n || 1), 175)
+          }(e[0], e[1]);
+          m = a, r.style.fontSize = a + "px", l.style.fontSize = a + "px"
+        })(), p()
+      }! function e() {
+        o.clearRect(0, 0, a, n), o.globalCompositeOperation = "lighter";
+        for (var t = 256, i = 256, r = g.length - 1; r >= 0; r--) {
+          var l = g[r];
+          if ("in" === l.phase) {
+            l.angle += l.spin * (1 + 2 * l.phaseT), l.radius *= .955, l.phaseT += .02;
+            var s = t + Math.cos(l.angle) * l.radius,
               d = i + Math.sin(l.angle) * l.radius,
               c = Math.max(1, .08 * l.radius);
-            o.strokeStyle = "rgba(200,150,255," + (.4 + .6 * Math.min(l.phaseT, 1)) + ")", o.lineWidth = c, o.lineCap = "round", o.beginPath(), o.moveTo(s, d); var h = l.angle - .15,
+            o.strokeStyle = "rgba(200,150,255," + (.4 + .6 * Math.min(l.phaseT, 1)) + ")", o.lineWidth = c, o.lineCap = "round", o.beginPath(), o.moveTo(s, d);
+            var h = l.angle - .15,
               u = l.radius / .94;
-            o.lineTo(t + Math.cos(h) * u, i + Math.sin(h) * u), o.stroke(); var f = o.createRadialGradient(s, d, 0, s, d, 3 * c);
-            f.addColorStop(0, "rgba(255,255,255,1)"), f.addColorStop(.5, "rgba(200,150,255,0.8)"), f.addColorStop(1, "rgba(140,60,255,0)"), o.fillStyle = f, o.beginPath(), o.arc(s, d, 3 * c, 0, 7), o.fill(), l.radius < 3 && (l.phase = "gathered") } else if ("out" === l.phase) { l.radius += l.expSpeed, l.expSpeed *= .97, l.life -= .014, l.phaseT += .02; var m = t + Math.cos(l.angle) * l.radius,
-              p = i + Math.sin(l.angle) * l.radius; if (l.life <= 0) { g.splice(r, 1); continue } o.strokeStyle = "rgba(" + Math.floor(200 + 55 * Math.random()) + "," + Math.floor(140 + 60 * Math.random()) + ",255," + l.life + ")", o.lineWidth = 1 + Math.random(), o.beginPath(), o.moveTo(m, p), o.lineTo(t + Math.cos(l.angle) * (l.radius - 3 * l.expSpeed), i + Math.sin(l.angle) * (l.radius - 3 * l.expSpeed)), o.stroke(), o.fillStyle = "rgba(255,255,255," + l.life + ")", o.beginPath(), o.arc(m, p, 1.5 + 1.5 * l.life, 0, 7), o.fill() } } o.globalCompositeOperation = "source-over", requestAnimationFrame(e) }(), document.fonts && document.fonts.load ? document.fonts.load('400 100px "Michroma"').then(v).catch(v) : v() }()
+            o.lineTo(t + Math.cos(h) * u, i + Math.sin(h) * u), o.stroke();
+            var f = o.createRadialGradient(s, d, 0, s, d, 3 * c);
+            f.addColorStop(0, "rgba(255,255,255,1)"), f.addColorStop(.5, "rgba(200,150,255,0.8)"), f.addColorStop(1, "rgba(140,60,255,0)"), o.fillStyle = f, o.beginPath(), o.arc(s, d, 3 * c, 0, 7), o.fill(), l.radius < 3 && (l.phase = "gathered")
+          } else if ("out" === l.phase) {
+            l.radius += l.expSpeed, l.expSpeed *= .97, l.life -= .014, l.phaseT += .02;
+            var m = t + Math.cos(l.angle) * l.radius,
+              p = i + Math.sin(l.angle) * l.radius;
+            if (l.life <= 0) { g.splice(r, 1); continue } o.strokeStyle = "rgba(" + Math.floor(200 + 55 * Math.random()) + "," + Math.floor(140 + 60 * Math.random()) + ",255," + l.life + ")", o.lineWidth = 1 + Math.random(), o.beginPath(), o.moveTo(m, p), o.lineTo(t + Math.cos(l.angle) * (l.radius - 3 * l.expSpeed), i + Math.sin(l.angle) * (l.radius - 3 * l.expSpeed)), o.stroke(), o.fillStyle = "rgba(255,255,255," + l.life + ")", o.beginPath(), o.arc(m, p, 1.5 + 1.5 * l.life, 0, 7), o.fill()
+          }
+        }
+        o.globalCompositeOperation = "source-over", requestAnimationFrame(e)
+      }(), document.fonts && document.fonts.load ? document.fonts.load('400 100px "Michroma"').then(v).catch(v) : v()
+    }()
   </script>
 </body>
 

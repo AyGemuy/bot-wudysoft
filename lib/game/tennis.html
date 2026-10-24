@@ -265,9 +265,16 @@
 
     function initAudio() { audioCtx || (audioCtx = new(window.AudioContext || window.webkitAudioContext)), "suspended" === audioCtx.state && audioCtx.resume() }
 
-    function playSound(e) { try { initAudio(); const t = audioCtx.createOscillator(),
+    function playSound(e) {
+      try {
+        initAudio();
+        const t = audioCtx.createOscillator(),
           a = audioCtx.createGain();
-        t.connect(a), a.connect(audioCtx.destination); const l = audioCtx.currentTime; "hit" === e ? (t.type = "triangle", t.frequency.setValueAtTime(440, l), a.gain.setValueAtTime(.1, l), a.gain.exponentialRampToValueAtTime(.01, l + .1), t.start(l), t.stop(l + .1)) : "score" === e && (t.type = "sawtooth", t.frequency.setValueAtTime(200, l), t.frequency.linearRampToValueAtTime(80, l + .3), a.gain.setValueAtTime(.2, l), a.gain.exponentialRampToValueAtTime(.01, l + .3), t.start(l), t.stop(l + .3)) } catch (e) {} }
+        t.connect(a), a.connect(audioCtx.destination);
+        const l = audioCtx.currentTime;
+        "hit" === e ? (t.type = "triangle", t.frequency.setValueAtTime(440, l), a.gain.setValueAtTime(.1, l), a.gain.exponentialRampToValueAtTime(.01, l + .1), t.start(l), t.stop(l + .1)) : "score" === e && (t.type = "sawtooth", t.frequency.setValueAtTime(200, l), t.frequency.linearRampToValueAtTime(80, l + .3), a.gain.setValueAtTime(.2, l), a.gain.exponentialRampToValueAtTime(.01, l + .3), t.start(l), t.stop(l + .3))
+      } catch (e) {}
+    }
     const canvas = document.getElementById("gameCanvas"),
       ctx = canvas.getContext("2d"),
       CANVAS_WIDTH = 640,
@@ -282,9 +289,21 @@
 
     function resetBall(e) { ball.x = 320, ball.y = 180, ball.vx = "player" === e ? -4 : 4, ball.vy = 4 * Math.random() - 2 }
 
-    function update() { upPressed && player.y > 10 && (player.y -= player.dy), downPressed && player.y < 360 - player.h - 10 && (player.y += player.dy); let e = ai.y + ai.h / 2; if (e < ball.y - 15 ? ai.y += ai.dy : e > ball.y + 15 && (ai.y -= ai.dy), ai.y < 10 && (ai.y = 10), ai.y > 360 - ai.h - 10 && (ai.y = 360 - ai.h - 10), ball.x += ball.vx, ball.y += ball.vy, (ball.y - ball.radius < 0 || ball.y + ball.radius > 360) && (ball.vy *= -1, playSound("hit")), ball.x - ball.radius < player.x + player.w && ball.y > player.y && ball.y < player.y + player.h) { ball.vx *= -1.08; let e = ball.y - (player.y + player.h / 2);
-        ball.vy = .15 * e, playSound("hit") } if (ball.x + ball.radius > ai.x && ball.y > ai.y && ball.y < ai.y + ai.h) { ball.vx *= -1.08; let e = ball.y - (ai.y + ai.h / 2);
-        ball.vy = .15 * e, playSound("hit") } ball.x < 0 ? (aScore++, playSound("score"), aScore >= 5 ? endGame("AI MENANG!") : resetBall("ai")) : ball.x > 640 && (pScore++, playSound("score"), pScore >= 5 ? endGame("PLAYER MENANG!") : resetBall("player")), document.getElementById("playerScore").textContent = pScore, document.getElementById("aiScore").textContent = aScore }
+    function update() {
+      upPressed && player.y > 10 && (player.y -= player.dy), downPressed && player.y < 360 - player.h - 10 && (player.y += player.dy);
+      let e = ai.y + ai.h / 2;
+      if (e < ball.y - 15 ? ai.y += ai.dy : e > ball.y + 15 && (ai.y -= ai.dy), ai.y < 10 && (ai.y = 10), ai.y > 360 - ai.h - 10 && (ai.y = 360 - ai.h - 10), ball.x += ball.vx, ball.y += ball.vy, (ball.y - ball.radius < 0 || ball.y + ball.radius > 360) && (ball.vy *= -1, playSound("hit")), ball.x - ball.radius < player.x + player.w && ball.y > player.y && ball.y < player.y + player.h) {
+        ball.vx *= -1.08;
+        let e = ball.y - (player.y + player.h / 2);
+        ball.vy = .15 * e, playSound("hit")
+      }
+      if (ball.x + ball.radius > ai.x && ball.y > ai.y && ball.y < ai.y + ai.h) {
+        ball.vx *= -1.08;
+        let e = ball.y - (ai.y + ai.h / 2);
+        ball.vy = .15 * e, playSound("hit")
+      }
+      ball.x < 0 ? (aScore++, playSound("score"), aScore >= 5 ? endGame("AI MENANG!") : resetBall("ai")) : ball.x > 640 && (pScore++, playSound("score"), pScore >= 5 ? endGame("PLAYER MENANG!") : resetBall("player")), document.getElementById("playerScore").textContent = pScore, document.getElementById("aiScore").textContent = aScore
+    }
 
     function render() { ctx.fillStyle = "#0f172a", ctx.fillRect(0, 0, 640, 360), ctx.strokeStyle = "rgba(255,255,255,0.2)", ctx.lineWidth = 4, ctx.setLineDash([10, 10]), ctx.beginPath(), ctx.moveTo(320, 0), ctx.lineTo(320, 360), ctx.stroke(), ctx.setLineDash([]), ctx.fillStyle = "#ec4899", ctx.fillRect(player.x, player.y, player.w, player.h), ctx.fillStyle = "#06b6d4", ctx.fillRect(ai.x, ai.y, ai.w, ai.h), ctx.fillStyle = "#facc15", ctx.beginPath(), ctx.arc(ball.x, ball.y, ball.radius, 0, 2 * Math.PI), ctx.fill() }
     let gameInterval = null;
@@ -295,10 +314,13 @@
 
     function endGame(e) { clearInterval(gameInterval), document.getElementById("resTitle").textContent = e, document.getElementById("resDesc").textContent = `Skor akhir: Player ${pScore} - ${aScore} AI`, document.getElementById("overlay").classList.add("show") }
 
-    function bindTouch(e, t) { const a = document.getElementById(e),
+    function bindTouch(e, t) {
+      const a = document.getElementById(e),
         l = e => { e.preventDefault(), initAudio(), t ? upPressed = !0 : downPressed = !0 },
         n = e => { e.preventDefault(), t ? upPressed = !1 : downPressed = !1 };
-      a.addEventListener("touchstart", l), a.addEventListener("touchend", n), a.addEventListener("mousedown", l), a.addEventListener("mouseup", n) } window.addEventListener("keydown", e => { initAudio(), "ArrowUp" !== e.code && "KeyW" !== e.code || (e.preventDefault(), upPressed = !0), "ArrowDown" !== e.code && "KeyS" !== e.code || (e.preventDefault(), downPressed = !0) }), window.addEventListener("keyup", e => { "ArrowUp" !== e.code && "KeyW" !== e.code || (upPressed = !1), "ArrowDown" !== e.code && "KeyS" !== e.code || (downPressed = !1) }), bindTouch("btnUp", !0), bindTouch("btnDown", !1), document.getElementById("btnRestart").addEventListener("click", initGame), initGame()
+      a.addEventListener("touchstart", l), a.addEventListener("touchend", n), a.addEventListener("mousedown", l), a.addEventListener("mouseup", n)
+    }
+    window.addEventListener("keydown", e => { initAudio(), "ArrowUp" !== e.code && "KeyW" !== e.code || (e.preventDefault(), upPressed = !0), "ArrowDown" !== e.code && "KeyS" !== e.code || (e.preventDefault(), downPressed = !0) }), window.addEventListener("keyup", e => { "ArrowUp" !== e.code && "KeyW" !== e.code || (upPressed = !1), "ArrowDown" !== e.code && "KeyS" !== e.code || (downPressed = !1) }), bindTouch("btnUp", !0), bindTouch("btnDown", !1), document.getElementById("btnRestart").addEventListener("click", initGame), initGame()
   </script>
 </body>
 

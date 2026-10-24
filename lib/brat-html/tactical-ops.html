@@ -685,7 +685,8 @@
     <div class="grain"></div>
   </div>
   <script>
-    ! function() { var t = document.getElementById("kalimat-src"),
+    ! function() {
+      var t = document.getElementById("kalimat-src"),
         e = (t && t.dataset.text || "GHOST PROTOCOL").trim() || "GHOST PROTOCOL",
         n = document.getElementById("stage"),
         a = document.getElementById("word"),
@@ -695,33 +696,60 @@
         r = "!@#$%&*<>?/[]{}=+-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ",
         c = document.createElement("canvas").getContext("2d");
 
-      function m() { return r[54 * Math.random() | 0] } c.font = "400 100px Anton"; var i = [],
+      function m() { return r[54 * Math.random() | 0] } c.font = "400 100px Anton";
+      var i = [],
         d = [],
         u = null,
         f = null;
 
-      function v() { var t, n, o;
-        a.innerHTML = "", i = [], a.style.fontSize = (t = e, n = c.measureText(t).width || 1, (o = Math.min(84, 424 / n * 100)) < 16 && (o = 16), o.toFixed(1) + "px"); for (var s = 0, l = e.length, r = Math.min(90, 900 / Math.max(1, l)), d = 0; d < l; d++) { var u = e[d]; if (" " !== u) { var f = document.createElement("span");
-            f.className = "letter scrambling", f.textContent = m(); var v = Math.random() * Math.PI * 2,
+      function v() {
+        var t, n, o;
+        a.innerHTML = "", i = [], a.style.fontSize = (t = e, n = c.measureText(t).width || 1, (o = Math.min(84, 424 / n * 100)) < 16 && (o = 16), o.toFixed(1) + "px");
+        for (var s = 0, l = e.length, r = Math.min(90, 900 / Math.max(1, l)), d = 0; d < l; d++) {
+          var u = e[d];
+          if (" " !== u) {
+            var f = document.createElement("span");
+            f.className = "letter scrambling", f.textContent = m();
+            var v = Math.random() * Math.PI * 2,
               h = 60 + 190 * Math.random();
-            f.style.setProperty("--tx", (Math.cos(v) * h).toFixed(1) + "px"), f.style.setProperty("--ty", (Math.sin(v) * h * .9 - 35).toFixed(1) + "px"), f.style.setProperty("--rot", (720 * (Math.random() - .5)).toFixed(0) + "deg"), f.style.setProperty("--impD", (.025 * s).toFixed(3) + "s"), a.appendChild(f), i.push({ el: f, ch: u, resolved: !1, resolveAt: 420 + s * r }), s++ } else { var p = document.createElement("span");
-            p.className = "space", p.innerHTML = "&nbsp;", a.appendChild(p) } } } var h = 0,
+            f.style.setProperty("--tx", (Math.cos(v) * h).toFixed(1) + "px"), f.style.setProperty("--ty", (Math.sin(v) * h * .9 - 35).toFixed(1) + "px"), f.style.setProperty("--rot", (720 * (Math.random() - .5)).toFixed(0) + "deg"), f.style.setProperty("--impD", (.025 * s).toFixed(3) + "s"), a.appendChild(f), i.push({ el: f, ch: u, resolved: !1, resolveAt: 420 + s * r }), s++
+          } else {
+            var p = document.createElement("span");
+            p.className = "space", p.innerHTML = "&nbsp;", a.appendChild(p)
+          }
+        }
+      }
+      var h = 0,
         p = 0;
 
-      function x() { i.forEach(function(t) { t.resolved = !1, t.el.classList.add("scrambling"), t.el.classList.remove("flash"), t.el.textContent = m() }), o.textContent = "DECODING", o.classList.remove("armed"), s.style.transform = "scaleX(0)"; var t = i.length ? i[i.length - 1].resolveAt : 400;
-        p = t + 750, h = performance.now(), f = setInterval(function() { var t = performance.now() - h,
+      function x() {
+        i.forEach(function(t) { t.resolved = !1, t.el.classList.add("scrambling"), t.el.classList.remove("flash"), t.el.textContent = m() }), o.textContent = "DECODING", o.classList.remove("armed"), s.style.transform = "scaleX(0)";
+        var t = i.length ? i[i.length - 1].resolveAt : 400;
+        p = t + 750, h = performance.now(), f = setInterval(function() {
+          var t = performance.now() - h,
             e = Math.min(1, t / p);
-          s.style.transform = "scaleX(" + e.toFixed(3) + ")", e >= 1 && (clearInterval(f), f = null) }, 60), u = setInterval(function() { for (var t = performance.now() - h, e = !0, n = 0; n < i.length; n++) { var a = i[n];
-            a.resolved || (e = !1, t >= a.resolveAt ? (a.resolved = !0, a.el.textContent = a.ch, a.el.classList.remove("scrambling"), a.el.classList.add("flash"), function(t) { d.push(setTimeout(function() { t.classList.remove("flash") }, 220)) }(a.el)) : a.el.textContent = m()) } e && (clearInterval(u), u = null, d.push(setTimeout(y, 700))) }, 45) }
+          s.style.transform = "scaleX(" + e.toFixed(3) + ")", e >= 1 && (clearInterval(f), f = null)
+        }, 60), u = setInterval(function() {
+          for (var t = performance.now() - h, e = !0, n = 0; n < i.length; n++) {
+            var a = i[n];
+            a.resolved || (e = !1, t >= a.resolveAt ? (a.resolved = !0, a.el.textContent = a.ch, a.el.classList.remove("scrambling"), a.el.classList.add("flash"), function(t) { d.push(setTimeout(function() { t.classList.remove("flash") }, 220)) }(a.el)) : a.el.textContent = m())
+          }
+          e && (clearInterval(u), u = null, d.push(setTimeout(y, 700)))
+        }, 45)
+      }
 
       function y() { n.classList.add("armed"), o.textContent = "LOCKED", o.classList.add("armed"), d.push(setTimeout(function() { n.classList.remove("armed"), n.classList.add("impact"), o.textContent = "STRIKE", d.push(setTimeout(I, 1800)) }, 500)) }
 
-      function I() { d.forEach(function(t) { clearTimeout(t) }), d = [], u && (clearInterval(u), u = null), f && (clearInterval(f), f = null), n.classList.remove("impact", "armed"), n.offsetWidth, x() } var L = Date.now();
+      function I() { d.forEach(function(t) { clearTimeout(t) }), d = [], u && (clearInterval(u), u = null), f && (clearInterval(f), f = null), n.classList.remove("impact", "armed"), n.offsetWidth, x() }
+      var L = Date.now();
 
-      function M() { v(), x() } setInterval(function() { var t = Math.floor((Date.now() - L) / 1e3),
+      function M() { v(), x() } setInterval(function() {
+        var t = Math.floor((Date.now() - L) / 1e3),
           e = ("0" + Math.floor(t / 60) % 100).slice(-2),
           n = ("0" + t % 60).slice(-2);
-        l.textContent = e + ":" + n }, 500), document.fonts && document.fonts.load ? Promise.all([document.fonts.load("400 100px Anton"), document.fonts.load('700 9px "JetBrains Mono"')]).then(M).catch(M) : M() }()
+        l.textContent = e + ":" + n
+      }, 500), document.fonts && document.fonts.load ? Promise.all([document.fonts.load("400 100px Anton"), document.fonts.load('700 9px "JetBrains Mono"')]).then(M).catch(M) : M()
+    }()
   </script>
 </body>
 

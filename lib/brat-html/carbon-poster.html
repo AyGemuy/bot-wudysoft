@@ -461,25 +461,43 @@
     <div class="flash"></div>
   </div>
   <script>
-    ! function() { var t = document.getElementById("kalimat-src"),
+    ! function() {
+      var t = document.getElementById("kalimat-src"),
         e = (t && t.dataset.text || "CARBON").trim() || "CARBON",
         n = document.getElementById("stage"),
         a = document.getElementById("phrase"),
         o = document.getElementById("mqInner"),
         s = document.createElement("canvas").getContext("2d");
-      s.font = "400 100px Anton"; var r, d, m, c, i = [];
+      s.font = "400 100px Anton";
+      var r, d, m, c, i = [];
 
-      function l() { var t, n, o;
-        a.innerHTML = "", i = [], a.style.fontSize = (t = e, n = s.measureText(t).width || 1, (o = Math.min(84, 432 / n * 100)) < 18 && (o = 18), o.toFixed(1) + "px"); for (var r = 0, d = 0; d < e.length; d++) { var m = e[d]; if (" " !== m) { var c = document.createElement("span");
-            c.className = "letter", c.textContent = m, c.style.setProperty("--d", (.05 * r).toFixed(3) + "s"), a.appendChild(c), i.push(c), r++ } else { var l = document.createElement("span");
-            l.className = "space", l.innerHTML = "&nbsp;", a.appendChild(l) } } }
+      function l() {
+        var t, n, o;
+        a.innerHTML = "", i = [], a.style.fontSize = (t = e, n = s.measureText(t).width || 1, (o = Math.min(84, 432 / n * 100)) < 18 && (o = 18), o.toFixed(1) + "px");
+        for (var r = 0, d = 0; d < e.length; d++) {
+          var m = e[d];
+          if (" " !== m) {
+            var c = document.createElement("span");
+            c.className = "letter", c.textContent = m, c.style.setProperty("--d", (.05 * r).toFixed(3) + "s"), a.appendChild(c), i.push(c), r++
+          } else {
+            var l = document.createElement("span");
+            l.className = "space", l.innerHTML = "&nbsp;", a.appendChild(l)
+          }
+        }
+      }
 
       function u() { clearTimeout(r), clearTimeout(d), n.classList.remove("impact", "run"), n.offsetWidth, n.classList.add("run"), r = setTimeout(function() { n.classList.add("impact"), d = setTimeout(u, c) }, m) }
 
-      function p() { var t;
+      function p() {
+        var t;
         l(),
-          function() { for (var t = e + "   ·   ", n = "", a = 0; a < 4; a++) n += t;
-            o.textContent = n + n }(), t = .05 * (i.length - 1), m = Math.round(1e3 * (t + .7 + 1.5)), c = Math.round(1e3 * (t + .85 + .6)), n.style.setProperty("--runTime", m + "ms"), u() } document.fonts && document.fonts.load ? Promise.all([document.fonts.load("400 100px Anton"), document.fonts.load('700 10px "JetBrains Mono"')]).then(p).catch(p) : p() }()
+          function() {
+            for (var t = e + "   ·   ", n = "", a = 0; a < 4; a++) n += t;
+            o.textContent = n + n
+          }(), t = .05 * (i.length - 1), m = Math.round(1e3 * (t + .7 + 1.5)), c = Math.round(1e3 * (t + .85 + .6)), n.style.setProperty("--runTime", m + "ms"), u()
+      }
+      document.fonts && document.fonts.load ? Promise.all([document.fonts.load("400 100px Anton"), document.fonts.load('700 10px "JetBrains Mono"')]).then(p).catch(p) : p()
+    }()
   </script>
 </body>
 

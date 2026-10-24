@@ -268,7 +268,9 @@
     </div>
   </div>
   <script>
-    ! function() { "use strict"; var t = document.getElementById("kalimat-src"),
+    ! function() {
+      "use strict";
+      var t = document.getElementById("kalimat-src"),
         e = (t && t.dataset.text || "SUPREME").trim() || "SUPREME",
         s = document.getElementById("stage"),
         n = document.getElementById("box"),
@@ -280,21 +282,42 @@
 
       function l(t, e) { var s = setTimeout(t, e); return c.push(s), s }
 
-      function u() { for (var t = 1 + Math.floor(2 * Math.random()), e = {}, s = 0; s < t; s++) { var n = Math.floor(Math.random() * i.length); if (!e[n]) { e[n] = !0; var a = i[n];
+      function u() {
+        for (var t = 1 + Math.floor(2 * Math.random()), e = {}, s = 0; s < t; s++) {
+          var n = Math.floor(Math.random() * i.length);
+          if (!e[n]) {
+            e[n] = !0;
+            var a = i[n];
             a.classList.remove("glitch"), a.offsetWidth, a.classList.add("glitch"),
-              function(t) { l(function() { t.classList.remove("glitch") }, 460) }(a) } } }
+              function(t) { l(function() { t.classList.remove("glitch") }, 460) }(a)
+          }
+        }
+      }
 
       function d() { s.classList.remove("shining"), s.offsetWidth, s.classList.add("shining"), l(function() { s.classList.remove("shining") }, 950) }
 
       function h() { n.classList.remove("blackout"), n.offsetWidth, n.classList.add("blackout"), l(function() { n.classList.remove("blackout") }, 950) }
 
-      function f() {! function() { var t = e;
-          o.font = '400 100px "Archivo Black", sans-serif'; var s = o.measureText(t).width || 1,
+      function f() {
+        ! function() {
+          var t = e;
+          o.font = '400 100px "Archivo Black", sans-serif';
+          var s = o.measureText(t).width || 1,
             n = Math.min(38e3 / s, 110);
-          a.style.fontSize = n + "px", a.innerHTML = "", i = []; for (var c = [], r = 0; r < t.length; r++) { var l = " " === t[r] ? " " : t[r];
-            c.push(o.measureText(l).width * n / 100) } for (var u = 0; u < t.length; u++) { var d = " " === t[u] ? " " : t[u],
+          a.style.fontSize = n + "px", a.innerHTML = "", i = [];
+          for (var c = [], r = 0; r < t.length; r++) {
+            var l = " " === t[r] ? " " : t[r];
+            c.push(o.measureText(l).width * n / 100)
+          }
+          for (var u = 0; u < t.length; u++) {
+            var d = " " === t[u] ? " " : t[u],
               h = document.createElement("span");
-            h.className = "ch", h.textContent = d, h.style.setProperty("--i", u), h.style.width = c[u] + "px", a.appendChild(h), i.push(h) } }(), c.forEach(clearTimeout), c = [], r.forEach(clearInterval), r = [], s.classList.remove("run", "shining", "settle"), i.forEach(function(t) { t.classList.remove("glitch") }), n.classList.remove("blackout"), s.offsetWidth, s.classList.add("run"), l(function() { s.classList.remove("run"), s.classList.add("shining"), l(function() { s.classList.remove("shining"), s.classList.add("settle"), r.push(setInterval(u, 1700)), r.push(setInterval(d, 3400)), r.push(setInterval(h, 7200)) }, 900) }, 55 * i.length + 480 + 700) } document.fonts && document.fonts.load ? document.fonts.load('400 100px "Archivo Black"').then(f).catch(f) : f() }()
+            h.className = "ch", h.textContent = d, h.style.setProperty("--i", u), h.style.width = c[u] + "px", a.appendChild(h), i.push(h)
+          }
+        }(), c.forEach(clearTimeout), c = [], r.forEach(clearInterval), r = [], s.classList.remove("run", "shining", "settle"), i.forEach(function(t) { t.classList.remove("glitch") }), n.classList.remove("blackout"), s.offsetWidth, s.classList.add("run"), l(function() { s.classList.remove("run"), s.classList.add("shining"), l(function() { s.classList.remove("shining"), s.classList.add("settle"), r.push(setInterval(u, 1700)), r.push(setInterval(d, 3400)), r.push(setInterval(h, 7200)) }, 900) }, 55 * i.length + 480 + 700)
+      }
+      document.fonts && document.fonts.load ? document.fonts.load('400 100px "Archivo Black"').then(f).catch(f) : f()
+    }()
   </script>
 </body>
 

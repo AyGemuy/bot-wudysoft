@@ -293,7 +293,8 @@
     <div class="grain"></div>
   </div>
   <script>
-    ! function() { var t = document.getElementById("kalimat-src"),
+    ! function() {
+      var t = document.getElementById("kalimat-src"),
         e = (t && t.dataset.text || "BRUTAL SLAP").trim() || "BRUTAL SLAP",
         n = document.getElementById("stage"),
         a = document.getElementById("fx").getContext("2d"),
@@ -303,32 +304,81 @@
         l = o.querySelector(".fly"),
         s = document.getElementById("textLeft"),
         c = document.getElementById("textRight"),
-        h = document.createElement("canvas").getContext("2d"); var f = [],
+        h = document.createElement("canvas").getContext("2d");
+      var f = [],
         d = [],
         m = ["#000", "#FF4081", "#00E5FF", "#FFEB3B"];
 
-      function v() { n.classList.remove("impact", "run"), f = [], d = [], a.clearRect(0, 0, 512, 512), [r, l].forEach(function(t) { t.style.animation = "none", t.offsetWidth, t.style.animation = "" }), requestAnimationFrame(function() { n.classList.add("run"); var t = function() { r.removeEventListener("animationend", t), n.classList.add("impact"),
-              function() { for (var t = 0; t < 70; t++) { var e = Math.random() * Math.PI * 2,
+      function v() {
+        n.classList.remove("impact", "run"), f = [], d = [], a.clearRect(0, 0, 512, 512), [r, l].forEach(function(t) { t.style.animation = "none", t.offsetWidth, t.style.animation = "" }), requestAnimationFrame(function() {
+          n.classList.add("run");
+          var t = function() {
+            r.removeEventListener("animationend", t), n.classList.add("impact"),
+              function() {
+                for (var t = 0; t < 70; t++) {
+                  var e = Math.random() * Math.PI * 2,
                     n = 20 * Math.random() + 3;
-                  f.push({ x: 256, y: 256, vx: Math.cos(e) * n, vy: Math.sin(e) * n - 2, life: 1, decay: .016 + .018 * Math.random(), size: 6 + 14 * Math.random(), rot: Math.random() * Math.PI, vr: .3 * (Math.random() - .5), color: m[Math.floor(Math.random() * m.length)] }) } for (var a = 0; a < 40; a++) { var i = Math.random() * Math.PI * 2,
+                  f.push({ x: 256, y: 256, vx: Math.cos(e) * n, vy: Math.sin(e) * n - 2, life: 1, decay: .016 + .018 * Math.random(), size: 6 + 14 * Math.random(), rot: Math.random() * Math.PI, vr: .3 * (Math.random() - .5), color: m[Math.floor(Math.random() * m.length)] })
+                }
+                for (var a = 0; a < 40; a++) {
+                  var i = Math.random() * Math.PI * 2,
                     o = 26 * Math.random() + 5;
-                  d.push({ x: 256, y: 256, vx: Math.cos(i) * o, vy: Math.sin(i) * o - 3, life: 1, decay: .02 + .025 * Math.random(), size: 2 + 4 * Math.random() }) } }(), setTimeout(v, 3e3) };
-          r.addEventListener("animationend", t, { once: !0 }) }) }
+                  d.push({ x: 256, y: 256, vx: Math.cos(i) * o, vy: Math.sin(i) * o - 3, life: 1, decay: .02 + .025 * Math.random(), size: 2 + 4 * Math.random() })
+                }
+              }(), setTimeout(v, 3e3)
+          };
+          r.addEventListener("animationend", t, { once: !0 })
+        })
+      }
 
       function u() {
-        (function() { var t = function(t) { var e = String(t).trim().split(/\s+/).filter(Boolean); if (!e.length) return ["", ""]; if (1 === e.length) { var n = e[0]; if (n.length < 2) return [n, n]; var a = Math.ceil(n.length / 2); return [n.slice(0, a), n.slice(a)] } if (2 === e.length) return [e[0], e[1]]; for (var i = 1, o = 1 / 0, r = 1; r < e.length; r++) { var l = e.slice(0, r).join("").length,
+        (function() {
+          var t = function(t) {
+              var e = String(t).trim().split(/\s+/).filter(Boolean);
+              if (!e.length) return ["", ""];
+              if (1 === e.length) { var n = e[0]; if (n.length < 2) return [n, n]; var a = Math.ceil(n.length / 2); return [n.slice(0, a), n.slice(a)] }
+              if (2 === e.length) return [e[0], e[1]];
+              for (var i = 1, o = 1 / 0, r = 1; r < e.length; r++) {
+                var l = e.slice(0, r).join("").length,
                   s = e.slice(r).join("").length,
                   c = Math.abs(l - s);
-                c < o && (o = c, i = r) } return [e.slice(0, i).join(" "), e.slice(i).join(" ")] }(e),
+                c < o && (o = c, i = r)
+              }
+              return [e.slice(0, i).join(" "), e.slice(i).join(" ")]
+            }(e),
             n = t[0],
             a = t[1];
-          s.textContent = n, c.textContent = a; var r = function(t, e) { if (!t && !e) return 180;
-            h.font = '900 100px "Archivo Black", sans-serif'; var n = t ? h.measureText(t).width || 1 : 0,
-              a = e ? h.measureText(e).width || 1 : 0; return Math.min(46e3 / (n + a || 1), 180) }(n, a);
-          i.style.fontSize = r + "px", o.style.fontSize = r + "px" })(), v() }! function t() { a.clearRect(0, 0, 512, 512); for (var e = f.length - 1; e >= 0; e--) { var n = f[e];
-          n.x += n.vx, n.y += n.vy, n.vx *= .94, n.vy *= .94, n.vy += .25, n.rot += n.vr, n.life -= n.decay, n.life <= 0 ? f.splice(e, 1) : (a.save(), a.translate(n.x, n.y), a.rotate(n.rot), a.globalAlpha = n.life, a.fillStyle = n.color, a.fillRect(-n.size / 2, -n.size / 2, n.size, n.size), a.strokeStyle = "#000", a.lineWidth = 2, a.strokeRect(-n.size / 2, -n.size / 2, n.size, n.size), a.restore()) } for (var i = d.length - 1; i >= 0; i--) { var o = d[i]; if (o.x += o.vx, o.y += o.vy, o.vx *= .95, o.vy *= .95, o.vy += .2, o.life -= o.decay, o.life <= 0) d.splice(i, 1);
-          else { a.globalAlpha = o.life, a.fillStyle = "#000", a.beginPath(); for (var r = 0; r < 4; r++) { var l = r / 4 * Math.PI * 2;
-              a.lineTo(o.x + Math.cos(l) * o.size, o.y + Math.sin(l) * o.size), a.lineTo(o.x + Math.cos(l + Math.PI / 4) * o.size * .4, o.y + Math.sin(l + Math.PI / 4) * o.size * .4) } a.closePath(), a.fill() } } a.globalAlpha = 1, requestAnimationFrame(t) }(), document.fonts && document.fonts.load ? document.fonts.load('900 100px "Archivo Black"').then(u).catch(u) : u() }()
+          s.textContent = n, c.textContent = a;
+          var r = function(t, e) {
+            if (!t && !e) return 180;
+            h.font = '900 100px "Archivo Black", sans-serif';
+            var n = t ? h.measureText(t).width || 1 : 0,
+              a = e ? h.measureText(e).width || 1 : 0;
+            return Math.min(46e3 / (n + a || 1), 180)
+          }(n, a);
+          i.style.fontSize = r + "px", o.style.fontSize = r + "px"
+        })(), v()
+      }! function t() {
+        a.clearRect(0, 0, 512, 512);
+        for (var e = f.length - 1; e >= 0; e--) {
+          var n = f[e];
+          n.x += n.vx, n.y += n.vy, n.vx *= .94, n.vy *= .94, n.vy += .25, n.rot += n.vr, n.life -= n.decay, n.life <= 0 ? f.splice(e, 1) : (a.save(), a.translate(n.x, n.y), a.rotate(n.rot), a.globalAlpha = n.life, a.fillStyle = n.color, a.fillRect(-n.size / 2, -n.size / 2, n.size, n.size), a.strokeStyle = "#000", a.lineWidth = 2, a.strokeRect(-n.size / 2, -n.size / 2, n.size, n.size), a.restore())
+        }
+        for (var i = d.length - 1; i >= 0; i--) {
+          var o = d[i];
+          if (o.x += o.vx, o.y += o.vy, o.vx *= .95, o.vy *= .95, o.vy += .2, o.life -= o.decay, o.life <= 0) d.splice(i, 1);
+          else {
+            a.globalAlpha = o.life, a.fillStyle = "#000", a.beginPath();
+            for (var r = 0; r < 4; r++) {
+              var l = r / 4 * Math.PI * 2;
+              a.lineTo(o.x + Math.cos(l) * o.size, o.y + Math.sin(l) * o.size), a.lineTo(o.x + Math.cos(l + Math.PI / 4) * o.size * .4, o.y + Math.sin(l + Math.PI / 4) * o.size * .4)
+            }
+            a.closePath(), a.fill()
+          }
+        }
+        a.globalAlpha = 1, requestAnimationFrame(t)
+      }(), document.fonts && document.fonts.load ? document.fonts.load('900 100px "Archivo Black"').then(u).catch(u) : u()
+    }()
   </script>
 </body>
 

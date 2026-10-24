@@ -258,9 +258,16 @@
 
     function initAudio() { audioCtx || (audioCtx = new(window.AudioContext || window.webkitAudioContext)), "suspended" === audioCtx.state && audioCtx.resume() }
 
-    function playSound(e) { try { initAudio(); const t = audioCtx.createOscillator(),
+    function playSound(e) {
+      try {
+        initAudio();
+        const t = audioCtx.createOscillator(),
           i = audioCtx.createGain();
-        t.connect(i), i.connect(audioCtx.destination); const a = audioCtx.currentTime; "break" === e ? (t.type = "triangle", t.frequency.setValueAtTime(400, a), t.frequency.exponentialRampToValueAtTime(100, a + .08), i.gain.setValueAtTime(.1, a), i.gain.exponentialRampToValueAtTime(.01, a + .08), t.start(a), t.stop(a + .08)) : "fire" === e ? (t.type = "sawtooth", t.frequency.setValueAtTime(600, a), t.frequency.exponentialRampToValueAtTime(300, a + .12), i.gain.setValueAtTime(.15, a), i.gain.exponentialRampToValueAtTime(.01, a + .12), t.start(a), t.stop(a + .12)) : "hit" === e ? (t.type = "sawtooth", t.frequency.setValueAtTime(120, a), t.frequency.linearRampToValueAtTime(30, a + .3), i.gain.setValueAtTime(.2, a), i.gain.exponentialRampToValueAtTime(.01, a + .3), t.start(a), t.stop(a + .3)) : "win" === e && (t.type = "sine", t.frequency.setValueAtTime(523, a), t.frequency.setValueAtTime(659, a + .1), t.frequency.setValueAtTime(783, a + .2), i.gain.setValueAtTime(.2, a), i.gain.exponentialRampToValueAtTime(.01, a + .4), t.start(a), t.stop(a + .4)) } catch (e) {} }
+        t.connect(i), i.connect(audioCtx.destination);
+        const a = audioCtx.currentTime;
+        "break" === e ? (t.type = "triangle", t.frequency.setValueAtTime(400, a), t.frequency.exponentialRampToValueAtTime(100, a + .08), i.gain.setValueAtTime(.1, a), i.gain.exponentialRampToValueAtTime(.01, a + .08), t.start(a), t.stop(a + .08)) : "fire" === e ? (t.type = "sawtooth", t.frequency.setValueAtTime(600, a), t.frequency.exponentialRampToValueAtTime(300, a + .12), i.gain.setValueAtTime(.15, a), i.gain.exponentialRampToValueAtTime(.01, a + .12), t.start(a), t.stop(a + .12)) : "hit" === e ? (t.type = "sawtooth", t.frequency.setValueAtTime(120, a), t.frequency.linearRampToValueAtTime(30, a + .3), i.gain.setValueAtTime(.2, a), i.gain.exponentialRampToValueAtTime(.01, a + .3), t.start(a), t.stop(a + .3)) : "win" === e && (t.type = "sine", t.frequency.setValueAtTime(523, a), t.frequency.setValueAtTime(659, a + .1), t.frequency.setValueAtTime(783, a + .2), i.gain.setValueAtTime(.2, a), i.gain.exponentialRampToValueAtTime(.01, a + .4), t.start(a), t.stop(a + .4))
+      } catch (e) {}
+    }
     const canvas = document.getElementById("gameCanvas"),
       ctx = canvas.getContext("2d"),
       CANVAS_WIDTH = 640,
@@ -277,21 +284,59 @@
       ballVy = 0,
       isSuperCharged = !1,
       superChargeTimer = 0;
-    class Ball { constructor() { this.x = 320, this.y = ballY, this.radius = 10, this.vy = 0 } update() { isPressing || isSuperCharged ? this.vy = 8 : (this.vy += .4, this.vy > 6 && (this.vy = 6)), this.y += this.vy; let e = Math.floor((this.y - 60) / 12); if (e >= 0 && e < stackSlices.length) { let t = stackSlices[e]; if (t && !t.broken) { let e = !1; for (let i of t.segments)
-              if (i.isBlack) { let t = (cylinderAngle % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI); if (i.containsAngle(t)) { e = !0; break } } e && !isSuperCharged ? (gameOver = !0, playSound("hit"), showModal("💀", "GAME OVER", "Bola menabrak rintangan hitam!")) : (t.broken = !0, score += isSuperCharged ? 20 : 10, playSound(isSuperCharged ? "fire" : "break"), this.vy = -4.5, isSuperCharged && (superChargeTimer--, superChargeTimer <= 0 && (isSuperCharged = !1))) } } this.y >= 300 && (this.y = 300, this.vy = 0, gameWon || gameOver || (gameWon = !0, playSound("win"), showModal("🏆", "LEVEL CLEARED!", "Hebat! Kamu berhasil menembus semua stack!"))) } draw() { ctx.save(), ctx.shadowBlur = isSuperCharged ? 25 : 10, ctx.shadowColor = isSuperCharged ? "#f97316" : "#a855f7", ctx.fillStyle = isSuperCharged ? "#f97316" : "#a855f7", ctx.beginPath(), ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI), ctx.fill(), ctx.restore() } } class StackSlice { constructor(e, t) { this.y = e, this.index = t, this.broken = !1, this.segments = []; let i = level > 2 ? 2 : 1,
-          a = []; for (; a.length < i;) { let e = Math.floor(8 * Math.random());
-          a.includes(e) || a.push(e) } for (let e = 0; e < 8; e++) { let t = e / 8 * Math.PI * 2,
+    class Ball {
+      constructor() { this.x = 320, this.y = ballY, this.radius = 10, this.vy = 0 } update() {
+        isPressing || isSuperCharged ? this.vy = 8 : (this.vy += .4, this.vy > 6 && (this.vy = 6)), this.y += this.vy;
+        let e = Math.floor((this.y - 60) / 12);
+        if (e >= 0 && e < stackSlices.length) {
+          let t = stackSlices[e];
+          if (t && !t.broken) {
+            let e = !1;
+            for (let i of t.segments)
+              if (i.isBlack) { let t = (cylinderAngle % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI); if (i.containsAngle(t)) { e = !0; break } } e && !isSuperCharged ? (gameOver = !0, playSound("hit"), showModal("💀", "GAME OVER", "Bola menabrak rintangan hitam!")) : (t.broken = !0, score += isSuperCharged ? 20 : 10, playSound(isSuperCharged ? "fire" : "break"), this.vy = -4.5, isSuperCharged && (superChargeTimer--, superChargeTimer <= 0 && (isSuperCharged = !1)))
+          }
+        }
+        this.y >= 300 && (this.y = 300, this.vy = 0, gameWon || gameOver || (gameWon = !0, playSound("win"), showModal("🏆", "LEVEL CLEARED!", "Hebat! Kamu berhasil menembus semua stack!")))
+      }
+      draw() { ctx.save(), ctx.shadowBlur = isSuperCharged ? 25 : 10, ctx.shadowColor = isSuperCharged ? "#f97316" : "#a855f7", ctx.fillStyle = isSuperCharged ? "#f97316" : "#a855f7", ctx.beginPath(), ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI), ctx.fill(), ctx.restore() }
+    }
+    class StackSlice {
+      constructor(e, t) {
+        this.y = e, this.index = t, this.broken = !1, this.segments = [];
+        let i = level > 2 ? 2 : 1,
+          a = [];
+        for (; a.length < i;) {
+          let e = Math.floor(8 * Math.random());
+          a.includes(e) || a.push(e)
+        }
+        for (let e = 0; e < 8; e++) {
+          let t = e / 8 * Math.PI * 2,
             i = (e + 1) / 8 * Math.PI * 2;
-          this.segments.push({ start: t, end: i, isBlack: a.includes(e), containsAngle: e => { let a = (e + cylinderAngle) % (2 * Math.PI); return a < 0 && (a += 2 * Math.PI), a >= t && a < i } }) } } draw() { if (!this.broken) { ctx.save(); for (let e of this.segments) ctx.fillStyle = e.isBlack ? "#1f2937" : this.index % 2 == 0 ? "#f97316" : "#a855f7", ctx.beginPath(), ctx.ellipse(320, this.y, 140, 25, 0, e.start + cylinderAngle, e.end + cylinderAngle), ctx.lineTo(320, this.y + 10), ctx.ellipse(320, this.y + 10, 140, 25, 0, e.end + cylinderAngle, e.start + cylinderAngle, !0), ctx.fill(), ctx.strokeStyle = "#000", ctx.stroke();
-          ctx.restore() } } }
+          this.segments.push({ start: t, end: i, isBlack: a.includes(e), containsAngle: e => { let a = (e + cylinderAngle) % (2 * Math.PI); return a < 0 && (a += 2 * Math.PI), a >= t && a < i } })
+        }
+      }
+      draw() {
+        if (!this.broken) {
+          ctx.save();
+          for (let e of this.segments) ctx.fillStyle = e.isBlack ? "#1f2937" : this.index % 2 == 0 ? "#f97316" : "#a855f7", ctx.beginPath(), ctx.ellipse(320, this.y, 140, 25, 0, e.start + cylinderAngle, e.end + cylinderAngle), ctx.lineTo(320, this.y + 10), ctx.ellipse(320, this.y + 10, 140, 25, 0, e.end + cylinderAngle, e.start + cylinderAngle, !0), ctx.fill(), ctx.strokeStyle = "#000", ctx.stroke();
+          ctx.restore()
+        }
+      }
+    }
 
-    function initGame() { score = 0, level = 1, gameOver = !1, gameWon = !1, isSuperCharged = !1, superChargeTimer = 0, cylinderAngle = 0, ballY = 40, stackSlices = []; for (let e = 0; e < totalSlices; e++) stackSlices.push(new StackSlice(80 + 12 * e, e));
-      ball = new Ball, document.getElementById("overlay").classList.remove("show"), updateUI() }
+    function initGame() {
+      score = 0, level = 1, gameOver = !1, gameWon = !1, isSuperCharged = !1, superChargeTimer = 0, cylinderAngle = 0, ballY = 40, stackSlices = [];
+      for (let e = 0; e < totalSlices; e++) stackSlices.push(new StackSlice(80 + 12 * e, e));
+      ball = new Ball, document.getElementById("overlay").classList.remove("show"), updateUI()
+    }
 
     function update() { gameOver || gameWon || (cylinderAngle += isPressing ? .08 : .03, ball.update(), updateUI()) }
 
-    function render() { ctx.clearRect(0, 0, 640, 360), ctx.fillStyle = "#110c1d", ctx.fillRect(0, 0, 640, 360), ctx.fillStyle = "#374151", ctx.fillRect(312, 60, 16, 260); for (let e of stackSlices) e.draw();
-      ball.draw(), isSuperCharged && (ctx.fillStyle = "#f97316", ctx.font = "bold 14px sans-serif", ctx.fillText("🔥 FIRE MODE (SUPER CHARGE)", 20, 30)) }
+    function render() {
+      ctx.clearRect(0, 0, 640, 360), ctx.fillStyle = "#110c1d", ctx.fillRect(0, 0, 640, 360), ctx.fillStyle = "#374151", ctx.fillRect(312, 60, 16, 260);
+      for (let e of stackSlices) e.draw();
+      ball.draw(), isSuperCharged && (ctx.fillStyle = "#f97316", ctx.font = "bold 14px sans-serif", ctx.fillText("🔥 FIRE MODE (SUPER CHARGE)", 20, 30))
+    }
 
     function gameLoop() { update(), render(), requestAnimationFrame(gameLoop) }
 

@@ -284,7 +284,9 @@
     <div class="word" id="word"></div>
   </div>
   <script>
-    ! function() { "use strict"; var t = document.getElementById("kalimat-src"),
+    ! function() {
+      "use strict";
+      var t = document.getElementById("kalimat-src"),
         n = (t && t.dataset.text || "PLAYER ONE").trim() || "PLAYER ONE",
         e = [{ family: "'Orbitron', sans-serif", weight: 800 }, { family: "'Audiowide', sans-serif", weight: 400 }, { family: "'Zen Dots', sans-serif", weight: 400 }, { family: "'Shippori Mincho', serif", weight: 800 }],
         s = document.getElementById("stage"),
@@ -296,24 +298,48 @@
 
       function l(t, n) { var e = setTimeout(t, n); return r.push(e), e }
 
-      function h() { for (var t = 1 + Math.floor(3 * Math.random()), n = 0; n < t; n++) { var e = i[Math.floor(Math.random() * i.length)];
-          e.classList.contains("swapping") || e.classList.contains("wave") || (e.classList.add("glitch"), function(t) { l(function() { t.classList.remove("glitch") }, 430) }(e)) } }
+      function h() {
+        for (var t = 1 + Math.floor(3 * Math.random()), n = 0; n < t; n++) {
+          var e = i[Math.floor(Math.random() * i.length)];
+          e.classList.contains("swapping") || e.classList.contains("wave") || (e.classList.add("glitch"), function(t) { l(function() { t.classList.remove("glitch") }, 430) }(e))
+        }
+      }
 
-      function d() { var t = i[Math.floor(Math.random() * i.length)]; if (!t.classList.contains("glitch") && !t.classList.contains("wave")) { for (var n = -1, s = 0; s < e.length; s++)
+      function d() {
+        var t = i[Math.floor(Math.random() * i.length)];
+        if (!t.classList.contains("glitch") && !t.classList.contains("wave")) {
+          for (var n = -1, s = 0; s < e.length; s++)
             if (t.classList.contains("font-" + s)) { n = s; break } var a, o = 0;
           do { a = Math.floor(Math.random() * e.length), o++ } while (a === n && o < 20);
-          t.classList.remove("font-" + n), t.classList.add("font-" + a), t.classList.add("swapping"), l(function() { t.classList.remove("swapping") }, 520) } }
+          t.classList.remove("font-" + n), t.classList.add("font-" + a), t.classList.add("swapping"), l(function() { t.classList.remove("swapping") }, 520)
+        }
+      }
 
       function f() { i.forEach(function(t) { t.classList.remove("glitch", "swapping"), t.classList.add("wave") }), l(function() { i.forEach(function(t) { t.classList.remove("wave") }) }, 900 + 42 * i.length + 90) }
 
       function u() {
-        (function() { for (var t = n, s = [], r = 0; r < t.length; r++) { var c = " " === t[r] ? " " : t[r];
-            s.push({ c: c, font: Math.floor(Math.random() * e.length) }) } var l = s.map(function(t) { var n = 0; return e.forEach(function(e) { var s, a;
-                n = Math.max(n, (s = t.c, a = e, o.font = a.weight + " 100px " + a.family, o.measureText(s).width || 1)) }), n }),
+        (function() {
+          for (var t = n, s = [], r = 0; r < t.length; r++) {
+            var c = " " === t[r] ? " " : t[r];
+            s.push({ c: c, font: Math.floor(Math.random() * e.length) })
+          }
+          var l = s.map(function(t) {
+              var n = 0;
+              return e.forEach(function(e) {
+                var s, a;
+                n = Math.max(n, (s = t.c, a = e, o.font = a.weight + " 100px " + a.family, o.measureText(s).width || 1))
+              }), n
+            }),
             h = l.reduce(function(t, n) { return t + n }, 0),
             d = Math.min(4e4 / h, 150);
-          a.style.fontSize = d + "px", a.innerHTML = "", i = [], s.forEach(function(t, n) { var e = document.createElement("span");
-            e.className = "ch font-" + t.font, e.textContent = t.c, e.style.setProperty("--i", n), e.style.width = l[n] * d / 100 + "px", e.style.setProperty("--dx", (320 * Math.random() - 160).toFixed(0) + "px"), e.style.setProperty("--dy", ((Math.random() < .5 ? -1 : 1) * (130 + 160 * Math.random())).toFixed(0) + "px"), e.style.setProperty("--rot", (44 * Math.random() - 22).toFixed(0) + "deg"), a.appendChild(e), i.push(e) }) })(), r.forEach(clearTimeout), r = [], c.forEach(clearInterval), c = [], s.classList.remove("run", "shining", "settle"), i.forEach(function(t) { t.classList.remove("glitch", "swapping", "wave") }), s.offsetWidth, s.classList.add("run"), l(function() { s.classList.remove("run"), s.classList.add("shining"), l(function() { s.classList.remove("shining"), s.classList.add("settle"), c.push(setInterval(h, 1500)), c.push(setInterval(d, 2100)), c.push(setInterval(f, 3800)), l(f, 350), l(h, 650) }, 900 + 25 * i.length) }, 60 * i.length + 1e3) } document.fonts && document.fonts.load ? Promise.all([document.fonts.load("800 100px Orbitron"), document.fonts.load("400 100px Audiowide"), document.fonts.load('400 100px "Zen Dots"'), document.fonts.load('800 100px "Shippori Mincho"')]).then(u).catch(u) : u() }()
+          a.style.fontSize = d + "px", a.innerHTML = "", i = [], s.forEach(function(t, n) {
+            var e = document.createElement("span");
+            e.className = "ch font-" + t.font, e.textContent = t.c, e.style.setProperty("--i", n), e.style.width = l[n] * d / 100 + "px", e.style.setProperty("--dx", (320 * Math.random() - 160).toFixed(0) + "px"), e.style.setProperty("--dy", ((Math.random() < .5 ? -1 : 1) * (130 + 160 * Math.random())).toFixed(0) + "px"), e.style.setProperty("--rot", (44 * Math.random() - 22).toFixed(0) + "deg"), a.appendChild(e), i.push(e)
+          })
+        })(), r.forEach(clearTimeout), r = [], c.forEach(clearInterval), c = [], s.classList.remove("run", "shining", "settle"), i.forEach(function(t) { t.classList.remove("glitch", "swapping", "wave") }), s.offsetWidth, s.classList.add("run"), l(function() { s.classList.remove("run"), s.classList.add("shining"), l(function() { s.classList.remove("shining"), s.classList.add("settle"), c.push(setInterval(h, 1500)), c.push(setInterval(d, 2100)), c.push(setInterval(f, 3800)), l(f, 350), l(h, 650) }, 900 + 25 * i.length) }, 60 * i.length + 1e3)
+      }
+      document.fonts && document.fonts.load ? Promise.all([document.fonts.load("800 100px Orbitron"), document.fonts.load("400 100px Audiowide"), document.fonts.load('400 100px "Zen Dots"'), document.fonts.load('800 100px "Shippori Mincho"')]).then(u).catch(u) : u()
+    }()
   </script>
 </body>
 

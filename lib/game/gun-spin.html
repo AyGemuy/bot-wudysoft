@@ -236,7 +236,8 @@
     </div>
   </div>
   <script>
-    (() => { const t = document.getElementById("gameCanvas"),
+    (() => {
+      const t = document.getElementById("gameCanvas"),
         e = t.getContext("2d"),
         a = document.getElementById("gameContainer"),
         i = document.getElementById("roundBanner"),
@@ -245,17 +246,26 @@
         s = document.getElementById("blueHpText"),
         o = document.getElementById("yellowHpBar"),
         h = document.getElementById("yellowHpText"),
-        r = document.getElementById("levelText"); let c = 400,
-        d = 500; const y = Math.min(window.devicePixelRatio || 1, 2);
+        r = document.getElementById("levelText");
+      let c = 400,
+        d = 500;
+      const y = Math.min(window.devicePixelRatio || 1, 2);
 
-      function f() { c = a.clientWidth, d = a.clientHeight, t.width = c * y, t.height = d * y, e.resetTransform(), e.scale(y, y) } window.addEventListener("resize", f), f(); let u = null;
+      function f() { c = a.clientWidth, d = a.clientHeight, t.width = c * y, t.height = d * y, e.resetTransform(), e.scale(y, y) } window.addEventListener("resize", f), f();
+      let u = null;
 
       function m() { return u || (u = new(window.AudioContext || window.webkitAudioContext)), "suspended" === u.state && u.resume(), u }
 
-      function x() { const t = m(); if (!t) return; const e = t.currentTime,
+      function x() {
+        const t = m();
+        if (!t) return;
+        const e = t.currentTime,
           a = t.createOscillator(),
           i = t.createGain();
-        a.type = "triangle", a.frequency.setValueAtTime(650, e), a.frequency.exponentialRampToValueAtTime(120, e + .14), i.gain.setValueAtTime(.45, e), i.gain.exponentialRampToValueAtTime(.001, e + .14), a.connect(i), i.connect(t.destination), a.start(e), a.stop(e + .15) } const p = .18; let v = [],
+        a.type = "triangle", a.frequency.setValueAtTime(650, e), a.frequency.exponentialRampToValueAtTime(120, e + .14), i.gain.setValueAtTime(.45, e), i.gain.exponentialRampToValueAtTime(.001, e + .14), a.connect(i), i.connect(t.destination), a.start(e), a.stop(e + .15)
+      }
+      const p = .18;
+      let v = [],
         g = [],
         M = [],
         w = [],
@@ -264,50 +274,123 @@
         A = !1,
         V = null,
         B = 0;
-      class I { constructor(t, e, a, i) { this.startX = t, this.startY = e, this.x = t, this.y = e, this.vx = 0, this.vy = 0, this.angle = i ? -Math.PI / 2 : Math.PI / 2, this.angularVelocity = .08, this.color = a, this.isPlayer = i, this.maxHealth = 100, this.health = 100, this.visible = !0, this.muzzleFlash = 0, this.radius = 18 } update() { if (!this.visible) return;
-          this.angle += this.angularVelocity, this.angularVelocity *= .978, Math.abs(this.angularVelocity) < .03 && (this.angularVelocity = .035 * (this.angularVelocity >= 0 ? 1 : -1)), this.vy += p, this.vx *= .985, this.vy *= .985, this.x += this.vx, this.y += this.vy; const t = 24,
+      class I {
+        constructor(t, e, a, i) { this.startX = t, this.startY = e, this.x = t, this.y = e, this.vx = 0, this.vy = 0, this.angle = i ? -Math.PI / 2 : Math.PI / 2, this.angularVelocity = .08, this.color = a, this.isPlayer = i, this.maxHealth = 100, this.health = 100, this.visible = !0, this.muzzleFlash = 0, this.radius = 18 } update() {
+          if (!this.visible) return;
+          this.angle += this.angularVelocity, this.angularVelocity *= .978, Math.abs(this.angularVelocity) < .03 && (this.angularVelocity = .035 * (this.angularVelocity >= 0 ? 1 : -1)), this.vy += p, this.vx *= .985, this.vy *= .985, this.x += this.vx, this.y += this.vy;
+          const t = 24,
             e = -.65;
-          this.x < t ? (this.x = t, this.vx *= e, this.angularVelocity *= .8) : this.x > c - t && (this.x = c - t, this.vx *= e, this.angularVelocity *= .8), this.y < t ? (this.y = t, this.vy *= e) : this.y > d - t && (this.y = d - t, this.vy *= e, this.angularVelocity *= .85), this.muzzleFlash > 0 && this.muzzleFlash-- } draw() { if (!this.visible) return;
-          e.save(), e.translate(this.x, this.y), e.rotate(this.angle), e.shadowColor = "rgba(0,0,0,0.45)", e.shadowBlur = 8, e.shadowOffsetY = 4, e.save(), e.translate(-9, 2), e.rotate(.35), e.fillStyle = "#1c242c", e.fillRect(-5, 0, 10, 16), e.fillStyle = this.color, e.fillRect(-4, 3, 3, 10), e.restore(), e.strokeStyle = "#54656f", e.lineWidth = 1.6, e.beginPath(), e.arc(-2, 4, 4.5, 0, Math.PI), e.stroke(); let t = e.createLinearGradient(-16, -8, 16, 4);
-          t.addColorStop(0, "#78909c"), t.addColorStop(.5, "#cfd8dc"), t.addColorStop(1, "#37474f"), e.fillStyle = t, e.fillRect(-15, -7, 30, 9), e.fillStyle = this.color, e.fillRect(-15, 0, 24, 4), e.fillStyle = "#101418", e.fillRect(15, -6, 2, 6), this.muzzleFlash > 0 && (e.shadowColor = "#ffea00", e.shadowBlur = 18, e.fillStyle = "#fff9c4", e.beginPath(), e.arc(22, -3, 8, 0, 2 * Math.PI), e.fill(), e.fillStyle = "#ff9800", e.beginPath(), e.moveTo(18, -10), e.lineTo(34, -3), e.lineTo(18, 4), e.closePath(), e.fill()), e.restore() } shoot() { if (!this.visible || this.health <= 0) return; const t = this.x + 20 * Math.cos(this.angle),
+          this.x < t ? (this.x = t, this.vx *= e, this.angularVelocity *= .8) : this.x > c - t && (this.x = c - t, this.vx *= e, this.angularVelocity *= .8), this.y < t ? (this.y = t, this.vy *= e) : this.y > d - t && (this.y = d - t, this.vy *= e, this.angularVelocity *= .85), this.muzzleFlash > 0 && this.muzzleFlash--
+        }
+        draw() {
+          if (!this.visible) return;
+          e.save(), e.translate(this.x, this.y), e.rotate(this.angle), e.shadowColor = "rgba(0,0,0,0.45)", e.shadowBlur = 8, e.shadowOffsetY = 4, e.save(), e.translate(-9, 2), e.rotate(.35), e.fillStyle = "#1c242c", e.fillRect(-5, 0, 10, 16), e.fillStyle = this.color, e.fillRect(-4, 3, 3, 10), e.restore(), e.strokeStyle = "#54656f", e.lineWidth = 1.6, e.beginPath(), e.arc(-2, 4, 4.5, 0, Math.PI), e.stroke();
+          let t = e.createLinearGradient(-16, -8, 16, 4);
+          t.addColorStop(0, "#78909c"), t.addColorStop(.5, "#cfd8dc"), t.addColorStop(1, "#37474f"), e.fillStyle = t, e.fillRect(-15, -7, 30, 9), e.fillStyle = this.color, e.fillRect(-15, 0, 24, 4), e.fillStyle = "#101418", e.fillRect(15, -6, 2, 6), this.muzzleFlash > 0 && (e.shadowColor = "#ffea00", e.shadowBlur = 18, e.fillStyle = "#fff9c4", e.beginPath(), e.arc(22, -3, 8, 0, 2 * Math.PI), e.fill(), e.fillStyle = "#ff9800", e.beginPath(), e.moveTo(18, -10), e.lineTo(34, -3), e.lineTo(18, 4), e.closePath(), e.fill()), e.restore()
+        }
+        shoot() {
+          if (!this.visible || this.health <= 0) return;
+          const t = this.x + 20 * Math.cos(this.angle),
             e = this.y + 20 * Math.sin(this.angle);
-          v.push({ x: t, y: e, vx: 20 * Math.cos(this.angle), vy: 20 * Math.sin(this.angle), color: this.color, owner: this, trail: [] }); const a = this.isPlayer ? 7.2 : 7.2 + .3 * b;
-          this.vx -= Math.cos(this.angle) * a, this.vy -= Math.sin(this.angle) * a; const i = Math.random() > .5 ? 1 : -1;
-          this.angularVelocity = i * (.16 + .12 * Math.random()), this.muzzleFlash = 3, T = Math.max(T, 5); const l = this.angle - Math.PI / 2 + .4 * (Math.random() - .5);
-          w.push({ x: this.x, y: this.y, vx: Math.cos(l) * (4 + 3 * Math.random()), vy: Math.sin(l) * (4 + 3 * Math.random()) - 2, angle: Math.random() * Math.PI, spin: .4 * (Math.random() - .5), alpha: 1 }); for (let a = 0; a < 4; a++) M.push({ x: t, y: e, vx: Math.cos(this.angle) * (1 + 3 * Math.random()) + 2 * (Math.random() - .5), vy: Math.sin(this.angle) * (1 + 3 * Math.random()) + 2 * (Math.random() - .5), radius: 4 + 5 * Math.random(), alpha: .55 });! function() { const t = m(); if (!t) return; const e = t.currentTime,
+          v.push({ x: t, y: e, vx: 20 * Math.cos(this.angle), vy: 20 * Math.sin(this.angle), color: this.color, owner: this, trail: [] });
+          const a = this.isPlayer ? 7.2 : 7.2 + .3 * b;
+          this.vx -= Math.cos(this.angle) * a, this.vy -= Math.sin(this.angle) * a;
+          const i = Math.random() > .5 ? 1 : -1;
+          this.angularVelocity = i * (.16 + .12 * Math.random()), this.muzzleFlash = 3, T = Math.max(T, 5);
+          const l = this.angle - Math.PI / 2 + .4 * (Math.random() - .5);
+          w.push({ x: this.x, y: this.y, vx: Math.cos(l) * (4 + 3 * Math.random()), vy: Math.sin(l) * (4 + 3 * Math.random()) - 2, angle: Math.random() * Math.PI, spin: .4 * (Math.random() - .5), alpha: 1 });
+          for (let a = 0; a < 4; a++) M.push({ x: t, y: e, vx: Math.cos(this.angle) * (1 + 3 * Math.random()) + 2 * (Math.random() - .5), vy: Math.sin(this.angle) * (1 + 3 * Math.random()) + 2 * (Math.random() - .5), radius: 4 + 5 * Math.random(), alpha: .55 });
+          ! function() {
+            const t = m();
+            if (!t) return;
+            const e = t.currentTime,
               a = t.createOscillator(),
               i = t.createGain();
-            a.type = "sine", a.frequency.setValueAtTime(240, e), a.frequency.exponentialRampToValueAtTime(32, e + .18), i.gain.setValueAtTime(.85, e), i.gain.exponentialRampToValueAtTime(.001, e + .2), a.connect(i), i.connect(t.destination), a.start(e), a.stop(e + .22); const l = Math.floor(.16 * t.sampleRate),
+            a.type = "sine", a.frequency.setValueAtTime(240, e), a.frequency.exponentialRampToValueAtTime(32, e + .18), i.gain.setValueAtTime(.85, e), i.gain.exponentialRampToValueAtTime(.001, e + .2), a.connect(i), i.connect(t.destination), a.start(e), a.stop(e + .22);
+            const l = Math.floor(.16 * t.sampleRate),
               n = t.createBuffer(1, l, t.sampleRate),
-              s = n.getChannelData(0); for (let t = 0; t < l; t++) s[t] = (2 * Math.random() - 1) * Math.pow(1 - t / l, 3); const o = t.createBufferSource();
-            o.buffer = n; const h = t.createBiquadFilter();
-            h.type = "bandpass", h.frequency.setValueAtTime(1400, e), h.frequency.linearRampToValueAtTime(600, e + .14); const r = t.createGain();
-            r.gain.setValueAtTime(.9, e), r.gain.exponentialRampToValueAtTime(.001, e + .16), o.connect(h), h.connect(r), r.connect(t.destination), o.start(e) }() } explode() { this.visible = !1, T = 16; for (let t = 0; t < 35; t++) { const t = Math.random() * Math.PI * 2,
+              s = n.getChannelData(0);
+            for (let t = 0; t < l; t++) s[t] = (2 * Math.random() - 1) * Math.pow(1 - t / l, 3);
+            const o = t.createBufferSource();
+            o.buffer = n;
+            const h = t.createBiquadFilter();
+            h.type = "bandpass", h.frequency.setValueAtTime(1400, e), h.frequency.linearRampToValueAtTime(600, e + .14);
+            const r = t.createGain();
+            r.gain.setValueAtTime(.9, e), r.gain.exponentialRampToValueAtTime(.001, e + .16), o.connect(h), h.connect(r), r.connect(t.destination), o.start(e)
+          }()
+        }
+        explode() {
+          this.visible = !1, T = 16;
+          for (let t = 0; t < 35; t++) {
+            const t = Math.random() * Math.PI * 2,
               e = 9 * Math.random() + 2;
-            g.push({ x: this.x, y: this.y, vx: Math.cos(t) * e, vy: Math.sin(t) * e, size: 5 * Math.random() + 3, color: Math.random() > .4 ? this.color : "#ffab00", life: 1, decay: .015 + .02 * Math.random() }) } } respawn(t) { this.x = c / 2, this.y = t, this.vx = 0, this.vy = 0, this.angularVelocity = .08, this.health = this.maxHealth, this.visible = !0 } } const P = new I(c / 2, d - 120, "#00b0ff", !0),
+            g.push({ x: this.x, y: this.y, vx: Math.cos(t) * e, vy: Math.sin(t) * e, size: 5 * Math.random() + 3, color: Math.random() > .4 ? this.color : "#ffab00", life: 1, decay: .015 + .02 * Math.random() })
+          }
+        }
+        respawn(t) { this.x = c / 2, this.y = t, this.vx = 0, this.vy = 0, this.angularVelocity = .08, this.health = this.maxHealth, this.visible = !0 }
+      }
+      const P = new I(c / 2, d - 120, "#00b0ff", !0),
         S = new I(c / 2, 120, "#ffb300", !1);
 
-      function R() { V && clearInterval(V); const t = Math.max(500, 1300 - 90 * b);
-        V = setInterval(() => { S.visible && S.health > 0 && !A && S.shoot() }, t) }
+      function R() {
+        V && clearInterval(V);
+        const t = Math.max(500, 1300 - 90 * b);
+        V = setInterval(() => { S.visible && S.health > 0 && !A && S.shoot() }, t)
+      }
 
       function E(t, e) { i.textContent = t, i.style.color = e, i.classList.add("show"), setTimeout(() => i.classList.remove("show"), 1600) }
 
       function C(t) { A || (A = !0, t ? (b++, E(`🏆 KAMU MENANG! MASUK RONDE ${b}`, "var(--accent-green)")) : (b = 1, E("💀 KAMU KALAH! KEMBALI KE RONDE 1", "var(--accent-red)")), r.textContent = `RONDE ${b}`, setTimeout(() => { P.maxHealth = 100, S.maxHealth = 100 + 20 * (b - 1), P.respawn(d - 120), S.respawn(120), z(), R(), A = !1 }, 1800)) }
 
-      function z() { const t = Math.max(0, Math.round(P.health / P.maxHealth * 100)),
+      function z() {
+        const t = Math.max(0, Math.round(P.health / P.maxHealth * 100)),
           e = Math.max(0, Math.round(S.health / S.maxHealth * 100));
-        n.style.width = t + "%", s.textContent = t + "%", o.style.width = e + "%", h.textContent = e + "%" }
+        n.style.width = t + "%", s.textContent = t + "%", o.style.width = e + "%", h.textContent = e + "%"
+      }
 
-      function H() { const t = Date.now();
-        t - B < 260 || (B = t, l.disabled = !0, setTimeout(() => { l.disabled = !1 }, 260), m(), P.visible && !A && P.shoot()) } l.addEventListener("pointerdown", t => { t.preventDefault(), H() }), a.addEventListener("pointerdown", t => { t.preventDefault(), H() }), window.addEventListener("keydown", t => { "Space" === t.code && (t.preventDefault(), H()) }), z(), R(), requestAnimationFrame(function t() { if (e.save(), T > 0) { const t = (Math.random() - .5) * T,
+      function H() {
+        const t = Date.now();
+        t - B < 260 || (B = t, l.disabled = !0, setTimeout(() => { l.disabled = !1 }, 260), m(), P.visible && !A && P.shoot())
+      }
+      l.addEventListener("pointerdown", t => { t.preventDefault(), H() }), a.addEventListener("pointerdown", t => { t.preventDefault(), H() }), window.addEventListener("keydown", t => { "Space" === t.code && (t.preventDefault(), H()) }), z(), R(), requestAnimationFrame(function t() {
+        if (e.save(), T > 0) {
+          const t = (Math.random() - .5) * T,
             a = (Math.random() - .5) * T;
-          e.translate(t, a), T *= .88, T < .3 && (T = 0) }! function() { e.fillStyle = "#151c24", e.fillRect(0, 0, c, d), e.strokeStyle = "#1d2733", e.lineWidth = 1; for (let t = 0; t < c; t += 35) e.beginPath(), e.moveTo(t, 0), e.lineTo(t, d), e.stroke(); for (let t = 0; t < d; t += 35) e.beginPath(), e.moveTo(0, t), e.lineTo(c, t), e.stroke() }(); for (let t = w.length - 1; t >= 0; t--) { const a = w[t];
-          a.x += a.vx, a.y += a.vy, a.vy += .144, a.angle += a.spin, a.alpha -= .012, e.save(), e.translate(a.x, a.y), e.rotate(a.angle), e.fillStyle = `rgba(255, 215, 0, ${a.alpha})`, e.fillRect(-3, -1.5, 6, 3), e.restore(), a.alpha <= 0 && w.splice(t, 1) } P.update(), P.draw(), S.update(), S.draw(); for (let t = v.length - 1; t >= 0; t--) { const a = v[t]; if (a.x += a.vx, a.y += a.vy, a.trail.push({ x: a.x, y: a.y }), a.trail.length > 7 && a.trail.shift(), a.trail.length > 1) { e.beginPath(), e.moveTo(a.trail[0].x, a.trail[0].y); for (let t = 1; t < a.trail.length; t++) e.lineTo(a.trail[t].x, a.trail[t].y);
-            e.strokeStyle = a.color, e.lineWidth = 3, e.lineCap = "round", e.shadowColor = a.color, e.shadowBlur = 8, e.stroke(), e.shadowBlur = 0 } if (e.fillStyle = "#ffffff", e.beginPath(), e.arc(a.x, a.y, 3.5, 0, 2 * Math.PI), e.fill(), a.owner === P && S.visible && Math.hypot(a.x - S.x, a.y - S.y) < S.radius + 6) { S.health -= 25, z(), v.splice(t, 1), x(), T = 8; for (let t = 0; t < 8; t++) g.push({ x: a.x, y: a.y, vx: 8 * (Math.random() - .5), vy: 8 * (Math.random() - .5), size: 3, color: "#ffea00", life: 1, decay: .04 });
-            S.health <= 0 && (S.explode(), C(!0)) } else if (a.owner === S && P.visible && Math.hypot(a.x - P.x, a.y - P.y) < P.radius + 6) { P.health -= 25, z(), v.splice(t, 1), x(), T = 10; for (let t = 0; t < 8; t++) g.push({ x: a.x, y: a.y, vx: 8 * (Math.random() - .5), vy: 8 * (Math.random() - .5), size: 3, color: "#00e5ff", life: 1, decay: .04 });
-            P.health <= 0 && (P.explode(), C(!1)) } else(a.x < -20 || a.x > c + 20 || a.y < -20 || a.y > d + 20) && v.splice(t, 1) } for (let t = M.length - 1; t >= 0; t--) { const a = M[t];
-          a.x += a.vx, a.y += a.vy, a.radius += .2, a.alpha -= .02, e.fillStyle = `rgba(180, 195, 205, ${a.alpha})`, e.beginPath(), e.arc(a.x, a.y, a.radius, 0, 2 * Math.PI), e.fill(), a.alpha <= 0 && M.splice(t, 1) } for (let t = g.length - 1; t >= 0; t--) { const a = g[t];
-          a.x += a.vx, a.y += a.vy, a.vy += .072, a.life -= a.decay, a.life <= 0 ? g.splice(t, 1) : (e.fillStyle = a.color, e.globalAlpha = a.life, e.fillRect(a.x, a.y, a.size, a.size), e.globalAlpha = 1) } e.restore(), requestAnimationFrame(t) }) })()
+          e.translate(t, a), T *= .88, T < .3 && (T = 0)
+        }! function() { e.fillStyle = "#151c24", e.fillRect(0, 0, c, d), e.strokeStyle = "#1d2733", e.lineWidth = 1; for (let t = 0; t < c; t += 35) e.beginPath(), e.moveTo(t, 0), e.lineTo(t, d), e.stroke(); for (let t = 0; t < d; t += 35) e.beginPath(), e.moveTo(0, t), e.lineTo(c, t), e.stroke() }();
+        for (let t = w.length - 1; t >= 0; t--) {
+          const a = w[t];
+          a.x += a.vx, a.y += a.vy, a.vy += .144, a.angle += a.spin, a.alpha -= .012, e.save(), e.translate(a.x, a.y), e.rotate(a.angle), e.fillStyle = `rgba(255, 215, 0, ${a.alpha})`, e.fillRect(-3, -1.5, 6, 3), e.restore(), a.alpha <= 0 && w.splice(t, 1)
+        }
+        P.update(), P.draw(), S.update(), S.draw();
+        for (let t = v.length - 1; t >= 0; t--) {
+          const a = v[t];
+          if (a.x += a.vx, a.y += a.vy, a.trail.push({ x: a.x, y: a.y }), a.trail.length > 7 && a.trail.shift(), a.trail.length > 1) {
+            e.beginPath(), e.moveTo(a.trail[0].x, a.trail[0].y);
+            for (let t = 1; t < a.trail.length; t++) e.lineTo(a.trail[t].x, a.trail[t].y);
+            e.strokeStyle = a.color, e.lineWidth = 3, e.lineCap = "round", e.shadowColor = a.color, e.shadowBlur = 8, e.stroke(), e.shadowBlur = 0
+          }
+          if (e.fillStyle = "#ffffff", e.beginPath(), e.arc(a.x, a.y, 3.5, 0, 2 * Math.PI), e.fill(), a.owner === P && S.visible && Math.hypot(a.x - S.x, a.y - S.y) < S.radius + 6) {
+            S.health -= 25, z(), v.splice(t, 1), x(), T = 8;
+            for (let t = 0; t < 8; t++) g.push({ x: a.x, y: a.y, vx: 8 * (Math.random() - .5), vy: 8 * (Math.random() - .5), size: 3, color: "#ffea00", life: 1, decay: .04 });
+            S.health <= 0 && (S.explode(), C(!0))
+          } else if (a.owner === S && P.visible && Math.hypot(a.x - P.x, a.y - P.y) < P.radius + 6) {
+            P.health -= 25, z(), v.splice(t, 1), x(), T = 10;
+            for (let t = 0; t < 8; t++) g.push({ x: a.x, y: a.y, vx: 8 * (Math.random() - .5), vy: 8 * (Math.random() - .5), size: 3, color: "#00e5ff", life: 1, decay: .04 });
+            P.health <= 0 && (P.explode(), C(!1))
+          } else(a.x < -20 || a.x > c + 20 || a.y < -20 || a.y > d + 20) && v.splice(t, 1)
+        }
+        for (let t = M.length - 1; t >= 0; t--) {
+          const a = M[t];
+          a.x += a.vx, a.y += a.vy, a.radius += .2, a.alpha -= .02, e.fillStyle = `rgba(180, 195, 205, ${a.alpha})`, e.beginPath(), e.arc(a.x, a.y, a.radius, 0, 2 * Math.PI), e.fill(), a.alpha <= 0 && M.splice(t, 1)
+        }
+        for (let t = g.length - 1; t >= 0; t--) {
+          const a = g[t];
+          a.x += a.vx, a.y += a.vy, a.vy += .072, a.life -= a.decay, a.life <= 0 ? g.splice(t, 1) : (e.fillStyle = a.color, e.globalAlpha = a.life, e.fillRect(a.x, a.y, a.size, a.size), e.globalAlpha = 1)
+        }
+        e.restore(), requestAnimationFrame(t)
+      })
+    })()
   </script>
 </body>
 

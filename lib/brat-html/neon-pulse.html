@@ -450,26 +450,51 @@
     <div class="hud"><i></i><i></i><i></i></div>
   </div>
   <script>
-    ! function() { var t = document.getElementById("kalimat-src"),
+    ! function() {
+      var t = document.getElementById("kalimat-src"),
         e = (t && t.dataset.text || "NEON PULSE").trim() || "NEON PULSE",
         n = document.getElementById("stage"),
         a = document.getElementById("phrase"),
         o = document.createElement("canvas").getContext("2d");
-      o.font = "800 100px Orbitron"; var r, s, c, d, i = [];
+      o.font = "800 100px Orbitron";
+      var r, s, c, d, i = [];
 
-      function l() { a.innerHTML = "", i = []; var t = function() { for (var t = e.split(/\s+/).filter(Boolean), n = 1, a = 0; a < t.length; a++) { var r = o.measureText(t[a]).width || 1;
-            r > n && (n = r) } var s = 440 / n * 100; return s > 88 && (s = 88), s < 20 && (s = 20), s.toFixed(1) + "px" }();
-        a.style.fontSize = t; var n = e.split(/\s+/).filter(Boolean),
+      function l() {
+        a.innerHTML = "", i = [];
+        var t = function() {
+          for (var t = e.split(/\s+/).filter(Boolean), n = 1, a = 0; a < t.length; a++) {
+            var r = o.measureText(t[a]).width || 1;
+            r > n && (n = r)
+          }
+          var s = 440 / n * 100;
+          return s > 88 && (s = 88), s < 20 && (s = 20), s.toFixed(1) + "px"
+        }();
+        a.style.fontSize = t;
+        var n = e.split(/\s+/).filter(Boolean),
           r = 0;
-        n.forEach(function(t, e) { var o = document.createElement("span");
-          o.className = "chunk"; for (var s = 0; s < t.length; s++) { var c = document.createElement("span");
-            c.className = "letter", c.textContent = t[s], c.style.setProperty("--d", (.055 * r).toFixed(2) + "s"), o.appendChild(c), i.push(c), r++ } if (e < n.length - 1) { var d = document.createElement("span");
-            d.className = "space", o.appendChild(d) } a.appendChild(o) }) }
+        n.forEach(function(t, e) {
+          var o = document.createElement("span");
+          o.className = "chunk";
+          for (var s = 0; s < t.length; s++) {
+            var c = document.createElement("span");
+            c.className = "letter", c.textContent = t[s], c.style.setProperty("--d", (.055 * r).toFixed(2) + "s"), o.appendChild(c), i.push(c), r++
+          }
+          if (e < n.length - 1) {
+            var d = document.createElement("span");
+            d.className = "space", o.appendChild(d)
+          }
+          a.appendChild(o)
+        })
+      }
 
       function m() { clearTimeout(r), clearTimeout(s), n.classList.remove("impact", "run"), n.offsetWidth, n.classList.add("run"), r = setTimeout(function() { n.classList.add("impact"), s = setTimeout(m, d) }, c) }
 
-      function u() { var t;
-        l(), t = .055 * (i.length - 1), c = Math.round(1e3 * (t + .65 + 1.4)), d = Math.round(1e3 * (t + .7 + .9)), m() } document.fonts && document.fonts.load ? document.fonts.load("800 100px Orbitron").then(u).catch(u) : u() }()
+      function u() {
+        var t;
+        l(), t = .055 * (i.length - 1), c = Math.round(1e3 * (t + .65 + 1.4)), d = Math.round(1e3 * (t + .7 + .9)), m()
+      }
+      document.fonts && document.fonts.load ? document.fonts.load("800 100px Orbitron").then(u).catch(u) : u()
+    }()
   </script>
 </body>
 

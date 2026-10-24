@@ -363,7 +363,8 @@
     <div class="flash"></div>
   </div>
   <script>
-    ! function() { var e = document.getElementById("kalimat-src"),
+    ! function() {
+      var e = document.getElementById("kalimat-src"),
         t = (e && e.dataset.text || "SONIC BOOM").trim() || "SONIC BOOM",
         n = document.getElementById("stage"),
         a = document.getElementById("fx").getContext("2d"),
@@ -373,35 +374,83 @@
         l = i.querySelector(".fly"),
         s = document.getElementById("textLeft"),
         d = document.getElementById("textRight"),
-        c = document.createElement("canvas").getContext("2d"); var h = [],
+        c = document.createElement("canvas").getContext("2d");
+      var h = [],
         u = [];
 
-      function f() { n.classList.remove("impact", "run"), h = [], u = [], a.clearRect(0, 0, 512, 512), [o, l].forEach(function(e) { e.style.animation = "none", e.offsetWidth, e.style.animation = "" }), requestAnimationFrame(function() { n.classList.add("run"); var e = function() { o.removeEventListener("animationend", e), n.classList.add("impact"),
-              function() { for (var e = 0; e < 60; e++) { var t = e / 60 * Math.PI * 2 + .1 * (Math.random() - .5);
-                  h.push({ angle: t, innerR: 30, outerR: 30, growth: 8 + 14 * Math.random(), life: 1, decay: .018 + .015 * Math.random(), width: 1 + 2 * Math.random(), color: Math.random() > .7 ? [255, 255, 255] : [0, 200, 255] }) } for (var n = 0; n < 48; n++) { var a = n / 48 * Math.PI * 2;
-                  u.push({ angle: a, radius: 120, length: 10 + 40 * Math.random(), life: 1, decay: .012 + .012 * Math.random(), width: 3, peak: 10 + 40 * Math.random() }) } }(), setTimeout(f, 3400) };
-          o.addEventListener("animationend", e, { once: !0 }) }) }
+      function f() {
+        n.classList.remove("impact", "run"), h = [], u = [], a.clearRect(0, 0, 512, 512), [o, l].forEach(function(e) { e.style.animation = "none", e.offsetWidth, e.style.animation = "" }), requestAnimationFrame(function() {
+          n.classList.add("run");
+          var e = function() {
+            o.removeEventListener("animationend", e), n.classList.add("impact"),
+              function() {
+                for (var e = 0; e < 60; e++) {
+                  var t = e / 60 * Math.PI * 2 + .1 * (Math.random() - .5);
+                  h.push({ angle: t, innerR: 30, outerR: 30, growth: 8 + 14 * Math.random(), life: 1, decay: .018 + .015 * Math.random(), width: 1 + 2 * Math.random(), color: Math.random() > .7 ? [255, 255, 255] : [0, 200, 255] })
+                }
+                for (var n = 0; n < 48; n++) {
+                  var a = n / 48 * Math.PI * 2;
+                  u.push({ angle: a, radius: 120, length: 10 + 40 * Math.random(), life: 1, decay: .012 + .012 * Math.random(), width: 3, peak: 10 + 40 * Math.random() })
+                }
+              }(), setTimeout(f, 3400)
+          };
+          o.addEventListener("animationend", e, { once: !0 })
+        })
+      }
 
       function g() {
-        (function() { var e = function(e) { var t = String(e).trim().split(/\s+/).filter(Boolean); if (!t.length) return ["", ""]; if (1 === t.length) { var n = t[0]; if (n.length < 2) return [n, n]; var a = Math.ceil(n.length / 2); return [n.slice(0, a), n.slice(a)] } if (2 === t.length) return [t[0], t[1]]; for (var r = 1, i = 1 / 0, o = 1; o < t.length; o++) { var l = t.slice(0, o).join("").length,
+        (function() {
+          var e = function(e) {
+            var t = String(e).trim().split(/\s+/).filter(Boolean);
+            if (!t.length) return ["", ""];
+            if (1 === t.length) { var n = t[0]; if (n.length < 2) return [n, n]; var a = Math.ceil(n.length / 2); return [n.slice(0, a), n.slice(a)] }
+            if (2 === t.length) return [t[0], t[1]];
+            for (var r = 1, i = 1 / 0, o = 1; o < t.length; o++) {
+              var l = t.slice(0, o).join("").length,
                 s = t.slice(o).join("").length,
                 d = Math.abs(l - s);
-              d < i && (i = d, r = o) } return [t.slice(0, r).join(" "), t.slice(r).join(" ")] }(t);
-          s.textContent = e[0], d.textContent = e[1]; var n = function(e, t) { if (!e && !t) return 175;
-            c.font = '400 100px "Audiowide", sans-serif'; var n = e ? c.measureText(e).width || 1 : 0,
-              a = t ? c.measureText(t).width || 1 : 0; return Math.min(46e3 / (n + a || 1), 175) }(e[0], e[1]);
-          r.style.fontSize = n + "px", i.style.fontSize = n + "px" })(), f() }! function e() { a.clearRect(0, 0, 512, 512), a.globalCompositeOperation = "lighter"; for (var t = 256, n = 256, r = h.length - 1; r >= 0; r--) { var i = h[r]; if (i.outerR += i.growth, i.innerR += .4 * i.growth, i.growth *= .96, i.life -= i.decay, i.life <= 0) h.splice(r, 1);
-          else { var o = i.color,
+              d < i && (i = d, r = o)
+            }
+            return [t.slice(0, r).join(" "), t.slice(r).join(" ")]
+          }(t);
+          s.textContent = e[0], d.textContent = e[1];
+          var n = function(e, t) {
+            if (!e && !t) return 175;
+            c.font = '400 100px "Audiowide", sans-serif';
+            var n = e ? c.measureText(e).width || 1 : 0,
+              a = t ? c.measureText(t).width || 1 : 0;
+            return Math.min(46e3 / (n + a || 1), 175)
+          }(e[0], e[1]);
+          r.style.fontSize = n + "px", i.style.fontSize = n + "px"
+        })(), f()
+      }! function e() {
+        a.clearRect(0, 0, 512, 512), a.globalCompositeOperation = "lighter";
+        for (var t = 256, n = 256, r = h.length - 1; r >= 0; r--) {
+          var i = h[r];
+          if (i.outerR += i.growth, i.innerR += .4 * i.growth, i.growth *= .96, i.life -= i.decay, i.life <= 0) h.splice(r, 1);
+          else {
+            var o = i.color,
               l = t + Math.cos(i.angle) * i.innerR,
               s = n + Math.sin(i.angle) * i.innerR,
               d = t + Math.cos(i.angle) * i.outerR,
               c = n + Math.sin(i.angle) * i.outerR;
-            a.strokeStyle = "rgba(" + o[0] + "," + o[1] + "," + o[2] + "," + i.life + ")", a.lineWidth = i.width, a.lineCap = "round", a.beginPath(), a.moveTo(l, s), a.lineTo(d, c), a.stroke() } } for (var f = u.length - 1; f >= 0; f--) { var g = u[f]; if (g.length += .15 * (g.peak - g.length), g.peak *= .92, g.radius += 2, g.life -= g.decay, g.life <= 0) u.splice(f, 1);
-          else { var m = t + Math.cos(g.angle) * g.radius,
+            a.strokeStyle = "rgba(" + o[0] + "," + o[1] + "," + o[2] + "," + i.life + ")", a.lineWidth = i.width, a.lineCap = "round", a.beginPath(), a.moveTo(l, s), a.lineTo(d, c), a.stroke()
+          }
+        }
+        for (var f = u.length - 1; f >= 0; f--) {
+          var g = u[f];
+          if (g.length += .15 * (g.peak - g.length), g.peak *= .92, g.radius += 2, g.life -= g.decay, g.life <= 0) u.splice(f, 1);
+          else {
+            var m = t + Math.cos(g.angle) * g.radius,
               v = n + Math.sin(g.angle) * g.radius,
               M = t + Math.cos(g.angle) * (g.radius + g.length),
               y = n + Math.sin(g.angle) * (g.radius + g.length);
-            a.strokeStyle = "rgba(0, 200, 255, " + g.life + ")", a.lineWidth = g.width, a.lineCap = "round", a.beginPath(), a.moveTo(m, v), a.lineTo(M, y), a.stroke(), a.fillStyle = "rgba(255,255,255," + g.life + ")", a.beginPath(), a.arc(M, y, 1.5, 0, 7), a.fill() } } a.globalCompositeOperation = "source-over", requestAnimationFrame(e) }(), document.fonts && document.fonts.load ? document.fonts.load('400 100px "Audiowide"').then(g).catch(g) : g() }()
+            a.strokeStyle = "rgba(0, 200, 255, " + g.life + ")", a.lineWidth = g.width, a.lineCap = "round", a.beginPath(), a.moveTo(m, v), a.lineTo(M, y), a.stroke(), a.fillStyle = "rgba(255,255,255," + g.life + ")", a.beginPath(), a.arc(M, y, 1.5, 0, 7), a.fill()
+          }
+        }
+        a.globalCompositeOperation = "source-over", requestAnimationFrame(e)
+      }(), document.fonts && document.fonts.load ? document.fonts.load('400 100px "Audiowide"').then(g).catch(g) : g()
+    }()
   </script>
 </body>
 

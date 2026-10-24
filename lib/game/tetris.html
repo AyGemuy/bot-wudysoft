@@ -308,9 +308,16 @@
 
     function initAudio() { audioCtx || (audioCtx = new(window.AudioContext || window.webkitAudioContext)), "suspended" === audioCtx.state && audioCtx.resume() }
 
-    function playSound(e) { try { initAudio(); const t = audioCtx.createOscillator(),
+    function playSound(e) {
+      try {
+        initAudio();
+        const t = audioCtx.createOscillator(),
           a = audioCtx.createGain();
-        t.connect(a), a.connect(audioCtx.destination); const r = audioCtx.currentTime; "move" === e ? (t.type = "triangle", t.frequency.setValueAtTime(250, r), a.gain.setValueAtTime(.05, r), a.gain.exponentialRampToValueAtTime(.01, r + .05), t.start(r), t.stop(r + .05)) : "rotate" === e ? (t.type = "sine", t.frequency.setValueAtTime(400, r), t.frequency.exponentialRampToValueAtTime(600, r + .08), a.gain.setValueAtTime(.08, r), a.gain.exponentialRampToValueAtTime(.01, r + .08), t.start(r), t.stop(r + .08)) : "clear" === e ? (t.type = "square", t.frequency.setValueAtTime(523, r), t.frequency.setValueAtTime(659, r + .08), t.frequency.setValueAtTime(783, r + .16), a.gain.setValueAtTime(.12, r), a.gain.exponentialRampToValueAtTime(.01, r + .28), t.start(r), t.stop(r + .28)) : "drop" === e ? (t.type = "triangle", t.frequency.setValueAtTime(150, r), t.frequency.exponentialRampToValueAtTime(60, r + .1), a.gain.setValueAtTime(.15, r), a.gain.exponentialRampToValueAtTime(.01, r + .1), t.start(r), t.stop(r + .1)) : "over" === e && (t.type = "sawtooth", t.frequency.setValueAtTime(180, r), t.frequency.linearRampToValueAtTime(40, r + .4), a.gain.setValueAtTime(.2, r), a.gain.exponentialRampToValueAtTime(.01, r + .4), t.start(r), t.stop(r + .4)) } catch (e) {} }
+        t.connect(a), a.connect(audioCtx.destination);
+        const r = audioCtx.currentTime;
+        "move" === e ? (t.type = "triangle", t.frequency.setValueAtTime(250, r), a.gain.setValueAtTime(.05, r), a.gain.exponentialRampToValueAtTime(.01, r + .05), t.start(r), t.stop(r + .05)) : "rotate" === e ? (t.type = "sine", t.frequency.setValueAtTime(400, r), t.frequency.exponentialRampToValueAtTime(600, r + .08), a.gain.setValueAtTime(.08, r), a.gain.exponentialRampToValueAtTime(.01, r + .08), t.start(r), t.stop(r + .08)) : "clear" === e ? (t.type = "square", t.frequency.setValueAtTime(523, r), t.frequency.setValueAtTime(659, r + .08), t.frequency.setValueAtTime(783, r + .16), a.gain.setValueAtTime(.12, r), a.gain.exponentialRampToValueAtTime(.01, r + .28), t.start(r), t.stop(r + .28)) : "drop" === e ? (t.type = "triangle", t.frequency.setValueAtTime(150, r), t.frequency.exponentialRampToValueAtTime(60, r + .1), a.gain.setValueAtTime(.15, r), a.gain.exponentialRampToValueAtTime(.01, r + .1), t.start(r), t.stop(r + .1)) : "over" === e && (t.type = "sawtooth", t.frequency.setValueAtTime(180, r), t.frequency.linearRampToValueAtTime(40, r + .4), a.gain.setValueAtTime(.2, r), a.gain.exponentialRampToValueAtTime(.01, r + .4), t.start(r), t.stop(r + .4))
+      } catch (e) {}
+    }
     const canvas = document.getElementById("gameCanvas"),
       ctx = canvas.getContext("2d"),
       COLS = 10,
@@ -361,36 +368,59 @@
 
     function createPiece(e) { return SHAPES[e] }
 
-    function collide(e, t) { const a = t.matrix,
-        r = t.pos; for (let t = 0; t < a.length; ++t)
+    function collide(e, t) {
+      const a = t.matrix,
+        r = t.pos;
+      for (let t = 0; t < a.length; ++t)
         for (let n = 0; n < a[t].length; ++n)
-          if (0 !== a[t][n] && 0 !== (e[t + r.y] && e[t + r.y][n + r.x])) return !0; return !1 }
+          if (0 !== a[t][n] && 0 !== (e[t + r.y] && e[t + r.y][n + r.x])) return !0;
+      return !1
+    }
 
     function merge(e, t) { t.matrix.forEach((a, r) => { a.forEach((a, n) => { 0 !== a && (e[r + t.pos.y][n + t.pos.x] = a) }) }) }
 
-    function playerReset() { const e = [1, 2, 3, 4, 5, 6, 7],
+    function playerReset() {
+      const e = [1, 2, 3, 4, 5, 6, 7],
         t = e[Math.floor(Math.random() * e.length)];
-      player.matrix = createPiece(t), player.pos.y = 0, player.pos.x = Math.floor(5) - Math.floor(player.matrix[0].length / 2), collide(arena, player) && (gameOver = !0, playSound("over"), endGame()) }
+      player.matrix = createPiece(t), player.pos.y = 0, player.pos.x = Math.floor(5) - Math.floor(player.matrix[0].length / 2), collide(arena, player) && (gameOver = !0, playSound("over"), endGame())
+    }
 
     function playerMove(e) { gameOver || (player.pos.x += e, collide(arena, player) ? player.pos.x -= e : playSound("move")) }
 
-    function playerRotate() { if (gameOver) return; const e = player.pos.x; let t = 1; for (rotate(player.matrix); collide(arena, player);)
+    function playerRotate() {
+      if (gameOver) return;
+      const e = player.pos.x;
+      let t = 1;
+      for (rotate(player.matrix); collide(arena, player);)
         if (player.pos.x += t, t = -(t + (t > 0 ? 1 : -1)), t > player.matrix[0].length) return rotate(player.matrix, -1), void(player.pos.x = e);
-      playSound("rotate") }
+      playSound("rotate")
+    }
 
-    function rotate(e, t = 1) { for (let t = 0; t < e.length; ++t)
+    function rotate(e, t = 1) {
+      for (let t = 0; t < e.length; ++t)
         for (let a = 0; a < t; ++a)[e[a][t], e[t][a]] = [e[t][a], e[a][t]];
-      t > 0 ? e.forEach(e => e.reverse()) : e.reverse() }
+      t > 0 ? e.forEach(e => e.reverse()) : e.reverse()
+    }
 
     function playerDrop() { gameOver || (player.pos.y++, collide(arena, player) && (player.pos.y--, merge(arena, player), playSound("drop"), arenaSweep(), playerReset()), dropCounter = 0) }
 
-    function playerHardDrop() { if (!gameOver) { for (; !collide(arena, player);) player.pos.y++;
-        player.pos.y--, merge(arena, player), playSound("drop"), arenaSweep(), playerReset(), dropCounter = 0 } }
+    function playerHardDrop() {
+      if (!gameOver) {
+        for (; !collide(arena, player);) player.pos.y++;
+        player.pos.y--, merge(arena, player), playSound("drop"), arenaSweep(), playerReset(), dropCounter = 0
+      }
+    }
 
-    function arenaSweep() { let e = 0;
-      e: for (let t = arena.length - 1; t >= 0; --t) { for (let e = 0; e < arena[t].length; ++e)
-          if (0 === arena[t][e]) continue e; const a = arena.splice(t, 1)[0].fill(0);
-        arena.unshift(a), ++t, e++ } e > 0 && (score += [0, 100, 300, 500, 800][e] * level, lines += e, level = Math.floor(lines / 10) + 1, dropInterval = Math.max(100, 1e3 - 80 * (level - 1)), playSound("clear"), updateUI()) }
+    function arenaSweep() {
+      let e = 0;
+      e: for (let t = arena.length - 1; t >= 0; --t) {
+        for (let e = 0; e < arena[t].length; ++e)
+          if (0 === arena[t][e]) continue e;
+        const a = arena.splice(t, 1)[0].fill(0);
+        arena.unshift(a), ++t, e++
+      }
+      e > 0 && (score += [0, 100, 300, 500, 800][e] * level, lines += e, level = Math.floor(lines / 10) + 1, dropInterval = Math.max(100, 1e3 - 80 * (level - 1)), playSound("clear"), updateUI())
+    }
 
     function drawMatrix(e, t) { e.forEach((e, a) => { e.forEach((e, r) => { 0 !== e && (ctx.fillStyle = COLORS[e], ctx.fillRect(24 * (r + t.x) + 1, 24 * (a + t.y) + 1, 22, 22), ctx.fillStyle = "rgba(255, 255, 255, 0.2)", ctx.fillRect(24 * (r + t.x) + 1, 24 * (a + t.y) + 1, 22, 4)) }) }) }
 
@@ -398,8 +428,11 @@
 
     function render() { ctx.fillStyle = "#0d0a17", ctx.fillRect(0, 0, canvas.width, canvas.height), drawGrid(), drawMatrix(arena, { x: 0, y: 0 }), player.matrix && drawMatrix(player.matrix, player.pos) }
 
-    function update(e = 0) { if (gameOver) return; const t = e - lastTime;
-      lastTime = e, dropCounter += t, dropCounter > dropInterval && playerDrop(), render(), requestAnimationFrame(update) }
+    function update(e = 0) {
+      if (gameOver) return;
+      const t = e - lastTime;
+      lastTime = e, dropCounter += t, dropCounter > dropInterval && playerDrop(), render(), requestAnimationFrame(update)
+    }
 
     function updateUI() { document.getElementById("scoreVal").textContent = score, document.getElementById("linesVal").textContent = lines, document.getElementById("levelVal").textContent = level }
 
@@ -407,9 +440,12 @@
 
     function endGame() { document.getElementById("finalScoreDesc").textContent = "Skor akhir kamu: " + score, document.getElementById("overlay").classList.add("show") }
 
-    function bindBtn(e, t) { const a = document.getElementById(e),
+    function bindBtn(e, t) {
+      const a = document.getElementById(e),
         r = e => { e.preventDefault(), initAudio(), t() };
-      a.addEventListener("touchstart", r), a.addEventListener("mousedown", r) } window.addEventListener("keydown", e => { initAudio(), "ArrowLeft" !== e.code && "KeyA" !== e.code || (e.preventDefault(), playerMove(-1)), "ArrowRight" !== e.code && "KeyD" !== e.code || (e.preventDefault(), playerMove(1)), "ArrowDown" !== e.code && "KeyS" !== e.code || (e.preventDefault(), playerDrop()), "ArrowUp" !== e.code && "KeyW" !== e.code || (e.preventDefault(), playerRotate()), "Space" === e.code && (e.preventDefault(), playerHardDrop()) }), bindBtn("btnLeft", () => playerMove(-1)), bindBtn("btnRight", () => playerMove(1)), bindBtn("btnDown", () => playerDrop()), bindBtn("btnRotate", () => playerRotate()), bindBtn("btnDrop", () => playerHardDrop()), document.getElementById("btnRestart").addEventListener("click", () => { initGame() }), initGame()
+      a.addEventListener("touchstart", r), a.addEventListener("mousedown", r)
+    }
+    window.addEventListener("keydown", e => { initAudio(), "ArrowLeft" !== e.code && "KeyA" !== e.code || (e.preventDefault(), playerMove(-1)), "ArrowRight" !== e.code && "KeyD" !== e.code || (e.preventDefault(), playerMove(1)), "ArrowDown" !== e.code && "KeyS" !== e.code || (e.preventDefault(), playerDrop()), "ArrowUp" !== e.code && "KeyW" !== e.code || (e.preventDefault(), playerRotate()), "Space" === e.code && (e.preventDefault(), playerHardDrop()) }), bindBtn("btnLeft", () => playerMove(-1)), bindBtn("btnRight", () => playerMove(1)), bindBtn("btnDown", () => playerDrop()), bindBtn("btnRotate", () => playerRotate()), bindBtn("btnDrop", () => playerHardDrop()), document.getElementById("btnRestart").addEventListener("click", () => { initGame() }), initGame()
   </script>
 </body>
 

@@ -308,63 +308,138 @@
     </div>
   </div>
   <script>
-    (() => { let e = null,
+    (() => {
+      let e = null,
         t = null,
         n = null,
         a = "piano",
         o = !1,
-        i = 0; const l = new Map,
+        i = 0;
+      const l = new Map,
         c = [{ note: "C", octave: 3, label: "Do", type: "white", keyBind: "a" }, { note: "C#", octave: 3, label: "Do#", type: "black", pos: 1, keyBind: "w" }, { note: "D", octave: 3, label: "Re", type: "white", keyBind: "s" }, { note: "D#", octave: 3, label: "Re#", type: "black", pos: 2, keyBind: "e" }, { note: "E", octave: 3, label: "Mi", type: "white", keyBind: "d" }, { note: "F", octave: 3, label: "Fa", type: "white", keyBind: "f" }, { note: "F#", octave: 3, label: "Fa#", type: "black", pos: 4, keyBind: "t" }, { note: "G", octave: 3, label: "Sol", type: "white", keyBind: "g" }, { note: "G#", octave: 3, label: "Sol#", type: "black", pos: 5, keyBind: "y" }, { note: "A", octave: 3, label: "La", type: "white", keyBind: "h" }, { note: "A#", octave: 3, label: "La#", type: "black", pos: 6, keyBind: "u" }, { note: "B", octave: 3, label: "Si", type: "white", keyBind: "j" }, { note: "C", octave: 4, label: "Do", type: "white", keyBind: "k" }, { note: "C#", octave: 4, label: "Do#", type: "black", pos: 8, keyBind: "o" }, { note: "D", octave: 4, label: "Re", type: "white", keyBind: "l" }, { note: "D#", octave: 4, label: "Re#", type: "black", pos: 9, keyBind: "p" }, { note: "E", octave: 4, label: "Mi", type: "white", keyBind: ";" }, { note: "F", octave: 4, label: "Fa", type: "white" }, { note: "F#", octave: 4, label: "Fa#", type: "black", pos: 11 }, { note: "G", octave: 4, label: "Sol", type: "white" }, { note: "G#", octave: 4, label: "Sol#", type: "black", pos: 12 }, { note: "A", octave: 4, label: "La", type: "white" }, { note: "A#", octave: 4, label: "La#", type: "black", pos: 13 }, { note: "B", octave: 4, label: "Si", type: "white" }, { note: "C", octave: 5, label: "Do", type: "white" }],
         s = e => document.getElementById(e),
         r = s("keyboard"),
         u = s("note-display"),
         p = s("inst-label");
 
-      function d(i) {! function() { if (!e) { const a = window.AudioContext || window.webkitAudioContext;
-            e = new a, n = e.createAnalyser(), n.fftSize = 256, t = e.createGain(), t.gain.setValueAtTime(.85, e.currentTime), t.connect(n), n.connect(e.destination), k() } "suspended" === e.state && e.resume() }(); const l = e.currentTime,
+      function d(i) {
+        ! function() {
+          if (!e) {
+            const a = window.AudioContext || window.webkitAudioContext;
+            e = new a, n = e.createAnalyser(), n.fftSize = 256, t = e.createGain(), t.gain.setValueAtTime(.85, e.currentTime), t.connect(n), n.connect(e.destination), k()
+          }
+          "suspended" === e.state && e.resume()
+        }();
+        const l = e.currentTime,
           c = e.createGain(),
-          s = e.createBiquadFilter(); let r = []; if ("piano" === a) { s.type = "lowpass", s.frequency.setValueAtTime(4.8 * i, l), s.frequency.exponentialRampToValueAtTime(Math.max(140, 1.1 * i), l + 1.2); const t = e.createOscillator();
-          t.type = "triangle", t.frequency.setValueAtTime(i, l); const n = e.createOscillator();
-          n.type = "sine", n.frequency.setValueAtTime(2 * i, l); const a = e.createOscillator();
-          a.type = "sine", a.frequency.setValueAtTime(3 * i, l); const u = e.createGain();
-          u.gain.value = .7; const p = e.createGain();
-          p.gain.value = .25; const d = e.createGain();
-          d.gain.value = .1, t.connect(u), u.connect(s), n.connect(p), p.connect(s), a.connect(d), d.connect(s), r.push(t, n, a), c.gain.setValueAtTime(1e-4, l), c.gain.linearRampToValueAtTime(.9, l + .008), c.gain.exponentialRampToValueAtTime(.35, l + .35), c.gain.exponentialRampToValueAtTime(.001, l + (o ? 3.2 : 1.2)) } else if ("epiano" === a) { s.type = "bandpass", s.frequency.setValueAtTime(2 * i, l), s.Q.value = 1; const t = e.createOscillator();
-          t.type = "sine", t.frequency.setValueAtTime(i, l), t.connect(s), r.push(t), c.gain.setValueAtTime(.001, l), c.gain.linearRampToValueAtTime(.8, l + .015), c.gain.exponentialRampToValueAtTime(.001, l + (o ? 2.8 : 1.1)) } else if ("pipe" === a) s.type = "lowpass", s.frequency.value = 5500, [1, 2, 4].forEach((t, n) => { const a = e.createOscillator();
-          a.type = "sine", a.frequency.value = i * t; const o = e.createGain();
-          o.gain.value = .5 / (n + 1), a.connect(o), o.connect(s), r.push(a) }), c.gain.setValueAtTime(.001, l), c.gain.linearRampToValueAtTime(.65, l + .04);
-        else if ("strings" === a) { s.type = "lowpass", s.frequency.value = Math.min(3200, 3 * i); const t = e.createOscillator(),
+          s = e.createBiquadFilter();
+        let r = [];
+        if ("piano" === a) {
+          s.type = "lowpass", s.frequency.setValueAtTime(4.8 * i, l), s.frequency.exponentialRampToValueAtTime(Math.max(140, 1.1 * i), l + 1.2);
+          const t = e.createOscillator();
+          t.type = "triangle", t.frequency.setValueAtTime(i, l);
+          const n = e.createOscillator();
+          n.type = "sine", n.frequency.setValueAtTime(2 * i, l);
+          const a = e.createOscillator();
+          a.type = "sine", a.frequency.setValueAtTime(3 * i, l);
+          const u = e.createGain();
+          u.gain.value = .7;
+          const p = e.createGain();
+          p.gain.value = .25;
+          const d = e.createGain();
+          d.gain.value = .1, t.connect(u), u.connect(s), n.connect(p), p.connect(s), a.connect(d), d.connect(s), r.push(t, n, a), c.gain.setValueAtTime(1e-4, l), c.gain.linearRampToValueAtTime(.9, l + .008), c.gain.exponentialRampToValueAtTime(.35, l + .35), c.gain.exponentialRampToValueAtTime(.001, l + (o ? 3.2 : 1.2))
+        } else if ("epiano" === a) {
+          s.type = "bandpass", s.frequency.setValueAtTime(2 * i, l), s.Q.value = 1;
+          const t = e.createOscillator();
+          t.type = "sine", t.frequency.setValueAtTime(i, l), t.connect(s), r.push(t), c.gain.setValueAtTime(.001, l), c.gain.linearRampToValueAtTime(.8, l + .015), c.gain.exponentialRampToValueAtTime(.001, l + (o ? 2.8 : 1.1))
+        } else if ("pipe" === a) s.type = "lowpass", s.frequency.value = 5500, [1, 2, 4].forEach((t, n) => {
+          const a = e.createOscillator();
+          a.type = "sine", a.frequency.value = i * t;
+          const o = e.createGain();
+          o.gain.value = .5 / (n + 1), a.connect(o), o.connect(s), r.push(a)
+        }), c.gain.setValueAtTime(.001, l), c.gain.linearRampToValueAtTime(.65, l + .04);
+        else if ("strings" === a) {
+          s.type = "lowpass", s.frequency.value = Math.min(3200, 3 * i);
+          const t = e.createOscillator(),
             n = e.createOscillator();
-          t.type = "sawtooth", n.type = "sawtooth", t.frequency.setValueAtTime(i - 1.2, l), n.frequency.setValueAtTime(i + 1.2, l), t.connect(s), n.connect(s), r.push(t, n), c.gain.setValueAtTime(.001, l), c.gain.linearRampToValueAtTime(.6, l + .16) } else if ("brass" === a) { s.type = "lowpass", s.Q.value = 3.5, s.frequency.setValueAtTime(i, l), s.frequency.exponentialRampToValueAtTime(3.5 * i, l + .08); const t = e.createOscillator();
-          t.type = "sawtooth", t.frequency.setValueAtTime(i, l), t.connect(s), r.push(t), c.gain.setValueAtTime(.001, l), c.gain.linearRampToValueAtTime(.7, l + .03) } else { s.type = "lowpass", s.frequency.value = 3e3; const t = e.createOscillator();
-          t.type = "square", t.frequency.setValueAtTime(i, l), t.connect(s), r.push(t), c.gain.setValueAtTime(.001, l), c.gain.linearRampToValueAtTime(.5, l + .01) } return s.connect(c), c.connect(t), r.forEach(e => e.start(l)), { stop: () => { const t = e.currentTime,
+          t.type = "sawtooth", n.type = "sawtooth", t.frequency.setValueAtTime(i - 1.2, l), n.frequency.setValueAtTime(i + 1.2, l), t.connect(s), n.connect(s), r.push(t, n), c.gain.setValueAtTime(.001, l), c.gain.linearRampToValueAtTime(.6, l + .16)
+        } else if ("brass" === a) {
+          s.type = "lowpass", s.Q.value = 3.5, s.frequency.setValueAtTime(i, l), s.frequency.exponentialRampToValueAtTime(3.5 * i, l + .08);
+          const t = e.createOscillator();
+          t.type = "sawtooth", t.frequency.setValueAtTime(i, l), t.connect(s), r.push(t), c.gain.setValueAtTime(.001, l), c.gain.linearRampToValueAtTime(.7, l + .03)
+        } else {
+          s.type = "lowpass", s.frequency.value = 3e3;
+          const t = e.createOscillator();
+          t.type = "square", t.frequency.setValueAtTime(i, l), t.connect(s), r.push(t), c.gain.setValueAtTime(.001, l), c.gain.linearRampToValueAtTime(.5, l + .01)
+        }
+        return s.connect(c), c.connect(t), r.forEach(e => e.start(l)), {
+          stop: () => {
+            const t = e.currentTime,
               n = o ? 1.4 : .12;
-            c.gain.cancelScheduledValues(t), c.gain.setValueAtTime(Math.max(1e-4, c.gain.value), t), c.gain.exponentialRampToValueAtTime(1e-4, t + n), setTimeout(() => { r.forEach(e => { try { e.stop(), e.disconnect() } catch (e) {} }), s.disconnect(), c.disconnect() }, 1e3 * n + 100) } } }
+            c.gain.cancelScheduledValues(t), c.gain.setValueAtTime(Math.max(1e-4, c.gain.value), t), c.gain.exponentialRampToValueAtTime(1e-4, t + n), setTimeout(() => { r.forEach(e => { try { e.stop(), e.disconnect() } catch (e) {} }), s.disconnect(), c.disconnect() }, 1e3 * n + 100)
+          }
+        }
+      }
 
-      function y(e, t) { if (l.has(e)) return;
-        t.classList.add("is-active"); const n = d(function(e, t) { const n = { C: 0, "C#": 1, D: 2, "D#": 3, E: 4, F: 5, "F#": 6, G: 7, "G#": 8, A: 9, "A#": 10, B: 11 } [e] + 12 * (t + i); return 440 * Math.pow(2, (n - 57) / 12) }(e.note, e.octave));
-        l.set(e, { voice: n, keyEl: t }), u.textContent = `${e.label} (${e.note}${e.octave+i})` }
+      function y(e, t) {
+        if (l.has(e)) return;
+        t.classList.add("is-active");
+        const n = d(function(e, t) { const n = { C: 0, "C#": 1, D: 2, "D#": 3, E: 4, F: 5, "F#": 6, G: 7, "G#": 8, A: 9, "A#": 10, B: 11 } [e] + 12 * (t + i); return 440 * Math.pow(2, (n - 57) / 12) }(e.note, e.octave));
+        l.set(e, { voice: n, keyEl: t }), u.textContent = `${e.label} (${e.note}${e.octave+i})`
+      }
 
-      function m(e) { const t = l.get(e);
-        t && (t.keyEl.classList.remove("is-active"), t.voice.stop(), l.delete(e)) } window.addEventListener("keydown", e => { if (e.repeat) return; const t = c.find(t => t.keyBind && t.keyBind.toLowerCase() === e.key.toLowerCase());
-        t && t._element && y(t, t._element) }), window.addEventListener("keyup", e => { const t = c.find(t => t.keyBind && t.keyBind.toLowerCase() === e.key.toLowerCase());
-        t && m(t) }), document.querySelectorAll("#inst-list .inst-pill").forEach(e => { e.addEventListener("click", () => { document.querySelectorAll("#inst-list .inst-pill").forEach(e => e.classList.remove("is-active")), e.classList.add("is-active"), a = e.dataset.inst, p.textContent = e.textContent }) }); const v = s("sustain-btn");
-      v.addEventListener("click", () => { o = !o, v.classList.toggle("is-active", o), v.textContent = "Pedal Sustain: " + (o ? "AKTIF" : "MATI") }); const f = s("octave-btn");
-      f.addEventListener("click", () => { 0 === i ? (i = 1, f.textContent = "Oktaf: C4 - C6") : 1 === i ? (i = -1, f.textContent = "Oktaf: C2 - C4") : (i = 0, f.textContent = "Oktaf: C3 - C5") }), s("demo-btn").addEventListener("click", () => { let e = 0;
-        [{ note: "E", oct: 4, dur: 220 }, { note: "D#", oct: 4, dur: 220 }, { note: "E", oct: 4, dur: 220 }, { note: "D#", oct: 4, dur: 220 }, { note: "E", oct: 4, dur: 220 }, { note: "B", oct: 3, dur: 220 }, { note: "D", oct: 4, dur: 220 }, { note: "C", oct: 4, dur: 220 }, { note: "A", oct: 3, dur: 450 }].forEach(t => { setTimeout(() => { const e = c.find(e => e.note === t.note && e.octave === t.oct);
-            e && e._element && (y(e, e._element), setTimeout(() => m(e), .85 * t.dur)) }, e), e += t.dur }) }); const w = s("visCanvas"),
+      function m(e) {
+        const t = l.get(e);
+        t && (t.keyEl.classList.remove("is-active"), t.voice.stop(), l.delete(e))
+      }
+      window.addEventListener("keydown", e => {
+        if (e.repeat) return;
+        const t = c.find(t => t.keyBind && t.keyBind.toLowerCase() === e.key.toLowerCase());
+        t && t._element && y(t, t._element)
+      }), window.addEventListener("keyup", e => {
+        const t = c.find(t => t.keyBind && t.keyBind.toLowerCase() === e.key.toLowerCase());
+        t && m(t)
+      }), document.querySelectorAll("#inst-list .inst-pill").forEach(e => { e.addEventListener("click", () => { document.querySelectorAll("#inst-list .inst-pill").forEach(e => e.classList.remove("is-active")), e.classList.add("is-active"), a = e.dataset.inst, p.textContent = e.textContent }) });
+      const v = s("sustain-btn");
+      v.addEventListener("click", () => { o = !o, v.classList.toggle("is-active", o), v.textContent = "Pedal Sustain: " + (o ? "AKTIF" : "MATI") });
+      const f = s("octave-btn");
+      f.addEventListener("click", () => { 0 === i ? (i = 1, f.textContent = "Oktaf: C4 - C6") : 1 === i ? (i = -1, f.textContent = "Oktaf: C2 - C4") : (i = 0, f.textContent = "Oktaf: C3 - C5") }), s("demo-btn").addEventListener("click", () => {
+        let e = 0;
+        [{ note: "E", oct: 4, dur: 220 }, { note: "D#", oct: 4, dur: 220 }, { note: "E", oct: 4, dur: 220 }, { note: "D#", oct: 4, dur: 220 }, { note: "E", oct: 4, dur: 220 }, { note: "B", oct: 3, dur: 220 }, { note: "D", oct: 4, dur: 220 }, { note: "C", oct: 4, dur: 220 }, { note: "A", oct: 3, dur: 450 }].forEach(t => {
+          setTimeout(() => {
+            const e = c.find(e => e.note === t.note && e.octave === t.oct);
+            e && e._element && (y(e, e._element), setTimeout(() => m(e), .85 * t.dur))
+          }, e), e += t.dur
+        })
+      });
+      const w = s("visCanvas"),
         T = w.getContext("2d");
 
       function h() { w.width = w.offsetWidth * (window.devicePixelRatio || 1), w.height = w.offsetHeight * (window.devicePixelRatio || 1) }
 
-      function k() { if (requestAnimationFrame(k), !n) return; const e = n.frequencyBinCount,
+      function k() {
+        if (requestAnimationFrame(k), !n) return;
+        const e = n.frequencyBinCount,
           t = new Uint8Array(e);
-        n.getByteTimeDomainData(t); const a = w.width,
+        n.getByteTimeDomainData(t);
+        const a = w.width,
           o = w.height;
-        T.fillStyle = "#080d10", T.fillRect(0, 0, a, o), T.lineWidth = 2 * (window.devicePixelRatio || 1), T.strokeStyle = "#00a884", T.shadowColor = "#00a884", T.shadowBlur = 8, T.beginPath(); const i = a / e; let l = 0; for (let n = 0; n < e; n++) { const e = t[n] / 128 * o / 2;
-          0 === n ? T.moveTo(l, e) : T.lineTo(l, e), l += i } T.lineTo(a, o / 2), T.stroke(), T.shadowBlur = 0 } window.addEventListener("resize", h), h(),
-        function() { r.innerHTML = ""; const e = c.filter(e => "white" === e.type).length;
-          c.forEach(t => { const n = document.createElement("div"); "white" === t.type ? (n.className = "white-key", n.innerHTML = `<span class="key-label">${t.label}</span>`) : (n.className = "black-key", n.style.left = (t.pos - .38) / e * 100 + "%", n.innerHTML = `<span class="key-label">${t.label}</span>`), n.addEventListener("pointerdown", e => { n.setPointerCapture(e.pointerId), y(t, n) }), n.addEventListener("pointerup", () => m(t)), n.addEventListener("pointercancel", () => m(t)), n.addEventListener("pointerenter", e => { 1 === e.buttons && y(t, n) }), n.addEventListener("pointerleave", () => m(t)), t._element = n, r.appendChild(n) }) }() })()
+        T.fillStyle = "#080d10", T.fillRect(0, 0, a, o), T.lineWidth = 2 * (window.devicePixelRatio || 1), T.strokeStyle = "#00a884", T.shadowColor = "#00a884", T.shadowBlur = 8, T.beginPath();
+        const i = a / e;
+        let l = 0;
+        for (let n = 0; n < e; n++) {
+          const e = t[n] / 128 * o / 2;
+          0 === n ? T.moveTo(l, e) : T.lineTo(l, e), l += i
+        }
+        T.lineTo(a, o / 2), T.stroke(), T.shadowBlur = 0
+      }
+      window.addEventListener("resize", h), h(),
+        function() {
+          r.innerHTML = "";
+          const e = c.filter(e => "white" === e.type).length;
+          c.forEach(t => { const n = document.createElement("div"); "white" === t.type ? (n.className = "white-key", n.innerHTML = `<span class="key-label">${t.label}</span>`) : (n.className = "black-key", n.style.left = (t.pos - .38) / e * 100 + "%", n.innerHTML = `<span class="key-label">${t.label}</span>`), n.addEventListener("pointerdown", e => { n.setPointerCapture(e.pointerId), y(t, n) }), n.addEventListener("pointerup", () => m(t)), n.addEventListener("pointercancel", () => m(t)), n.addEventListener("pointerenter", e => { 1 === e.buttons && y(t, n) }), n.addEventListener("pointerleave", () => m(t)), t._element = n, r.appendChild(n) })
+        }()
+    })()
   </script>
 </body>
 

@@ -280,7 +280,8 @@
     <div class="vignette"></div>
   </div>
   <script>
-    ! function() { var e = document.getElementById("kalimat-src"),
+    ! function() {
+      var e = document.getElementById("kalimat-src"),
         t = (e && e.dataset.text || "WILD FIRE").trim() || "WILD FIRE",
         a = document.getElementById("stage"),
         n = document.getElementById("fx").getContext("2d"),
@@ -292,36 +293,94 @@
         d = document.getElementById("textRight"),
         h = document.createElement("canvas").getContext("2d");
 
-      function c(e) { if (!e) return 200;
-        h.font = '900 100px Anton, "Arial Black", sans-serif'; var t = h.measureText(e).width || 1; return Math.min(27e3 / t, 200) } var f = [],
+      function c(e) {
+        if (!e) return 200;
+        h.font = '900 100px Anton, "Arial Black", sans-serif';
+        var t = h.measureText(e).width || 1;
+        return Math.min(27e3 / t, 200)
+      }
+      var f = [],
         m = [],
         v = [];
 
-      function y() { a.classList.remove("impact", "run"), f = [], m = [], v = [], n.clearRect(0, 0, 512, 512), [r, l].forEach(function(e) { e.style.animation = "none", e.offsetWidth, e.style.animation = "" }), requestAnimationFrame(function() { a.classList.add("run"); var e = function() { r.removeEventListener("animationend", e), a.classList.add("impact"),
-              function() { for (var e = 0; e < 200; e++) { var t = Math.random() * Math.PI * 2,
+      function y() {
+        a.classList.remove("impact", "run"), f = [], m = [], v = [], n.clearRect(0, 0, 512, 512), [r, l].forEach(function(e) { e.style.animation = "none", e.offsetWidth, e.style.animation = "" }), requestAnimationFrame(function() {
+          a.classList.add("run");
+          var e = function() {
+            r.removeEventListener("animationend", e), a.classList.add("impact"),
+              function() {
+                for (var e = 0; e < 200; e++) {
+                  var t = Math.random() * Math.PI * 2,
                     a = 18 * Math.random() + 2;
-                  f.push({ x: 256, y: 256, vx: Math.cos(t) * a, vy: Math.sin(t) * a - 3, life: 1, decay: .014 + .015 * Math.random(), size: 14 + 40 * Math.random(), hue: 10 + 50 * Math.random(), shrink: .95 + .02 * Math.random() }) } for (var n = 0; n < 130; n++) { var o = Math.random() * Math.PI * 2,
+                  f.push({ x: 256, y: 256, vx: Math.cos(t) * a, vy: Math.sin(t) * a - 3, life: 1, decay: .014 + .015 * Math.random(), size: 14 + 40 * Math.random(), hue: 10 + 50 * Math.random(), shrink: .95 + .02 * Math.random() })
+                }
+                for (var n = 0; n < 130; n++) {
+                  var o = Math.random() * Math.PI * 2,
                     i = 26 * Math.random() + 4;
-                  m.push({ x: 256, y: 256, vx: Math.cos(o) * i, vy: Math.sin(o) * i - 3, life: 1, decay: .015 + .02 * Math.random(), size: 1 + 2.5 * Math.random(), hue: 20 + 40 * Math.random() }) } for (var r = 0; r < 35; r++) { var l = Math.random() * Math.PI * 2,
+                  m.push({ x: 256, y: 256, vx: Math.cos(o) * i, vy: Math.sin(o) * i - 3, life: 1, decay: .015 + .02 * Math.random(), size: 1 + 2.5 * Math.random(), hue: 20 + 40 * Math.random() })
+                }
+                for (var r = 0; r < 35; r++) {
+                  var l = Math.random() * Math.PI * 2,
                     s = 7 * Math.random() + 1;
-                  v.push({ x: 256, y: 256, vx: Math.cos(l) * s, vy: Math.sin(l) * s - 4, life: 1, decay: .004 + .004 * Math.random(), size: 40 + 70 * Math.random(), growth: 1.02 }) } }(), setTimeout(y, 3400) };
-          r.addEventListener("animationend", e, { once: !0 }) }) }
+                  v.push({ x: 256, y: 256, vx: Math.cos(l) * s, vy: Math.sin(l) * s - 4, life: 1, decay: .004 + .004 * Math.random(), size: 40 + 70 * Math.random(), growth: 1.02 })
+                }
+              }(), setTimeout(y, 3400)
+          };
+          r.addEventListener("animationend", e, { once: !0 })
+        })
+      }
 
       function u() {
-        (function() { var e = function(e) { var t = String(e).trim().split(/\s+/).filter(Boolean); if (!t.length) return ["", ""]; if (1 === t.length) { var a = t[0],
-                  n = Math.ceil(a.length / 2); return [a.slice(0, n), a.slice(n)] } if (2 === t.length) return [t[0], t[1]]; for (var o = 1, i = 1 / 0, r = 1; r < t.length; r++) { var l = t.slice(0, r).join("").length,
+        (function() {
+          var e = function(e) {
+              var t = String(e).trim().split(/\s+/).filter(Boolean);
+              if (!t.length) return ["", ""];
+              if (1 === t.length) {
+                var a = t[0],
+                  n = Math.ceil(a.length / 2);
+                return [a.slice(0, n), a.slice(n)]
+              }
+              if (2 === t.length) return [t[0], t[1]];
+              for (var o = 1, i = 1 / 0, r = 1; r < t.length; r++) {
+                var l = t.slice(0, r).join("").length,
                   s = t.slice(r).join("").length,
                   d = Math.abs(l - s);
-                d < i && (i = d, o = r) } return [t.slice(0, o).join(" "), t.slice(o).join(" ")] }(t),
+                d < i && (i = d, o = r)
+              }
+              return [t.slice(0, o).join(" "), t.slice(o).join(" ")]
+            }(t),
             a = e[0],
             n = e[1];
-          s.textContent = a, d.textContent = n; var r = Math.min(c(a), c(n));
-          o.style.fontSize = r + "px", i.style.fontSize = r + "px" })(), y() }! function e() { n.clearRect(0, 0, 512, 512), n.globalCompositeOperation = "source-over"; for (var t = v.length - 1; t >= 0; t--) { var a = v[t]; if (a.x += a.vx, a.y += a.vy, a.vy -= .04, a.vx *= .97, a.vy *= .97, a.life -= a.decay, a.size *= a.growth, a.life <= 0) v.splice(t, 1);
-          else { var o = n.createRadialGradient(a.x, a.y, 0, a.x, a.y, a.size);
-            o.addColorStop(0, "rgba(70,25,12," + .4 * a.life + ")"), o.addColorStop(1, "rgba(0,0,0,0)"), n.fillStyle = o, n.beginPath(), n.arc(a.x, a.y, a.size, 0, 7), n.fill() } } n.globalCompositeOperation = "lighter"; for (var i = f.length - 1; i >= 0; i--) { var r = f[i]; if (r.x += r.vx, r.y += r.vy, r.vy += .28, r.vx *= .96, r.vy *= .96, r.life -= r.decay, r.size *= r.shrink, r.life <= 0 || r.size < 1) f.splice(i, 1);
-          else { var l = n.createRadialGradient(r.x, r.y, 0, r.x, r.y, r.size);
-            l.addColorStop(0, "hsla(" + (r.hue + 30) + ",100%,75%," + r.life + ")"), l.addColorStop(.5, "hsla(" + r.hue + ",100%,50%," + .6 * r.life + ")"), l.addColorStop(1, "hsla(" + (r.hue - 10) + ",100%,25%,0)"), n.fillStyle = l, n.beginPath(), n.arc(r.x, r.y, r.size, 0, 7), n.fill() } } for (var s = m.length - 1; s >= 0; s--) { var d = m[s];
-          d.x += d.vx, d.y += d.vy, d.vy += .22, d.vx *= .975, d.vy *= .975, d.life -= d.decay, d.life <= 0 ? m.splice(s, 1) : (n.strokeStyle = "hsla(" + (d.hue + 20) + ",100%,72%," + d.life + ")", n.lineWidth = d.size, n.lineCap = "round", n.beginPath(), n.moveTo(d.x, d.y), n.lineTo(d.x - 2 * d.vx, d.y - 2 * d.vy), n.stroke(), n.fillStyle = "hsla(" + (d.hue + 35) + ",100%,92%," + d.life + ")", n.beginPath(), n.arc(d.x, d.y, .8 * d.size, 0, 7), n.fill()) } n.globalCompositeOperation = "source-over", requestAnimationFrame(e) }(), document.fonts && document.fonts.load ? document.fonts.load("900 100px Anton").then(u).catch(u) : u() }()
+          s.textContent = a, d.textContent = n;
+          var r = Math.min(c(a), c(n));
+          o.style.fontSize = r + "px", i.style.fontSize = r + "px"
+        })(), y()
+      }! function e() {
+        n.clearRect(0, 0, 512, 512), n.globalCompositeOperation = "source-over";
+        for (var t = v.length - 1; t >= 0; t--) {
+          var a = v[t];
+          if (a.x += a.vx, a.y += a.vy, a.vy -= .04, a.vx *= .97, a.vy *= .97, a.life -= a.decay, a.size *= a.growth, a.life <= 0) v.splice(t, 1);
+          else {
+            var o = n.createRadialGradient(a.x, a.y, 0, a.x, a.y, a.size);
+            o.addColorStop(0, "rgba(70,25,12," + .4 * a.life + ")"), o.addColorStop(1, "rgba(0,0,0,0)"), n.fillStyle = o, n.beginPath(), n.arc(a.x, a.y, a.size, 0, 7), n.fill()
+          }
+        }
+        n.globalCompositeOperation = "lighter";
+        for (var i = f.length - 1; i >= 0; i--) {
+          var r = f[i];
+          if (r.x += r.vx, r.y += r.vy, r.vy += .28, r.vx *= .96, r.vy *= .96, r.life -= r.decay, r.size *= r.shrink, r.life <= 0 || r.size < 1) f.splice(i, 1);
+          else {
+            var l = n.createRadialGradient(r.x, r.y, 0, r.x, r.y, r.size);
+            l.addColorStop(0, "hsla(" + (r.hue + 30) + ",100%,75%," + r.life + ")"), l.addColorStop(.5, "hsla(" + r.hue + ",100%,50%," + .6 * r.life + ")"), l.addColorStop(1, "hsla(" + (r.hue - 10) + ",100%,25%,0)"), n.fillStyle = l, n.beginPath(), n.arc(r.x, r.y, r.size, 0, 7), n.fill()
+          }
+        }
+        for (var s = m.length - 1; s >= 0; s--) {
+          var d = m[s];
+          d.x += d.vx, d.y += d.vy, d.vy += .22, d.vx *= .975, d.vy *= .975, d.life -= d.decay, d.life <= 0 ? m.splice(s, 1) : (n.strokeStyle = "hsla(" + (d.hue + 20) + ",100%,72%," + d.life + ")", n.lineWidth = d.size, n.lineCap = "round", n.beginPath(), n.moveTo(d.x, d.y), n.lineTo(d.x - 2 * d.vx, d.y - 2 * d.vy), n.stroke(), n.fillStyle = "hsla(" + (d.hue + 35) + ",100%,92%," + d.life + ")", n.beginPath(), n.arc(d.x, d.y, .8 * d.size, 0, 7), n.fill())
+        }
+        n.globalCompositeOperation = "source-over", requestAnimationFrame(e)
+      }(), document.fonts && document.fonts.load ? document.fonts.load("900 100px Anton").then(u).catch(u) : u()
+    }()
   </script>
 </body>
 

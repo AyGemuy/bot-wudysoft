@@ -265,9 +265,16 @@
 
     function initAudio() { audioCtx || (audioCtx = new(window.AudioContext || window.webkitAudioContext)), "suspended" === audioCtx.state && audioCtx.resume() }
 
-    function playSound(e) { try { initAudio(); const t = audioCtx.createOscillator(),
+    function playSound(e) {
+      try {
+        initAudio();
+        const t = audioCtx.createOscillator(),
           l = audioCtx.createGain();
-        t.connect(l), l.connect(audioCtx.destination); const a = audioCtx.currentTime; "hit" === e ? (t.type = "triangle", t.frequency.setValueAtTime(300, a), l.gain.setValueAtTime(.1, a), l.gain.exponentialRampToValueAtTime(.01, a + .08), t.start(a), t.stop(a + .08)) : "break" === e ? (t.type = "sine", t.frequency.setValueAtTime(600, a), t.frequency.exponentialRampToValueAtTime(900, a + .1), l.gain.setValueAtTime(.12, a), l.gain.exponentialRampToValueAtTime(.01, a + .1), t.start(a), t.stop(a + .1)) : "lose" === e && (t.type = "sawtooth", t.frequency.setValueAtTime(150, a), t.frequency.linearRampToValueAtTime(40, a + .3), l.gain.setValueAtTime(.2, a), l.gain.exponentialRampToValueAtTime(.01, a + .3), t.start(a), t.stop(a + .3)) } catch (e) {} }
+        t.connect(l), l.connect(audioCtx.destination);
+        const a = audioCtx.currentTime;
+        "hit" === e ? (t.type = "triangle", t.frequency.setValueAtTime(300, a), l.gain.setValueAtTime(.1, a), l.gain.exponentialRampToValueAtTime(.01, a + .08), t.start(a), t.stop(a + .08)) : "break" === e ? (t.type = "sine", t.frequency.setValueAtTime(600, a), t.frequency.exponentialRampToValueAtTime(900, a + .1), l.gain.setValueAtTime(.12, a), l.gain.exponentialRampToValueAtTime(.01, a + .1), t.start(a), t.stop(a + .1)) : "lose" === e && (t.type = "sawtooth", t.frequency.setValueAtTime(150, a), t.frequency.linearRampToValueAtTime(40, a + .3), l.gain.setValueAtTime(.2, a), l.gain.exponentialRampToValueAtTime(.01, a + .3), t.start(a), t.stop(a + .3))
+      } catch (e) {}
+    }
     const canvas = document.getElementById("gameCanvas"),
       ctx = canvas.getContext("2d"),
       CANVAS_WIDTH = 640,
@@ -286,15 +293,31 @@
 
     function resetBall() { ball.x = 320, ball.y = 320, ball.vx = 4 * (Math.random() > .5 ? 1 : -1), ball.vy = -4 }
 
-    function update() { if (gameOver) return; if (leftPressed && paddle.x > 10 && (paddle.x -= paddle.dx), rightPressed && paddle.x < 640 - paddle.w - 10 && (paddle.x += paddle.dx), ball.x += ball.vx, ball.y += ball.vy, (ball.x - ball.radius < 0 || ball.x + ball.radius > 640) && (ball.vx *= -1, playSound("hit")), ball.y - ball.radius < 0 && (ball.vy *= -1, playSound("hit")), ball.y + ball.radius > paddle.y && ball.x > paddle.x && ball.x < paddle.x + paddle.w) { ball.vy *= -1; let e = ball.x - (paddle.x + paddle.w / 2);
-        ball.vx = .12 * e, playSound("hit") } let e = 0; for (let t = 0; t < brickConfig.rows; t++)
-        for (let l = 0; l < brickConfig.cols; l++) { let a = bricks[t][l];
-          1 === a.status && (e++, ball.x > a.x && ball.x < a.x + brickConfig.w && ball.y > a.y && ball.y < a.y + brickConfig.h && (ball.vy *= -1, a.status = 0, score += 15, playSound("break"))) } 0 === e && endGame("LUAR BIASA! KAMU MENANG!"), ball.y + ball.radius > 360 && (lives--, playSound("lose"), lives <= 0 ? endGame("GAME OVER") : resetBall()), document.getElementById("scoreVal").textContent = score, document.getElementById("livesVal").textContent = "❤️ " + lives }
+    function update() {
+      if (gameOver) return;
+      if (leftPressed && paddle.x > 10 && (paddle.x -= paddle.dx), rightPressed && paddle.x < 640 - paddle.w - 10 && (paddle.x += paddle.dx), ball.x += ball.vx, ball.y += ball.vy, (ball.x - ball.radius < 0 || ball.x + ball.radius > 640) && (ball.vx *= -1, playSound("hit")), ball.y - ball.radius < 0 && (ball.vy *= -1, playSound("hit")), ball.y + ball.radius > paddle.y && ball.x > paddle.x && ball.x < paddle.x + paddle.w) {
+        ball.vy *= -1;
+        let e = ball.x - (paddle.x + paddle.w / 2);
+        ball.vx = .12 * e, playSound("hit")
+      }
+      let e = 0;
+      for (let t = 0; t < brickConfig.rows; t++)
+        for (let l = 0; l < brickConfig.cols; l++) {
+          let a = bricks[t][l];
+          1 === a.status && (e++, ball.x > a.x && ball.x < a.x + brickConfig.w && ball.y > a.y && ball.y < a.y + brickConfig.h && (ball.vy *= -1, a.status = 0, score += 15, playSound("break")))
+        }
+      0 === e && endGame("LUAR BIASA! KAMU MENANG!"), ball.y + ball.radius > 360 && (lives--, playSound("lose"), lives <= 0 ? endGame("GAME OVER") : resetBall()), document.getElementById("scoreVal").textContent = score, document.getElementById("livesVal").textContent = "❤️ " + lives
+    }
 
-    function render() { ctx.fillStyle = "#0c0a1d", ctx.fillRect(0, 0, 640, 360); for (let e = 0; e < brickConfig.rows; e++)
+    function render() {
+      ctx.fillStyle = "#0c0a1d", ctx.fillRect(0, 0, 640, 360);
+      for (let e = 0; e < brickConfig.rows; e++)
         for (let t = 0; t < brickConfig.cols; t++)
-          if (1 === bricks[e][t].status) { let l = bricks[e][t];
-            ctx.fillStyle = l.color, ctx.fillRect(l.x, l.y, brickConfig.w, brickConfig.h), ctx.strokeStyle = "#000", ctx.strokeRect(l.x, l.y, brickConfig.w, brickConfig.h) } ctx.fillStyle = "#facc15", ctx.fillRect(paddle.x, paddle.y, paddle.w, paddle.h), ctx.fillStyle = "#a855f7", ctx.beginPath(), ctx.arc(ball.x, ball.y, ball.radius, 0, 2 * Math.PI), ctx.fill() }
+          if (1 === bricks[e][t].status) {
+            let l = bricks[e][t];
+            ctx.fillStyle = l.color, ctx.fillRect(l.x, l.y, brickConfig.w, brickConfig.h), ctx.strokeStyle = "#000", ctx.strokeRect(l.x, l.y, brickConfig.w, brickConfig.h)
+          } ctx.fillStyle = "#facc15", ctx.fillRect(paddle.x, paddle.y, paddle.w, paddle.h), ctx.fillStyle = "#a855f7", ctx.beginPath(), ctx.arc(ball.x, ball.y, ball.radius, 0, 2 * Math.PI), ctx.fill()
+    }
     let gameInterval = null;
 
     function gameLoop() { update(), render() }
@@ -303,10 +326,13 @@
 
     function endGame(e) { gameOver = !0, clearInterval(gameInterval), document.getElementById("resTitle").textContent = e, document.getElementById("resDesc").textContent = "Skor akhir total: " + score, document.getElementById("overlay").classList.add("show") }
 
-    function bindTouch(e, t) { const l = document.getElementById(e),
+    function bindTouch(e, t) {
+      const l = document.getElementById(e),
         a = e => { e.preventDefault(), initAudio(), t ? leftPressed = !0 : rightPressed = !0 },
         i = e => { e.preventDefault(), t ? leftPressed = !1 : rightPressed = !1 };
-      l.addEventListener("touchstart", a), l.addEventListener("touchend", i), l.addEventListener("mousedown", a), l.addEventListener("mouseup", i) } window.addEventListener("keydown", e => { initAudio(), "ArrowLeft" !== e.code && "KeyA" !== e.code || (e.preventDefault(), leftPressed = !0), "ArrowRight" !== e.code && "KeyD" !== e.code || (e.preventDefault(), rightPressed = !0) }), window.addEventListener("keyup", e => { "ArrowLeft" !== e.code && "KeyA" !== e.code || (leftPressed = !1), "ArrowRight" !== e.code && "KeyD" !== e.code || (rightPressed = !1) }), bindTouch("btnLeft", !0), bindTouch("btnRight", !1), document.getElementById("btnRestart").addEventListener("click", initGame), initGame()
+      l.addEventListener("touchstart", a), l.addEventListener("touchend", i), l.addEventListener("mousedown", a), l.addEventListener("mouseup", i)
+    }
+    window.addEventListener("keydown", e => { initAudio(), "ArrowLeft" !== e.code && "KeyA" !== e.code || (e.preventDefault(), leftPressed = !0), "ArrowRight" !== e.code && "KeyD" !== e.code || (e.preventDefault(), rightPressed = !0) }), window.addEventListener("keyup", e => { "ArrowLeft" !== e.code && "KeyA" !== e.code || (leftPressed = !1), "ArrowRight" !== e.code && "KeyD" !== e.code || (rightPressed = !1) }), bindTouch("btnLeft", !0), bindTouch("btnRight", !1), document.getElementById("btnRestart").addEventListener("click", initGame), initGame()
   </script>
 </body>
 

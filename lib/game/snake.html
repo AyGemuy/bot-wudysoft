@@ -314,9 +314,16 @@
 
     function initAudio() { audioCtx || (audioCtx = new(window.AudioContext || window.webkitAudioContext)), "suspended" === audioCtx.state && audioCtx.resume() }
 
-    function playSound(e) { try { initAudio(); const t = audioCtx.createOscillator(),
+    function playSound(e) {
+      try {
+        initAudio();
+        const t = audioCtx.createOscillator(),
           n = audioCtx.createGain();
-        t.connect(n), n.connect(audioCtx.destination); const o = audioCtx.currentTime; "eat" === e ? (t.type = "sine", t.frequency.setValueAtTime(587, o), t.frequency.setValueAtTime(880, o + .08), n.gain.setValueAtTime(.15, o), n.gain.exponentialRampToValueAtTime(.01, o + .2), t.start(o), t.stop(o + .2)) : "hit" === e && (t.type = "sawtooth", t.frequency.setValueAtTime(140, o), t.frequency.linearRampToValueAtTime(40, o + .3), n.gain.setValueAtTime(.2, o), n.gain.exponentialRampToValueAtTime(.01, o + .3), t.start(o), t.stop(o + .3)) } catch (e) {} }
+        t.connect(n), n.connect(audioCtx.destination);
+        const o = audioCtx.currentTime;
+        "eat" === e ? (t.type = "sine", t.frequency.setValueAtTime(587, o), t.frequency.setValueAtTime(880, o + .08), n.gain.setValueAtTime(.15, o), n.gain.exponentialRampToValueAtTime(.01, o + .2), t.start(o), t.stop(o + .2)) : "hit" === e && (t.type = "sawtooth", t.frequency.setValueAtTime(140, o), t.frequency.linearRampToValueAtTime(40, o + .3), n.gain.setValueAtTime(.2, o), n.gain.exponentialRampToValueAtTime(.01, o + .3), t.start(o), t.stop(o + .3))
+      } catch (e) {}
+    }
     const canvas = document.getElementById("gameCanvas"),
       ctx = canvas.getContext("2d"),
       GRID_SIZE = 20,
@@ -335,11 +342,17 @@
 
     function spawnFood() { food.x = Math.floor(Math.random() * TILE_COUNT), food.y = Math.floor(Math.random() * TILE_COUNT); for (let e of snake) e.x === food.x && e.y === food.y && spawnFood() }
 
-    function gameLoop() { if (gameOver) return;
-      changingDirection = !1; const e = { x: snake[0].x + dx, y: snake[0].y + dy }; if (e.x < 0 || e.x >= TILE_COUNT || e.y < 0 || e.y >= TILE_COUNT) endGame();
-      else { for (let t = 0; t < snake.length; t++)
+    function gameLoop() {
+      if (gameOver) return;
+      changingDirection = !1;
+      const e = { x: snake[0].x + dx, y: snake[0].y + dy };
+      if (e.x < 0 || e.x >= TILE_COUNT || e.y < 0 || e.y >= TILE_COUNT) endGame();
+      else {
+        for (let t = 0; t < snake.length; t++)
           if (e.x === snake[t].x && e.y === snake[t].y) return void endGame();
-        snake.unshift(e), e.x === food.x && e.y === food.y ? (score += 10, playSound("eat"), spawnFood()) : snake.pop(), render() } }
+        snake.unshift(e), e.x === food.x && e.y === food.y ? (score += 10, playSound("eat"), spawnFood()) : snake.pop(), render()
+      }
+    }
 
     function render() { ctx.fillStyle = "#0d1310", ctx.fillRect(0, 0, canvas.width, canvas.height), ctx.fillStyle = "#ef4444", ctx.beginPath(), ctx.arc(20 * food.x + 10, 20 * food.y + 10, 8, 0, 2 * Math.PI), ctx.fill(), snake.forEach((e, t) => { ctx.fillStyle = 0 === t ? "#22c55e" : "#16a34a", ctx.fillRect(20 * e.x + 1, 20 * e.y + 1, 18, 18) }), updateUI() }
 
@@ -349,9 +362,12 @@
 
     function changeDirection(e, t) { changingDirection || 0 !== e && 0 !== dx || 0 !== t && 0 !== dy || (dx = e, dy = t, changingDirection = !0) }
 
-    function bindDir(e, t, n) { const o = document.getElementById(e),
+    function bindDir(e, t, n) {
+      const o = document.getElementById(e),
         a = e => { e.preventDefault(), initAudio(), changeDirection(t, n) };
-      o.addEventListener("touchstart", a), o.addEventListener("mousedown", a) } window.addEventListener("keydown", e => { initAudio(), "ArrowUp" !== e.code && "KeyW" !== e.code || (e.preventDefault(), changeDirection(0, -1)), "ArrowDown" !== e.code && "KeyS" !== e.code || (e.preventDefault(), changeDirection(0, 1)), "ArrowLeft" !== e.code && "KeyA" !== e.code || (e.preventDefault(), changeDirection(-1, 0)), "ArrowRight" !== e.code && "KeyD" !== e.code || (e.preventDefault(), changeDirection(1, 0)) }), bindDir("btnUp", 0, -1), bindDir("btnDown", 0, 1), bindDir("btnLeft", -1, 0), bindDir("btnRight", 1, 0), document.getElementById("btnRestart").addEventListener("click", () => { initGame() }), initGame()
+      o.addEventListener("touchstart", a), o.addEventListener("mousedown", a)
+    }
+    window.addEventListener("keydown", e => { initAudio(), "ArrowUp" !== e.code && "KeyW" !== e.code || (e.preventDefault(), changeDirection(0, -1)), "ArrowDown" !== e.code && "KeyS" !== e.code || (e.preventDefault(), changeDirection(0, 1)), "ArrowLeft" !== e.code && "KeyA" !== e.code || (e.preventDefault(), changeDirection(-1, 0)), "ArrowRight" !== e.code && "KeyD" !== e.code || (e.preventDefault(), changeDirection(1, 0)) }), bindDir("btnUp", 0, -1), bindDir("btnDown", 0, 1), bindDir("btnLeft", -1, 0), bindDir("btnRight", 1, 0), document.getElementById("btnRestart").addEventListener("click", () => { initGame() }), initGame()
   </script>
 </body>
 
