@@ -606,8 +606,7 @@
 
     function update(t) { if (time += t, gameOver || gameWon) return updateParticles(t), void updatePopups(t);
       player.update(platforms, t); const e = clamp(player.x - W / 3, 0, 1760);
-      cameraX += (e - cameraX) * (1 - Math.pow(.84, t)), Math.abs(e - cameraX) < .2 && (cameraX = e); for (const e of goombas)
-        if (e.alive && (e.update(platforms, t), player.intersects(e))) { player.vy > 0 && player.prevY + player.h <= e.y + 12 ? (e.alive = !1, player.vy = -8, player.grounded = !1, score += 200, playSound("stomp"), spawnSpark(e.x + e.w / 2, e.y + 10, "#fca5a5"), addPopup(e.x + e.w / 2, e.y - 4, "+200", "#fca5a5"), updateUI()) : player.takeDamage(!1) } for (const t of coinsList) t.collected || player.intersects(t) && (t.collected = !0, coins++, score += 100, playSound("coin"), spawnSpark(t.x + 8, t.y + 8, "#f8b800"), addPopup(t.x + 8, t.y, "+100", "#fde68a"), updateUI()); for (const e of platforms) e.bump > 0 && (e.bump = Math.max(0, e.bump - .07 * t));
+      cameraX += (e - cameraX) * (1 - Math.pow(.84, t)), Math.abs(e - cameraX) < .2 && (cameraX = e); for (const e of goombas) e.alive && (e.update(platforms, t), player.intersects(e)) && (player.vy > 0 && player.prevY + player.h <= e.y + 12 ? (e.alive = !1, player.vy = -8, player.grounded = !1, score += 200, playSound("stomp"), spawnSpark(e.x + e.w / 2, e.y + 10, "#fca5a5"), addPopup(e.x + e.w / 2, e.y - 4, "+200", "#fca5a5"), updateUI()) : player.takeDamage(!1)); for (const t of coinsList) t.collected || player.intersects(t) && (t.collected = !0, coins++, score += 100, playSound("coin"), spawnSpark(t.x + 8, t.y + 8, "#f8b800"), addPopup(t.x + 8, t.y, "+100", "#fde68a"), updateUI()); for (const e of platforms) e.bump > 0 && (e.bump = Math.max(0, e.bump - .07 * t));
       player.intersects(flagPole) && endGame(!0), updateParticles(t), updatePopups(t) }
 
     function render() { ctx.clearRect(0, 0, W, H), drawSky(), drawSun(), drawClouds(), drawHills(), drawBushes(); for (const t of platforms) drawPlatform(t);
@@ -623,7 +622,7 @@
 
     function drawCloud(t, e, i) { ctx.fillStyle = "rgba(255,255,255,.82)", ctx.beginPath(), ctx.arc(t, e, 15 * i, 0, 2 * Math.PI), ctx.arc(t + 16 * i, e - 8 * i, 20 * i, 0, 2 * Math.PI), ctx.arc(t + 36 * i, e, 16 * i, 0, 2 * Math.PI), ctx.arc(t + 18 * i, e + 8 * i, 18 * i, 0, 2 * Math.PI), ctx.fill() }
 
-    function drawClouds() { const t = .18 * cameraX % 270; for (let e = -1; e < 5; e++) { drawCloud(270 * e - t + 70, 48 + 37 * e % 48, .68 + 17 * e % 30 / 100) } }
+    function drawClouds() { const t = .18 * cameraX % 270; for (let e = -1; e < 5; e++) drawCloud(270 * e - t + 70, 48 + 37 * e % 48, .68 + 17 * e % 30 / 100) }
 
     function drawHills() { const t = .12 * cameraX % 420;
       ctx.fillStyle = "#2f9e44"; for (let e = -1; e < 3; e++) { const i = 420 * e - t;

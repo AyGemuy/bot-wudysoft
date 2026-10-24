@@ -199,7 +199,7 @@ Silakan masukkan tautan berkas UCWeb / UC-Share yang valid.
         } = getFileInfo(targetItem);
         const mime = getMimeType(ext, targetItem.format_type);
         const isImage = ["image/jpeg", "image/png", "image/webp"].includes(mime) || [".jpg", ".jpeg", ".png", ".webp"].includes(ext);
-        const downloadUrl = targetItem.download?.direct || targetItem.download?.url || targetItem.video_info?.url;
+        const downloadUrl = targetItem.download?.url || targetItem.video_info?.url;
         if (!downloadUrl) {
           if (typeof ctx.react === "function") await ctx.react("❌");
           return ctx.reply("❌ Link download untuk berkas ini tidak ditemukan.");
@@ -241,7 +241,7 @@ Silakan masukkan tautan berkas UCWeb / UC-Share yang valid.
         } = getFileInfo(singleItem);
         const mime = getMimeType(ext, singleItem.format_type);
         const isImage = ["image/jpeg", "image/png", "image/webp"].includes(mime) || [".jpg", ".jpeg", ".png", ".webp"].includes(ext);
-        const downloadUrl = singleItem.download?.direct || singleItem.download?.url || singleItem.video_info?.url;
+        const downloadUrl = singleItem.download?.url || singleItem.video_info?.url;
         const caption = `–  *U C W E B  D O W N L O A D*
 
 ┌  ◦  *File* : ${fullName}
@@ -320,12 +320,12 @@ Silakan masukkan tautan berkas UCWeb / UC-Share yang valid.
           })
         });
       }
-      const topDownloadLink = topItemOnPage.download?.direct || topItemOnPage.download?.url;
+      const topDownloadLink = topItemOnPage.download?.url;
       if (topDownloadLink) {
         buttons.push({
           name: "cta_url",
           buttonParamsJson: JSON.stringify({
-            display_text: "📥 Direct Download Link",
+            display_text: "📥 Download Link",
             url: topDownloadLink,
             merchant_url: topDownloadLink
           })

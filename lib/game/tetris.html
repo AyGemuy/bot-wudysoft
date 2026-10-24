@@ -390,8 +390,7 @@
     function arenaSweep() { let e = 0;
       e: for (let t = arena.length - 1; t >= 0; --t) { for (let e = 0; e < arena[t].length; ++e)
           if (0 === arena[t][e]) continue e; const a = arena.splice(t, 1)[0].fill(0);
-        arena.unshift(a), ++t, e++ }
-      if (e > 0) { score += [0, 100, 300, 500, 800][e] * level, lines += e, level = Math.floor(lines / 10) + 1, dropInterval = Math.max(100, 1e3 - 80 * (level - 1)), playSound("clear"), updateUI() } }
+        arena.unshift(a), ++t, e++ } e > 0 && (score += [0, 100, 300, 500, 800][e] * level, lines += e, level = Math.floor(lines / 10) + 1, dropInterval = Math.max(100, 1e3 - 80 * (level - 1)), playSound("clear"), updateUI()) }
 
     function drawMatrix(e, t) { e.forEach((e, a) => { e.forEach((e, r) => { 0 !== e && (ctx.fillStyle = COLORS[e], ctx.fillRect(24 * (r + t.x) + 1, 24 * (a + t.y) + 1, 22, 22), ctx.fillStyle = "rgba(255, 255, 255, 0.2)", ctx.fillRect(24 * (r + t.x) + 1, 24 * (a + t.y) + 1, 22, 4)) }) }) }
 

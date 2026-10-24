@@ -1,414 +1,187 @@
-import axios from "axios";
 import {
   getMessagePayload
 } from "../../core/serialize.js";
-import {
-  simpleQuoted,
-  metaQuoted
-} from "../../lib/quoted.js";
-import db from "../../data/db.js";
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+global.swgcDrafts = global.swgcDrafts || new Map();
 
-function serializePayloadForDb(payload) {
-  if (!payload) return null;
-  const clone = {
-    ...payload
-  };
-  if (Buffer.isBuffer(clone.buffer)) {
-    clone.buffer = {
-      _isBuffer: true,
-      data: clone.buffer.toString("base64")
-    };
-  }
-  return clone;
+function getFullText(m) {
+  if (!m) return "";
+  const raw = m.message || m.msg || m;
+  return (m.text || m.caption || m.body || raw?.conversation || raw?.extendedTextMessage?.text || raw?.imageMessage?.caption || raw?.videoMessage?.caption || raw?.ephemeralMessage?.message?.extendedTextMessage?.text || raw?.ephemeralMessage?.message?.conversation || "").trim();
 }
 
-function deserializePayloadFromDb(stored) {
-  if (!stored) return null;
-  const result = {
-    ...stored
-  };
-  if (result.buffer && typeof result.buffer === "object" && result.buffer._isBuffer) {
-    result.buffer = Buffer.from(result.buffer.data, "base64");
-  }
-  return result;
+function detectMedia(mtype = "", mime = "") {
+  mtype = mtype.toLowerCase();
+  mime = mime.toLowerCase();
+  if (mtype.includes("image") || mime.startsWith("image/")) return "image";
+  if (mtype.includes("video") || mime.startsWith("video/")) return "video";
+  if (mtype.includes("audio") || mime.startsWith("audio/")) return "audio";
+  return null;
 }
-
-function getSafeUserDb(jid, name = "Owner") {
-  if (!global.db) global.db = {};
-  if (!global.db.user) global.db.user = {};
-  try {
-    db?.ensureUser?.(jid);
-  } catch (_) {}
-  if (!global.db.user[jid]) {
-    global.db.user[jid] = {
-      id: jid,
-      name: name,
-      swgc: {}
-    };
-  }
-  if (!global.db.user[jid].swgc || typeof global.db.user[jid].swgc !== "object" || global.db.user[jid].swgc.payload) {
-    global.db.user[jid].swgc = {};
-  }
-  return global.db.user[jid];
-}
-async function getFilteredGroupList(sock) {
-  const dbGroups = global.db?.group || db?.group || {};
-  const listMap = new Map();
-  if (sock && typeof sock.groupFetchAllParticipating === "function") {
+async function sendGroupStory(sock, jid, mediaType, buffer, caption) {
+  const content = {};
+  if (mediaType === "image") content.image = buffer;
+  else if (mediaType === "video") content.video = buffer;
+  else if (mediaType === "audio") {
+    content.audio = buffer;
+    content.ptt = false;
+  } else content.text = caption || "";
+  if (caption && mediaType !== "audio") content.caption = caption;
+  if (typeof sock.sendGroupStatusMessage === "function") {
     try {
-      const participating = await sock.groupFetchAllParticipating();
-      if (participating && typeof participating === "object") {
-        for (const [jid, meta] of Object.entries(participating)) {
-          if (!jid.endsWith("@g.us")) continue;
-          if (dbGroups[jid]?.bans === true) continue;
-          const subject = meta?.subject || dbGroups[jid]?.subject || `Grup (${jid.split("@")[0].slice(-5)})`;
-          listMap.set(jid, {
-            jid: jid,
-            subject: subject
-          });
-        }
-        return Array.from(listMap.values());
+      return await sock.sendGroupStatusMessage(jid, content);
+    } catch (_) {}
+  }
+  return await sock.sendMessage(jid, {
+    ...content,
+    contextInfo: {
+      isGroupStatus: true,
+      statusAttributions: [{
+        type: 10
+      }],
+      statusAudienceMetadata: {
+        audienceType: "CLOSE_FRIENDS"
+      },
+      statusSourceType: (mediaType || "text").toUpperCase()
+    }
+  });
+}
+async function getGroups(sock) {
+  const list = new Map();
+  if (global.groupCache) {
+    for (const [jid, val] of global.groupCache.entries()) {
+      if (jid.endsWith("@g.us")) list.set(jid, val?.data?.subject || "Grup WhatsApp");
+    }
+  }
+  const dbGroups = global.db?.group || {};
+  for (const [jid, val] of Object.entries(dbGroups)) {
+    if (jid.endsWith("@g.us") && !val?.bans && !list.has(jid)) {
+      list.set(jid, val?.subject || val?.name || "Grup WhatsApp");
+    }
+  }
+  if (!list.size && typeof sock.groupFetchAllParticipating === "function") {
+    try {
+      const res = await sock.groupFetchAllParticipating();
+      for (const [jid, val] of Object.entries(res)) {
+        if (jid.endsWith("@g.us")) list.set(jid, val.subject || "Grup WhatsApp");
       }
     } catch (_) {}
   }
-  if (global.groupCache) {
-    for (const [jid, cacheObj] of global.groupCache.entries()) {
-      if (!jid.endsWith("@g.us") || dbGroups[jid]?.bans === true) continue;
-      const meta = cacheObj?.data || {};
-      if (meta?.subject) {
-        listMap.set(jid, {
-          jid: jid,
-          subject: meta.subject
-        });
-      }
-    }
-  }
-  for (const [jid, data] of Object.entries(dbGroups)) {
-    if (!jid.endsWith("@g.us") || data?.bans === true || listMap.has(jid)) continue;
-    if (!data?.subject && !data?.name) continue;
-    const subject = data?.subject || data?.name;
-    listMap.set(jid, {
-      jid: jid,
-      subject: subject
-    });
-  }
-  return Array.from(listMap.values());
-}
-
-function detectMediaType(typeStr = "", mimetype = "") {
-  const clean = String(typeStr || "").toLowerCase().replace(/message$/i, "");
-  const mime = String(mimetype || "").toLowerCase();
-  if (clean.includes("image") || mime.startsWith("image/")) return "image";
-  if (clean.includes("video") || clean === "ptv" || mime.startsWith("video/")) return "video";
-  if (clean.includes("audio") || clean.includes("voice") || mime.startsWith("audio/")) return "audio";
-  return null;
-}
-async function sendStatusToGroup(client, jid, mediaType, buffer, caption) {
-  const payloadData = {};
-  if (mediaType === "image") {
-    payloadData.image = buffer;
-    if (caption) payloadData.caption = caption;
-  } else if (mediaType === "video") {
-    payloadData.video = buffer;
-    if (caption) payloadData.caption = caption;
-  } else if (mediaType === "audio") {
-    payloadData.audio = buffer;
-    payloadData.ptt = false;
-  } else {
-    payloadData.text = caption || "";
-  }
-  if (typeof client.sendGroupStatusMessage === "function") {
-    try {
-      return await client.sendGroupStatusMessage(jid, payloadData);
-    } catch (e) {
-      console.warn("[SWGC] sendGroupStatusMessage gagal, mencoba Tier 2...", e?.message);
-    }
-  }
-  try {
-    return await client.sendMessage(jid, {
-      groupStatus: payloadData
-    });
-  } catch (e) {
-    console.warn("[SWGC] groupStatus wrapper gagal, mencoba Tier 3...", e?.message);
-  }
-  const baseContext = {
-    isGroupStatus: true,
-    statusAttributions: [{
-      type: 10
-    }],
-    statusAudienceMetadata: {
-      audienceType: "CLOSE_FRIENDS"
-    }
-  };
-  if (mediaType === "image") {
-    return await client.sendMessage(jid, {
-      image: buffer,
-      caption: caption || "",
-      contextInfo: {
-        ...baseContext,
-        statusSourceType: "IMAGE"
-      }
-    });
-  } else if (mediaType === "video") {
-    return await client.sendMessage(jid, {
-      video: buffer,
-      caption: caption || "",
-      contextInfo: {
-        ...baseContext,
-        statusSourceType: "VIDEO"
-      }
-    });
-  } else if (mediaType === "audio") {
-    return await client.sendMessage(jid, {
-      audio: buffer,
-      mimetype: "audio/mp4",
-      contextInfo: {
-        ...baseContext,
-        statusSourceType: "AUDIO"
-      }
-    });
-  } else {
-    return await client.sendMessage(jid, {
-      text: caption || "",
-      contextInfo: {
-        ...baseContext,
-        statusSourceType: "TEXT"
-      }
-    });
-  }
-}
-async function extractPayload(ctx, cleanQuery = "") {
-  let target = ctx;
-  const targetMsgInit = ctx.message || ctx.msg || ctx;
-  const metaInit = getMessagePayload(targetMsgInit) || {};
-  const isMedia = /image|video|audio|ptv|voice|viewonce/i.test(metaInit?.mtype || "") || ctx.isMedia;
-  if (!isMedia && ctx.quoted) {
-    target = ctx.quoted;
-  }
-  const targetMsg = target?.message || target?.msg || target || {};
-  const targetMeta = getMessagePayload(targetMsg) || {};
-  const rawType = String(targetMeta?.mtype || "").replace(/Message$/i, "");
-  const mimetype = target?.mimetype || targetMeta?.msg?.mimetype || "";
-  const mediaType = detectMediaType(rawType, mimetype);
-  const isTargetMedia = Boolean(mediaType) || target?.isMedia;
-  if (isTargetMedia && typeof target.download === "function") {
-    const buffer = await target.download().catch(() => null);
-    if (Buffer.isBuffer(buffer)) {
-      const caption = cleanQuery || (target !== ctx ? target.text || targetMeta?.msg?.caption || "" : "");
-      return {
-        mediaType: mediaType,
-        buffer: buffer,
-        caption: caption
-      };
-    }
-  }
-  const text = cleanQuery || (target !== ctx ? target.text || targetMeta?.msg?.conversation || targetMeta?.msg?.text || "" : "");
-  return text ? {
-    mediaType: "text",
-    buffer: null,
-    caption: text
-  } : null;
+  return Array.from(list.entries()).map(([jid, subject]) => ({
+    jid: jid,
+    subject: subject
+  }));
 }
 export default {
   name: "swgc",
-  aliases: ["statusgc", "swgroup", "upstatusgc", "storygc"],
-  description: "Upload status grup WhatsApp (Support: .swgc all / ini / select)",
+  aliases: ["statusgc", "swgroup"],
+  description: "Upload status grup WhatsApp (CTA Select / All / Ini)",
   category: "Owner",
   owner: true,
-  example: ".swgc all Halo | .swgc ini Halo | .swgc",
   execute: async (sock, ctx, msg) => {
     try {
-      if (!ctx.isOwner) return ctx.reply("❌ Fitur ini khusus hanya dapat digunakan oleh *Owner Bot*.");
-      const args = ctx.args || [];
-      const subCommand = (args[0] || "").toLowerCase();
-      const fullInput = ctx.query || args.join(" ") || ctx.text || ctx.body || "";
-      const matchId = fullInput.match(/--id=([a-zA-Z0-9_-]+)/i);
-      const matchTo = fullInput.match(/--to=([0-9\-_]+@g\.us)/i);
-      const matchCancel = fullInput.match(/--cancel=([a-zA-Z0-9_-]+)/i);
-      const contentId = matchId ? matchId[1] : null;
-      const targetJid = matchTo ? matchTo[1] : null;
-      const cancelId = matchCancel ? matchCancel[1] : null;
-      const rawSender = ctx.sender || ctx.from || ctx.id || "";
-      const senderJid = rawSender.includes("@") ? rawSender.split(":")[0].replace(/[^0-9]/g, "") + "@s.whatsapp.net" : rawSender;
-      const userNumber = senderJid.split("@")[0].replace(/\D/g, "");
-      const userDb = getSafeUserDb(senderJid, ctx.name);
+      if (!ctx.isOwner) return ctx.reply("❌ Khusus Owner Bot.");
       const prefix = typeof ctx.prefix === "string" ? ctx.prefix : ".";
-      const botName = global.bot?.name || "Wudysoft";
-      const botFooter = global.bot?.footer || `${botName} • Group Story Dispatcher`;
-      const quotedMsg = typeof metaQuoted === "function" ? metaQuoted(ctx) : typeof simpleQuoted === "function" ? simpleQuoted(ctx) : msg;
-      if (cancelId) {
-        if (userDb.swgc?.[cancelId]) {
-          delete userDb.swgc[cancelId];
-          db?.write?.(global.db);
-          ctx.react?.("🗑️");
-          return ctx.reply(`✅ Draft status grup dengan ID \`${cancelId}\` berhasil dibatalkan.`);
-        }
-        return ctx.reply("❌ Draft tidak ditemukan atau sudah kedaluwarsa.");
-      }
-      if (subCommand === "all" || subCommand === "semua") {
-        const queryWithoutSub = args.slice(1).join(" ").trim();
-        const payload = await extractPayload(ctx, queryWithoutSub);
-        if (!payload) return ctx.reply("❌ Masukkan teks atau balas media yang ingin disiarkan ke semua grup.");
-        const groups = await getFilteredGroupList(sock);
-        if (!groups.length) return ctx.reply("❌ Tidak ada grup aktif yang terdeteksi.");
+      const rawText = (ctx.text || ctx.body || "").trim();
+      const matchTo = rawText.match(/--to=([0-9\-_]+@g\.us)/i);
+      const matchId = rawText.match(/--id=([a-zA-Z0-9_-]+)/i);
+      if (matchTo && matchId) {
         ctx.react?.("⏳");
-        await ctx.reply(`🔄 *Memproses pengiriman status ke ${groups.length} grup...*`);
-        let successCount = 0;
-        let failCount = 0;
-        for (const g of groups) {
-          try {
-            await sendStatusToGroup(sock, g.jid, payload.mediaType, payload.buffer, payload.caption);
-            successCount++;
-            await sleep(400);
-          } catch (_) {
-            failCount++;
-          }
+        const draft = global.swgcDrafts.get(matchId[1]);
+        if (!draft) return ctx.reply("❌ Draft sudah kedaluwarsa, silakan buat ulang.");
+        await sendGroupStory(sock, matchTo[1], draft.mediaType, draft.buffer, draft.caption);
+        global.swgcDrafts.delete(matchId[1]);
+        ctx.react?.("✅");
+        return ctx.reply(`✅ Status grup berhasil diunggah ke \`${matchTo[1]}\``);
+      }
+      const isAll = /^[\\/\\.!#$]?swgc\s+all\b/i.test(rawText);
+      const isHere = /^[\\/\\.!#$]?swgc\s+(ini|here|gc)\b/i.test(rawText);
+      const userQuery = rawText.replace(/^[\\/\\.!#$]?swgc\s*(all|ini|here|gc)?\s*/i, "").replace(/--(id|to)=\S+/gi, "").trim();
+      const target = ctx.quoted || ctx;
+      const targetMsg = target.message || target.msg || target;
+      const meta = getMessagePayload(targetMsg) || {};
+      const mediaType = detectMedia(meta?.mtype || target.mtype || "", target.mimetype || meta?.msg?.mimetype);
+      const fullCaption = userQuery || (ctx.quoted ? getFullText(ctx.quoted) : getFullText(ctx));
+      let buffer = null;
+      if (mediaType && typeof target.download === "function") {
+        ctx.react?.("⏳");
+        buffer = await target.download().catch(() => null);
+      }
+      if (!buffer && !fullCaption) {
+        return ctx.reply("❌ Balas media/pesan atau ketik teks untuk dijadikan status grup.");
+      }
+      if (isAll) {
+        const groups = await getGroups(sock);
+        if (!groups.length) return ctx.reply("❌ Tidak ada grup terdeteksi.");
+        ctx.react?.("⏳");
+        let success = 0;
+        const BATCH = 5;
+        for (let i = 0; i < groups.length; i += BATCH) {
+          await Promise.allSettled(groups.slice(i, i + BATCH).map(async g => {
+            await sendGroupStory(sock, g.jid, mediaType, buffer, fullCaption);
+            success++;
+          }));
         }
         ctx.react?.("✅");
-        return ctx.reply(`–  *S W  A L L  G R O U P S*\n\n` + `┌  ◦  *Total Grup* : ${groups.length}\n` + `│  ◦  *Sukses* : ${successCount}\n` + `└  ◦  *Gagal* : ${failCount}\n\n` + `_Status grup berhasil disiarkan ke seluruh grup aktif._`);
+        return ctx.reply(`✅ Berhasil menyiarkan status ke *${success}/${groups.length}* grup.`);
       }
-      if (["ini", "here", "gc", "current"].includes(subCommand)) {
-        if (!ctx.isGroup && !ctx.id?.endsWith("@g.us")) {
-          return ctx.reply("❌ Perintah ini khusus untuk dijalankan di dalam grup.");
-        }
-        const queryWithoutSub = args.slice(1).join(" ").trim();
-        const payload = await extractPayload(ctx, queryWithoutSub);
-        if (!payload) return ctx.reply("❌ Masukkan teks atau balas media yang ingin dikirim.");
-        ctx.react?.("⏳");
-        try {
-          await sendStatusToGroup(sock, ctx.id, payload.mediaType, payload.buffer, payload.caption);
-          ctx.react?.("✅");
-          return ctx.reply("✅ Status grup berhasil diunggah ke grup ini.");
-        } catch (e) {
-          ctx.react?.("❌");
-          return ctx.reply(`❌ Gagal mengirim status: ${e?.message || e}`);
-        }
-      }
-      if (targetJid && contentId) {
-        ctx.react?.("⏳");
-        const draft = userDb.swgc?.[contentId];
-        if (!draft) {
-          ctx.react?.("❌");
-          return ctx.reply("❌ Draft konten status tidak ditemukan atau kedaluwarsa. Silakan reply/kirim ulang media dengan `.swgc`.");
-        }
-        const payload = deserializePayloadFromDb(draft.payload);
-        if (!payload) {
-          delete userDb.swgc[contentId];
-          db?.write?.(global.db);
-          ctx.react?.("❌");
-          return ctx.reply("❌ Gagal memuat data payload media. Silakan buat ulang.");
-        }
-        const sentResult = await sendStatusToGroup(sock, targetJid, payload.mediaType, payload.buffer, payload.caption);
-        delete userDb.swgc[contentId];
-        db?.write?.(global.db);
+      if (isHere) {
+        if (!ctx.isGroup && !ctx.id?.endsWith("@g.us")) return ctx.reply("❌ Gunakan di grup.");
+        await sendGroupStory(sock, ctx.id, mediaType, buffer, fullCaption);
         ctx.react?.("✅");
-        const successText = `–  *S W  G R O U P*\n\n` + `┌  ◦  *Status* : Berhasil Terunggah ✅\n` + `│  ◦  *Target Grup* : \`${targetJid}\`\n` + `│  ◦  *Tipe Konten* : ${payload.mediaType?.toUpperCase() || "TEXT"}\n` + `└  ◦  *ID Konten* : \`${contentId}\`\n\n` + `Status grup telah berhasil diunggah sesuai spesifikasi WhatsApp Story.`;
-        return await sock.sendMessage(ctx.id, {
-          text: successText
-        }, {
-          quoted: sentResult?.key ? sentResult : msg
-        });
-      }
-      const cleanText = fullInput.replace(/--(id|to|cancel)=\S+/gi, "").trim();
-      const now = Date.now();
-      for (const [id, item] of Object.entries(userDb.swgc || {})) {
-        if (!item?.time || now - item.time > 3e5) delete userDb.swgc[id];
+        return ctx.reply("✅ Status grup berhasil diunggah ke grup ini.");
       }
       ctx.react?.("⏳");
-      const payload = await extractPayload(ctx, cleanText);
-      if (!payload) {
-        ctx.react?.("❓");
-        return ctx.reply(`–  *S W  G R O U P*\n\n` + `Gunakan opsi perintah berikut:\n\n` + `┌  ◦  \`${prefix}swgc all <teks>\` (Kirim ke semua grup)\n` + `│  ◦  \`${prefix}swgc ini <teks>\` (Kirim ke grup ini)\n` + `└  ◦  \`${prefix}swgc <teks>\` (Pilih grup via menu interaktif)\n\n` + `Atau balas media (Foto/Video/Audio) dengan perintah di atas.`);
-      }
-      const generatedId = "sw_" + Math.random().toString(36).substring(2, 7);
-      userDb.swgc[generatedId] = {
-        payload: serializePayloadForDb(payload),
-        time: Date.now()
-      };
-      db?.write?.(global.db);
-      const groups = await getFilteredGroupList(sock);
-      if (!groups.length) {
-        delete userDb.swgc[generatedId];
-        ctx.react?.("❌");
-        return ctx.reply("❌ Tidak ada grup aktif yang tersedia di cache/database.");
-      }
-      const hours = new Date().getHours();
-      const greeting = hours < 4 ? "Selamat Malam" : hours < 11 ? "Selamat Pagi" : hours < 15 ? "Selamat Siang" : hours < 18 ? "Selamat Sore" : "Selamat Malam";
-      let mediaOutput = global.bot?.media?.banner1 || global.bot?.media?.thumb || global.bot?.media?.banner2 || null;
-      const baseContextInfo = {
-        mentionedJid: [senderJid],
-        ...global.bot?.utils?.contextInfo || {
-          forwardingScore: 999,
-          isForwarded: true
-        }
-      };
-      const seen = new Set();
+      const groups = await getGroups(sock);
+      if (!groups.length) return ctx.reply("❌ Tidak ada daftar grup yang tersedia.");
+      const draftId = "sw_" + Math.random().toString(36).slice(2, 7);
+      global.swgcDrafts.set(draftId, {
+        mediaType: mediaType,
+        buffer: buffer,
+        caption: fullCaption
+      });
+      setTimeout(() => global.swgcDrafts.delete(draftId), 3e5);
       const rows = [];
       if (ctx.isGroup || ctx.id?.endsWith("@g.us")) {
-        seen.add(ctx.id);
-        const currentGroupData = groups.find(g => g.jid === ctx.id);
-        const currentName = currentGroupData?.subject || "Grup Saat Ini";
         rows.push({
-          title: `📍 ${currentName.slice(0, 30)}`,
-          description: "Kirim status khusus ke grup saat ini",
-          id: `${prefix}swgc --id=${generatedId} --to=${ctx.id}`
+          title: "📍 Grup Saat Ini",
+          description: "Kirim langsung ke grup ini",
+          id: `${prefix}swgc --id=${draftId} --to=${ctx.id}`
         });
       }
       for (const g of groups) {
-        if (seen.has(g.jid)) continue;
-        seen.add(g.jid);
+        if (g.jid === ctx.id) continue;
         rows.push({
-          title: `👥 ${g.subject.slice(0, 30)}`,
+          title: g.subject.slice(0, 30),
           description: `ID: ${g.jid.split("@")[0].slice(-8)}`,
-          id: `${prefix}swgc --id=${generatedId} --to=${g.jid}`
+          id: `${prefix}swgc --id=${draftId} --to=${g.jid}`
         });
       }
-      const limitedRows = rows.slice(0, 25);
-      const bodyText = `“Hi @${userNumber}, ${greeting}!\n` + `Konten status grup Anda telah siap dan tersimpan sementara di server.”\n\n` + `–  *D R A F T  I N F O*\n\n` + `┌  ◦  *ID Konten* : \`${generatedId}\`\n` + `│  ◦  *Pengirim* : @${userNumber}\n` + `│  ◦  *Tipe Konten* : ${payload.mediaType?.toUpperCase() || "TEXT"}\n` + `│  ◦  *Total Grup* : ${rows.length} Grup Terdeteksi\n` + `└  ◦  *Masa Aktif* : 5 Menit (Auto-Purge)\n\n` + `–  *P E N T I N G*\n\n` + `┌  ◦  Status hanya terlihat oleh anggota grup tujuan.\n` + `└  ◦  Pilih target grup melalui tombol menu di bawah ini.`;
+      const previewText = fullCaption ? fullCaption.length > 50 ? fullCaption.slice(0, 50) + "..." : fullCaption : "(Tanpa Teks / Polos)";
+      const bodyText = `–  *S W  G R O U P*\n\n` + `┌  ◦  *Tipe* : ${(mediaType || "TEXT").toUpperCase()}\n` + `│  ◦  *Teks Salinan* : ${previewText}\n` + `└  ◦  *Total Grup* : ${rows.length} Grup\n\n` + `Pilih grup target pada tombol di bawah:`;
       const buttons = [{
         name: "single_select",
         buttonParamsJson: JSON.stringify({
-          title: `🎯 PILIH TARGET GRUP (${limitedRows.length})`,
+          title: `🎯 PILIH TARGET GRUP`,
           sections: [{
-            title: `${botName} • DAFTAR GRUP TERSEDIA`,
-            rows: limitedRows
+            title: "DAFTAR GRUP TERSEDIA",
+            rows: rows.slice(0, 25)
           }]
         })
-      }, {
-        name: "quick_reply",
-        buttonParamsJson: JSON.stringify({
-          display_text: "❌ Batalkan Draft",
-          id: `${prefix}swgc --cancel=${generatedId}`
-        })
       }];
-      const options = {
-        image: mediaOutput,
-        title: `✦ ${botName} • Group Story Dispatcher ✦`,
-        params: {
-          bottom_sheet: {
-            in_thread_buttons_limit: 1,
-            divider_indices: [1],
-            list_title: `${botName} • Pilih Target Story`,
-            button_title: "Pilih Grup Tujuan"
-          }
-        },
-        contextInfo: baseContextInfo,
-        quoted: quotedMsg
-      };
       if (typeof ctx.sendCta === "function") {
-        await ctx.sendCta(bodyText, botFooter, buttons, options);
+        await ctx.sendCta(bodyText, "Group Story Dispatcher", buttons, {
+          quoted: msg
+        });
       } else {
         await ctx.reply(bodyText, {
-          mentions: [senderJid],
-          quoted: quotedMsg
+          quoted: msg
         });
       }
       ctx.react?.("✅");
-    } catch (error) {
-      console.error("[SWGC Error]:", error);
+    } catch (e) {
+      console.error(e);
       ctx.react?.("❌");
-      ctx.reply(`❌ Gagal memproses status grup: ${error?.message || error}`);
+      ctx.reply(`❌ Error: ${e.message || e}`);
     }
   }
 };

@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+  <meta name="theme-color" content="#070810">
+  <title>KURO SLASH - Robot Road</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none
+    }
+
+    body,
+    html {
+      width: 100%;
+      min-height: 100vh
+    }
+
+    body {
+      background: linear-gradient(165deg, #070810, #0d101a 60%, #070810);
+      padding: 10px 8px;
+      color: #c8cede;
+      display: flex;
+      justify-content: center;
+      align-items: center
+    }
+
+    #app {
+      width: 100%;
+      max-width: 420px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px
+    }
+
+    .hdr {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 2px 4px 6px;
+      gap: 8px
+    }
+
+    .tt {
+      font: 900 18px 'Arial Black', sans-serif;
+      color: #eef1f8;
+      text-shadow: 0 0 10px rgba(193, 18, 31, .6), 0 2px #000;
+      letter-spacing: 2px;
+      line-height: 1.1
+    }
+
+    .tt small {
+      display: block;
+      font: 700 7px Arial;
+      letter-spacing: 2.5px;
+      color: #8a92a6;
+      text-shadow: none
+    }
+
+    .hrs {
+      display: flex;
+      gap: 6px;
+      align-items: center
+    }
+
+    .hr {
+      background: rgba(0, 0, 0, .55);
+      border: 1px solid rgba(193, 18, 31, .35);
+      border-radius: 9px;
+      padding: 3px 9px;
+      text-align: center;
+      min-width: 54px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1)
+    }
+
+    .hr i {
+      display: block;
+      font: 700 7px Arial;
+      font-style: normal;
+      letter-spacing: 1px;
+      color: #8a92a6
+    }
+
+    .hr b {
+      font: 900 13px 'Arial Black', monospace;
+      color: #eef1f8;
+      font-variant-numeric: tabular-nums
+    }
+
+    .mbtn {
+      width: 34px;
+      height: 34px;
+      border: 2px solid rgba(193, 18, 31, .4);
+      border-radius: 9px;
+      background: rgba(0, 0, 0, .55);
+      color: #eef1f8;
+      font-size: 15px;
+      cursor: pointer;
+      touch-action: none;
+      display: grid;
+      place-items: center;
+      transition: filter .1s
+    }
+
+    .mbtn:active {
+      filter: brightness(1.6)
+    }
+
+    .gw {
+      position: relative;
+      border: 2px solid rgba(193, 18, 31, .4);
+      border-radius: 16px;
+      overflow: hidden;
+      background: #020308;
+      box-shadow: 0 0 22px rgba(193, 18, 31, .18), 0 10px 25px rgba(0, 0, 0, .7);
+      aspect-ratio: 404/380
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none
+    }
+
+    .pads {
+      display: grid;
+      grid-template-columns: 1fr 1.6fr 1fr;
+      gap: 8px;
+      margin-top: 4px
+    }
+
+    .pd {
+      height: 52px;
+      border: 2px solid rgba(255, 255, 255, .16);
+      border-radius: 14px;
+      font: 900 13px 'Arial Black', sans-serif;
+      color: #fff;
+      cursor: pointer;
+      touch-action: none;
+      box-shadow: 0 4px 0 rgba(0, 0, 0, .6);
+      background: linear-gradient(#2a3145, #171c2a 60%, #0c0f18);
+      transition: transform .08s, filter .08s
+    }
+
+    .pd:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 rgba(0, 0, 0, .6);
+      filter: brightness(1.4)
+    }
+
+    #atkB {
+      background: linear-gradient(#a31826, #590c15 60%, #280509);
+      border-color: rgba(255, 80, 95, .4);
+      color: #ffe9e9;
+      text-shadow: 0 1px #000
+    }
+
+    .ub {
+      margin-top: 4px;
+      width: 100%;
+      height: 42px;
+      border: 2px solid rgba(193, 18, 31, .5);
+      border-radius: 12px;
+      font: 900 13px 'Arial Black', sans-serif;
+      color: #7a1924;
+      background: #0c0f18;
+      cursor: pointer;
+      touch-action: none;
+      letter-spacing: 2px;
+      transition: all .2s
+    }
+
+    .ub.rdy {
+      color: #fff;
+      background: linear-gradient(90deg, #c1121f, #ff3040);
+      box-shadow: 0 0 18px rgba(193, 18, 31, .85);
+      animation: up 1s infinite alternate;
+      border-color: #fff
+    }
+
+    .ub:active {
+      transform: translateY(2px)
+    }
+
+    @keyframes up {
+      0% {
+        filter: brightness(1)
+      }
+
+      100% {
+        filter: brightness(1.45)
+      }
+    }
+
+    .hint {
+      text-align: center;
+      font: 600 9.5px Arial, sans-serif;
+      color: #8a92a6;
+      line-height: 1.4;
+      margin-top: 4px
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <div class="hdr">
+      <div class="tt">KURO SLASH<small>SHANKS CODE · ROBOT ROAD</small></div>
+      <div class="hrs">
+        <div class="hr"><i>SCORE</i><b id="sc">0</b></div>
+        <div class="hr"><i>BEST</i><b id="bs">0</b></div><button class="mbtn" id="muteB" aria-label="Mute">🔊</button>
+      </div>
+    </div>
+    <div class="gw"><canvas id="cv" width="404" height="380"></canvas></div>
+    <div class="pads"><button class="pd" id="leftB">◀</button> <button class="pd" id="atkB">⚔ TEBAS</button> <button class="pd" id="rightB">▶</button></div><button class="ub" id="ultB">🌊 ULTI — 0%</button>
+    <div class="hint" id="hint">⚔ Tebas + Gelombang · Tebas peluru merah = PARRY · Kill = Heal +5 HP</div>
+  </div>
+  <script>
+    ! function() { const t = document.getElementById("cv"),
+        e = t.getContext("2d"),
+        l = 404,
+        a = 380; let n = window.devicePixelRatio && window.devicePixelRatio > 1 ? 2 : 1;
+      t.width = l * n, t.height = a * n; const o = document.getElementById("sc"),
+        i = document.getElementById("bs"),
+        r = document.getElementById("ultB"); let f = 0; try { f = parseInt(localStorage.getItem("shanks_best") || "0", 10) || 0 } catch (t) {} i.textContent = f; const s = 336,
+        h = 760,
+        c = 64,
+        d = 1.62;
+
+      function g(t) { return 1 - t / h * .62 }
+
+      function u(t) { return s - t / h * 266 }
+
+      function y(t, e) { return 202 + t * c * g(e) } let m = null,
+        p = !1; try { p = "1" === localStorage.getItem("shanks_mute") } catch (t) {}
+
+      function b() { if (!m) try { m = new(window.AudioContext || window.webkitAudioContext) } catch (t) { return null }
+        if (m && "suspended" === m.state) try { m.resume() } catch (t) {}
+        return m }
+
+      function S(t, e, l, a, n, o) { const i = m; if (i && !p) try { const r = i.currentTime + (n || 0),
+            f = i.createOscillator(),
+            s = i.createGain();
+          f.type = l || "square", f.frequency.setValueAtTime(t, r), o && f.frequency.exponentialRampToValueAtTime(o, r + e), s.gain.setValueAtTime(a || .1, r), s.gain.exponentialRampToValueAtTime(1e-4, r + e), f.connect(s), s.connect(i.destination), f.start(r), f.stop(r + e + .03) } catch (t) {} }
+
+      function M(t, e, l, a) { const n = m; if (n && !p) try { const o = n.currentTime + (l || 0),
+            i = Math.floor(n.sampleRate * t),
+            r = n.createBuffer(1, i, n.sampleRate),
+            f = r.getChannelData(0); for (let t = 0; t < i; t++) f[t] = 2 * Math.random() - 1; const s = n.createBufferSource(),
+            h = n.createGain(),
+            c = n.createBiquadFilter();
+          s.buffer = r, c.type = "lowpass", c.frequency.value = a || 1200, h.gain.setValueAtTime(e, o), h.gain.exponentialRampToValueAtTime(1e-4, o + t), s.connect(c), c.connect(h), h.connect(n.destination), s.start(o), s.stop(o + t + .03) } catch (t) {} }
+
+      function T() { S(600, .1, "sawtooth", .12, 0, 140) }
+
+      function x() { S(300, .12, "sawtooth", .12, 0, 900), S(1500, .06, "square", .07) }
+
+      function v() { M(.14, .24, 0, 1200), S(90, .12, "sine", .22, 0, 40) } let k = null;
+
+      function A() { const t = b(); if (t && !p && !k) try { const e = t.createOscillator(),
+            l = t.createOscillator(),
+            a = t.createGain(),
+            n = t.createBiquadFilter();
+          e.type = "sawtooth", e.frequency.value = 55, l.type = "sawtooth", l.frequency.value = 55.6, n.type = "lowpass", n.frequency.value = 210, a.gain.value = 0, a.gain.setTargetAtTime(.05, t.currentTime, .4), e.connect(n), l.connect(n), n.connect(a), a.connect(t.destination), e.start(), l.start(), k = { o: e, o2: l, g: a } } catch (t) {} }
+
+      function P() { if (k) { try { const t = m.currentTime;
+            k.g.gain.setTargetAtTime(0, t, .3), k.o.stop(t + 1), k.o2.stop(t + 1) } catch (t) {} k = null } } let z = 0,
+        R = 0; const w = [220, 262, 294, 330, 392, 440];
+      setInterval(() => { const t = m;
+        t && ("play" === C ? function() { const t = m; if (!t) return; const e = et >= 100 || L <= 30 || rt > 0,
+            l = 60 / (e ? 150 : 118) / 2; for (; R < t.currentTime + .15;) { const a = z % 16,
+              n = Math.max(0, R - t.currentTime); if ((0 === a || 8 === a || e && 10 === a) && S(70, .16, "sine", .4, n, 34), 4 !== a && 12 !== a || (M(.04, .09, n, 2e3), S(190, .03, "triangle", .07, n)), e && a % 2 && M(.012, .02, n, 6e3), (2 === a || 13 === a) && Math.random() < .6) { const t = w[Math.floor(6 * Math.random())];
+              S(t, .22, "triangle", .09, n), S(2 * t, .1, "sine", .03, n) } z++, R += l } }() : R = t.currentTime + .06) }, 40); let C = "ready",
+        E = 0,
+        W = 0,
+        I = f,
+        L = 100,
+        q = 0,
+        B = 0,
+        D = 5.2,
+        U = 1,
+        G = 0,
+        O = 0,
+        V = 0,
+        K = 0,
+        H = 0,
+        F = 1,
+        N = 0,
+        Y = 0,
+        _ = 0,
+        J = 202,
+        X = -1,
+        j = 0,
+        Q = 0,
+        Z = 0,
+        $ = !1,
+        tt = null,
+        et = 0,
+        lt = 0,
+        at = !1,
+        nt = 0,
+        ot = 0,
+        it = 0,
+        rt = 0,
+        ft = 0,
+        st = 1,
+        ht = [],
+        ct = [],
+        dt = [],
+        gt = [],
+        ut = [],
+        yt = [],
+        mt = [],
+        pt = [];
+
+      function bt(t, e) { const l = []; for (let e = 0; e < t; e++) l.push({ x: 202, y: 324 }); return { segs: l, L: e, amp: 2 } } const St = bt(10, 7),
+        Mt = bt(4, 5),
+        Tt = bt(4, 5),
+        xt = (t, e) => { t.length > e && t.splice(0, t.length - e) }; let vt = 340,
+        kt = 420,
+        At = 2e3,
+        Pt = 700,
+        zt = 120,
+        Rt = 1e3;
+
+      function wt() { W = 0, L = 100, q = 0, B = 0, D = 5.2, U = 1, G = 0, O = 0, V = 0, K = 0, H = 0, N = 0, Y = 0, _ = 0, J = 202, X = -1, j = 0, Q = 0, et = 0, lt = 0, at = !1, nt = 0, ot = 0, it = 0, rt = 0, ft = 0, ht = [], ct = [], dt = [], gt = [], ut = [], yt = [], mt = [], pt = [], tt = null, $ = !1, P(), vt = B + 340, kt = B + 420, At = B + 2e3, Pt = B + 700, zt = B + 120, Rt = B + 1e3, o.textContent = "0", r.classList.remove("rdy"), r.textContent = "🌊 ULTI — 0%" }
+
+      function Ct(t) { if (b(), "play" !== C) return; const e = Math.max(-1, Math.min(1, N + t)); if (e !== N) { N = e, S(420, .04, "square", .06), pt.push({ x: J, y: s, t: 1 }); for (let e = 0; e < 4; e++) dt.push({ x: J + 14 * (Math.random() - .5), y: 348, vx: (t < 0 ? 1 : -1) * Math.random() * 1.5, vy: .8 * -Math.random(), life: .35, c: "#3a4a6a", s: 2 + 1.5 * Math.random() }) } }
+
+      function Et() { b(), "play" !== C || j > 0 || (X = 0, j = rt > 0 ? 7 : 20, Q = 1, M(.09, .2, 0, 4200), S(1900, .07, "sine", .1, 0, 480)) }
+
+      function Wt() { b(), "play" === C && (et >= 100 && 0 === lt ? (lt = 1, et = 0, r.classList.remove("rdy"), r.textContent = "🌊 ULTI — 0%", S(180, .55, "sawtooth", .14, 0, 2100), M(.55, .1, 0, 2400)) : et < 100 && (Dt(J, 276, "BELUM PENUH", "#8a92a6"), S(200, .08, "square", .08))) } document.getElementById("leftB").addEventListener("pointerdown", t => { t.preventDefault(), Ct(-1) }), document.getElementById("rightB").addEventListener("pointerdown", t => { t.preventDefault(), Ct(1) }), document.getElementById("atkB").addEventListener("pointerdown", t => { t.preventDefault(), Et() }), r.addEventListener("pointerdown", t => { t.preventDefault(), Wt() }), document.addEventListener("pointerdown", t => { if (t.target.closest(".pads, .ub, .mbtn")) return; if ("ready" === C) return b(), A(), C = "play", void wt(); if ("dead" === C && performance.now() - Z > 900) return b(), A(), C = "play", void wt(); const e = t.clientX - innerWidth / 2;
+        e < -90 ? Ct(-1) : e > 90 ? Ct(1) : Et() }), document.addEventListener("keydown", t => { "ArrowLeft" !== t.code && "KeyA" !== t.code || t.repeat || Ct(-1), "ArrowRight" !== t.code && "KeyD" !== t.code || t.repeat || Ct(1), "Space" !== t.code && "KeyJ" !== t.code || t.repeat || (t.preventDefault(), Et()), "KeyU" !== t.code && "KeyK" !== t.code || t.repeat || Wt(), "Enter" === t.code && ("ready" === C || "dead" === C && performance.now() - Z > 900) && (b(), A(), C = "play", wt()) }); const It = document.getElementById("muteB");
+
+      function Lt() { if (B > vt) { const t = Math.random(); if (t < .3) { const t = Math.floor(3 * Math.random()) - 1;
+            ht.push({ t: "rock", z: h, lane: t, lanes: [t], done: !1 }) } else if (t < .55) { const t = Math.floor(3 * Math.random()) - 1;
+            ht.push({ t: "spike", z: h, lane: t, lanes: [t], done: !1 }) } else if (t < .78) { const t = Math.floor(2 * Math.random()) - 1;
+            ht.push({ t: "log", z: h, lane: t, lanes: [t, t + 1], done: !1 }) } else { const t = Math.floor(3 * Math.random()) - 1;
+            ht.push({ t: "crate", z: h, lane: t, lanes: [t], done: !1 }) } vt = B + 300 + 300 * Math.random() } if (B > kt && (ht.push({ t: "grunt", z: h, lane: Math.floor(3 * Math.random()) - 1, hp: 1, state: "walk", wt: 0, ph: 6 * Math.random(), flash: 0, lastW: 0 }), kt = B + 220 + 260 * Math.random()), B > At && (ht.push({ t: "brute", z: h, lane: Math.floor(3 * Math.random()) - 1, hp: 2, state: "walk", wt: 0, ph: 6 * Math.random(), flash: 0, lastW: 0 }), At = B + 1700 + 900 * Math.random()), B > Pt && (ht.push({ t: "rusher", z: -120, lane: Math.floor(3 * Math.random()) - 1, hp: 1, vz: 1.35 * D + 4.5, state: "rush", ph: 6 * Math.random(), flash: 0, hitDone: !1, lastW: 0 }), Pt = B + 560 + 480 * Math.random(), S(1500, .06, "square", .12), S(1500, .06, "square", .12, .09)), B > Rt && W > 400 && (ht.push({ t: "shooter", z: h, lane: Math.floor(3 * Math.random()) - 1, hp: 1, state: "advance", wt: 0, shots: 2, ph: 6 * Math.random(), flash: 0, lastW: 0 }), Rt = B + 1100 + 800 * Math.random()), B > zt) { const t = Math.random() < .5 ? -1 : 1;
+          ct.push({ z: h, side: t, off: .25 + .55 * Math.random(), kind: Math.random() < .5 ? "torii" : "tree", r: Math.random() }), zt = B + 200 + 160 * Math.random() } ht = ht.filter(t => t.z > -170 && t.hp > 0 && !t.rm), ct = ct.filter(t => t.z > -170) }
+
+      function qt(t, e, l, a) { for (let n = 0; n < l; n++) dt.push({ x: t, y: e, vx: 7.5 * (Math.random() - .5), vy: 5.5 * -Math.random(), life: 1, c: a[n % a.length], s: 2 + 3 * Math.random() }) }
+
+      function Bt(t, e, l) { ut.push({ x: t, y: e, t: 1, r0: l || 8 }) }
+
+      function Dt(t, e, l, a) { gt.push({ sx: t, y: e, t: 1, txt: l, c: a }), xt(gt, 7) }
+
+      function Ut(t) { q > 0 || lt > 0 || rt > 0 || "play" !== C || (L = Math.max(0, L - t), q = 80, G = Math.max(G, 9), O = .7, nt = 0, et = Math.max(0, et - 15), S(300, .2, "sawtooth", .16, 0, 70), M(.22, .14, .04, 700), Dt(J, 280, "-" + t, "#ff3040"), qt(J, 324, 14, ["#ff3040", "#8f1622"]), L <= 0 && (C = "dead", Z = performance.now(), P(), [330, 262, 196, 147, 98].forEach((t, e) => S(t, .28, "triangle", .13, .17 * e)), W > I && (I = W, i.textContent = I, function() { try { localStorage.setItem("shanks_best", String(f)) } catch (t) {} }(), $ = !0))) }
+
+      function Gt(t) { L <= 0 || L >= 100 || (L = Math.min(100, L + t), Dt(J + 30, 296, "+" + t, "#7ddc8a"), S(660, .07, "sine", .07), S(990, .09, "sine", .06, .05)) }
+
+      function Ot(t, e, l, a) { t.rm = !0, K = 4, G = Math.max(G, 7), nt++, ot = 130; const n = a + 10 * nt;
+        W += n, Dt(e, l - 16, "+" + n + (nt >= 3 ? " x" + nt : ""), "#ffd75e"), qt(e, l, 18, ["#ffd75e", "#ff3040", "#eef1f8", "#4a90e8"]), Bt(e, l, 10), M(.16, .22, 0, 2e3), [900, 620, 380].forEach((t, e) => S(t, .08, "square", .09, .03 * e, .5 * t)), Gt(5); const o = "brute" === t.t ? 22 : "rusher" === t.t ? 16 : 12;
+        et = Math.min(100, et + o), et >= 100 && !at && (at = !0, [880, 1175, 1568].forEach((t, e) => S(t, .1, "sine", .11, .07 * e)), Dt(202, 140, "ULTI SIAP!", "#ff3040"), r.classList.add("rdy")), r.textContent = "🌊 ULTI — " + Math.floor(et) + "%" }
+
+      function Vt(t) { const e = Math.max(-40, Math.min(h, t.z)),
+          l = y(t.lane, e),
+          a = u(e); if ("crate" === t.t) return t.rm = !0, W += 40, Dt(l, a - 12, "+40", "#c8cede"), qt(l, a, 10, ["#5a4630", "#8a6a48"]), M(.12, .2, 0, 800), void S(180, .08, "triangle", .14, 0, 60);
+        t.hp--, t.hp > 0 ? (t.flash = 10, t.z += 40, M(.1, .2, 0, 900), S(110, .09, "sine", .24, 0, 50), qt(l, a, 7, ["#eef1f8", "#ffd75e"]), Dt(l, a - 14, "CRACK", "#eef1f8")) : Ot(t, l, a, "brute" === t.t ? 200 : "rusher" === t.t ? 150 : 100) }
+
+      function Kt() { const t = Math.round(Y / c);
+        yt.push({ id: st++, lane: t, z: 12, vz: D + 15, pierce: rt > 0 ? 99 : 2, t: 0 }), xt(yt, 4), Bt(J, 326, 6), M(.14, .13, 0, 3e3), S(900, .14, "sine", .09, 0, 1500) }
+
+      function Ht(t) { t.deflected = !0, t.vz = D + 15, it += 25, H = 9, V = .55, Dt(y(t.lane, 20), u(20) - 36, "PARRY!", "#ffd75e"), qt(y(t.lane, 20), u(20), 12, ["#ffd75e", "#eef1f8"]), Bt(y(t.lane, 20), u(20), 8), S(2400, .06, "square", .15, 0, 1800), S(720, .14, "triangle", .12), M(.08, .12, 0, 5e3), it >= 100 && (it = 0, rt = 340, Dt(202, 150, "⚡ OVERDRIVE! ⚡", "#ffd75e"), tt = { t: 0, txt: "OVERDRIVE" }, Bt(J, 326, 20), G = 12, [110, 220, 440, 880, 1760].forEach((t, e) => S(t, .5, "sawtooth", .1, .05 * e, 1.5 * t)), M(.7, .14, 0, 3e3)) }
+
+      function Ft() { V = 1, G = 17, [98, 147, 196, 294].forEach((t, e) => { S(t, 1.5, "sine", .11, .02 * e), S(1.005 * t, 1.4, "triangle", .07, .02 * e) }), M(.5, .26, 0, 700); let t = 0; for (let e = ht.length - 1; e >= 0; e--) { const l = ht[e]; if (l.rm) continue; const a = Math.max(-40, Math.min(h, l.z));
+          qt(y(l.lane, a), u(a), 12, ["#eef1f8", "#ff3040"]), l.rm = !0, t++ } ht = ht.filter(t => !t.rm), t > 0 && (W += 40 * t, Dt(202, 130, "+" + 40 * t + "  IAI!", "#eef1f8")), at = !1 }
+
+      function Nt(t, e, l, a) { const n = t.segs;
+        n[0].x = e, n[0].y = l; for (let e = 1; e < n.length; e++) { n[e].y += a; let l = n[e].x - n[e - 1].x,
+            o = n[e].y - n[e - 1].y; const i = Math.sqrt(l * l + o * o) || 1,
+            r = (i - t.L) / i;
+          n[e].x -= l * r, n[e].y -= o * r } }
+
+      function Yt() { if (E++, K > 0) return void K--;
+        F = 1, lt > 0 && (lt++, lt > 6 && lt < 38 && (F = .35), 8 === lt && Ft(), lt > 50 && (lt = 0)), H > 0 && (H--, F > .3 && (F = .3)), G = Math.max(0, G - .5), O = Math.max(0, O - .03), V = Math.max(0, V - .05), q > 0 && q--, Q > 0 && (Q -= .05), j > 0 && j--, X >= 0 && (X++, 6 === X && (! function() { for (let t = ht.length - 1; t >= 0; t--) { const e = ht[t]; if (e.rm) continue; if ("grunt" !== e.t && "brute" !== e.t && "rusher" !== e.t && "shooter" !== e.t && "crate" !== e.t) continue; const l = Math.max(-40, Math.min(h, e.z));
+            e.z > -60 && e.z < 125 && Math.abs(y(e.lane, l) - J) < 44 && (Vt(e), V = Math.max(V, .3)) } }(), Kt()), X > 16 && (X = -1)), tt && (tt.t += .016, tt.t > 1 && (tt = null)), ot > 0 && (ot--, 0 === ot && (nt = 0)); for (let t = pt.length - 1; t >= 0; t--)(pt[t].t -= .09) <= 0 && pt.splice(t, 1); for (let t = dt.length - 1; t >= 0; t--) { const e = dt[t];
+          e.x += e.vx, e.y += e.vy, e.vy += .24, (e.life -= .032) <= 0 && dt.splice(t, 1) } for (let t = gt.length - 1; t >= 0; t--)(gt[t].t -= .045) <= 0 && gt.splice(t, 1); for (let t = ut.length - 1; t >= 0; t--)(ut[t].t -= .07) <= 0 && ut.splice(t, 1); if (xt(dt, 120), "play" !== C) return void P();
+        k || A(), rt > 0 && (rt--, 0 === rt && (Dt(J, 280, "AURA HABIS", "#8a92a6"), S(300, .2, "sine", .1, 0, 150)), rt % 9 == 0 && (X = 0, j = 0, Q = .7, Kt()), E % 3 == 0 && dt.push({ x: J + 26 * (Math.random() - .5), y: 340, vx: 1.4 * (Math.random() - .5), vy: -1.8 - Math.random(), life: .55, c: Math.random() < .5 ? "#ffd75e" : "#ff9a3c", s: 2 + 2 * Math.random() })), B += F * (D + (rt > 0 ? 2.2 : 0)), W += Math.round(F * D * .1), E % 6 == 0 && (o.textContent = W), ft += F * (.2 + .022 * D);
+        _ += .55 * (N * c - Y), _ *= .42, Y += _, J = 202 + Y, Math.abs(_) > 2.2 && E % 2 == 0 && pt.push({ x: J, y: s, t: .8 }); const t = Math.round(Y / c),
+          e = .01 * _,
+          l = 1.4 + .24 * D + 4.5 * Q + (rt > 0 ? 2.5 : 0);
+        Nt(St, J + 10 * e, 321, rt > 0 ? -.5 : .5), St.amp = l, Nt(Mt, J - 6 + 8 * e, 319, rt > 0 ? -.3 : .28), Nt(Tt, J + 6 + 8 * e, 319, rt > 0 ? -.3 : .28), E % 11 == 0 && dt.push({ x: J - 6 + 10 * (Math.random() - .5), y: 349, vx: -.8 - Math.random(), vy: -.3 - .4 * Math.random(), life: .4, c: "#3a4a6a", s: 2 + 2 * Math.random() }), W >= 500 * U && (U++, D = Math.min(9, D + .32), tt = { t: 0, txt: "LEBIH CEPAT" }, [440, 523, 659, 880].forEach((t, e) => S(t, .09, "square", .1, .06 * e))), Lt(); for (let t = yt.length - 1; t >= 0; t--) { const e = yt[t];
+          e.z += F * e.vz, e.t++; let l = !1; for (let t = ht.length - 1; t >= 0; t--) { const a = ht[t]; if (a.rm || a.lastW === e.id) continue;
+            ("grunt" === a.t || "brute" === a.t || "rusher" === a.t || "shooter" === a.t || "crate" === a.t) && a.lane === e.lane && Math.abs(a.z - e.z) < 34 && (a.lastW = e.id, Vt(a), l = !0, V = Math.max(V, .25)) } l && e.pierce--, (e.pierce <= 0 || e.z > 810) && yt.splice(t, 1) } for (let e = mt.length - 1; e >= 0; e--) { const l = mt[e]; if (l.deflected) { l.z += F * l.vz; let t = !1; for (let e = ht.length - 1; e >= 0; e--) { const a = ht[e]; if (a.rm) continue; if (("grunt" === a.t || "brute" === a.t || "rusher" === a.t || "shooter" === a.t) && a.lane === l.lane && Math.abs(a.z - l.z) < 38) { const e = Math.max(-40, Math.min(h, a.z)),
+                  l = y(a.lane, e);
+                a.hp -= 2, a.hp > 0 ? (a.flash = 10, qt(l, u(e), 8, ["#ffd75e", "#eef1f8"])) : Ot(a, l, u(e), 180), t = !0; break } } if (t || l.z > 800) { mt.splice(e, 1); continue } } else { if (l.z -= F * (D + 9), E % 4 == 0 && dt.push({ x: y(l.lane, Math.min(h, l.z + 10)), y: u(Math.min(h, l.z + 10)), vx: 0, vy: 0, life: .22, c: "#ff3040", s: 2 }), X >= 4 && X <= 10 && l.lane === t && l.z > -40 && l.z < 42) { Ht(l); continue } if (l.z < -46) { l.lane === t && (rt > 0 ? (qt(J, 324, 8, ["#ffd75e", "#eef1f8"]), v()) : Ut(12)), mt.splice(e, 1); continue } } } xt(mt, 8); for (let e = ht.length - 1; e >= 0; e--) { const l = ht[e]; if (!l.rm)
+            if (l.flash > 0 && l.flash--, "grunt" === l.t || "brute" === l.t) { const e = "brute" === l.t ? .35 * D + .5 : .5 * D + .8; "walk" === l.state ? (l.z -= F * e, l.z < 110 && (l.state = "windup", l.wt = 0)) : "windup" === l.state ? (l.wt += F, l.z -= F * D * .25, l.wt === ("brute" === l.t ? 26 : 20) && T(), l.wt > ("brute" === l.t ? 72 : 48) && (l.state = "lunge", l.lt = 0, l.struck = !1)) : (l.lt++, l.z -= F * (D + 12), !l.struck && l.z < 26 && (l.struck = !0, rt > 0 ? Ot(l, y(l.lane, 0), u(0), 100) : l.lane === t ? Ut("brute" === l.t ? 22 : 16) : Dt(y(l.lane, 0), u(0) - 30, "MISS", "#8a92a6")), (l.lt > 12 || l.z < -60) && (l.rm = !0)) } else "rusher" === l.t ? "rush" === l.state ? (l.z += F * l.vz, !l.hitDone && Math.abs(l.z) < 26 && l.lane === t && (l.hitDone = !0, rt > 0 ? Ot(l, y(l.lane, 0), u(0), 150) : Ut(14)), l.z > 70 && (l.vz *= .8, l.vz < .6 && (l.state = "windup", l.wt = 0)), l.z > h && (l.rm = !0)) : "windup" === l.state ? (l.wt += F, l.z -= F * D * .25, l.wt > 44 && (l.state = "lunge", l.lt = 0, l.struck = !1)) : (l.lt++, l.z -= F * (D + 12), !l.struck && l.z < 26 && (l.struck = !0, rt > 0 ? Ot(l, y(l.lane, 0), u(0), 150) : l.lane === t && Ut(14)), (l.lt > 12 || l.z < -60) && (l.rm = !0)) : "shooter" === l.t ? "advance" === l.state ? (l.z -= F * D * .5, l.z <= 300 && (l.state = "aim", l.wt = 0)) : "aim" === l.state ? (l.z += F * D, l.wt++, 62 === l.wt && (mt.push({ lane: t, z: l.z - 24, deflected: !1, vz: 0 }), x(), qt(y(l.lane, l.z - 24), u(l.z - 24), 5, ["#ff3040", "#ffd75e"])), l.wt > 86 && (l.shots--, l.shots > 0 ? (l.state = "aim", l.wt = -46) : l.state = "leave")) : (l.z += F * (D + 3), l.z > 820 && (l.rm = !0)) : (l.z -= F * D, !l.done && l.z < 14 && l.z > -8 && l.lanes.indexOf(t) >= 0 && (l.done = !0, rt > 0 ? (l.rm = !0, W += 50, qt(y(l.lane, 0), u(0), 12, ["#ffd75e", "#ff3040"]), Bt(y(l.lane, 0), u(0), 10), v(), Dt(y(l.lane, 0), u(0) - 24, "SMASH!", "#ffd75e")) : Ut("log" === l.t ? 22 : "crate" === l.t ? 12 : 18)), l.z < -70 && (l.rm = !0)) } ct.forEach(t => { t.z -= F * D }) }
+
+      function _t(t, l, a, n) { e.beginPath(), e.ellipse(t, l, a, n, 0, 0, 2 * Math.PI), e.fill() }
+
+      function Jt(t, l, a, n, o) { e.beginPath(), e.moveTo(t + o, l), e.lineTo(t + a - o, l), e.quadraticCurveTo(t + a, l, t + a, l + o), e.lineTo(t + a, l + n - o), e.quadraticCurveTo(t + a, l + n, t + a - o, l + n), e.lineTo(t + o, l + n), e.quadraticCurveTo(t, l + n, t, l + n - o), e.lineTo(t, l + o), e.quadraticCurveTo(t, l, t + o, l), e.closePath() }
+
+      function Xt(t, e, l) { const a = t.segs,
+          n = [{ x: a[0].x, y: a[0].y }]; for (let t = 1; t < a.length; t++) { const o = a[t].x - a[t - 1].x,
+            i = a[t].y - a[t - 1].y,
+            r = Math.sqrt(o * o + i * i) || 1,
+            f = -i / r,
+            s = o / r,
+            h = Math.sin(E * l + .62 * t) * e * (t / a.length);
+          n.push({ x: a[t].x + f * h, y: a[t].y + s * h }) } return n }
+
+      function jt(t, l, a, n, o) { for (let o = 1; o < t.length; o++) { const i = o / (t.length - 1);
+          e.strokeStyle = n, e.lineWidth = l + (a - l) * i, e.lineCap = "round", e.beginPath(), e.moveTo(t[o - 1].x, t[o - 1].y), e.lineTo(t[o].x, t[o].y), e.stroke() } for (let n = 2; n < t.length; n += 3) { const i = n / (t.length - 1);
+          e.strokeStyle = o, e.lineWidth = .35 * (l + (a - l) * i), e.beginPath(), e.moveTo(t[n - 1].x, t[n - 1].y - 1), e.lineTo(t[n].x, t[n].y - 1), e.stroke() } }
+
+      function Qt(t, l, a) { e.save(), e.globalAlpha = void 0 === a ? 1 : a, e.translate(J + 13, 338), e.rotate(t), e.fillStyle = "#2a0509", e.fillRect(-2, -9, 4, 10), e.fillStyle = "#c9a24a", e.fillRect(-5, -10, 10, 2.5), e.fillStyle = l ? "#ffe9c9" : "#dfe5ef", e.beginPath(), e.moveTo(-2.4, -10), e.lineTo(-3.2, -36), e.lineTo(0, -42), e.lineTo(3.2, -36), e.lineTo(2.4, -10), e.closePath(), e.fill(), e.strokeStyle = "rgba(120,130,150,.6)", e.lineWidth = .8, e.beginPath(), e.moveTo(-1.4, -11), e.lineTo(-1.8, -35), e.stroke(), l && (e.strokeStyle = "rgba(255,200,120,.95)", e.lineWidth = 1.6, e.beginPath(), e.moveTo(0, -11), e.lineTo(0, -40), e.stroke()), e.restore(), e.globalAlpha = 1 }
+
+      function Zt(t, l, a, n, o) { e.fillStyle = o, _t(t, l, 1.9 * a, 1.9 * a), e.fillStyle = n, _t(t, l, a, a) }
+
+      function $t(t) { const l = Math.max(-40, Math.min(h, t.z)),
+          a = g(l),
+          n = u(l); if (n < -30 || n > 420) return; const o = y(t.lane, l); if (e.fillStyle = "rgba(0,0,0,.4)", _t(o, n + 5 * a, 13 * a, 5 * a), "rock" === t.t) e.fillStyle = "#20242f", e.beginPath(), e.moveTo(o - 14 * a, n + 4 * a), e.lineTo(o - 9 * a, n - 11 * a), e.lineTo(o + 2 * a, n - 15 * a), e.lineTo(o + 12 * a, n - 7 * a), e.lineTo(o + 13 * a, n + 4 * a), e.closePath(), e.fill(), e.strokeStyle = "rgba(150,170,220,.25)", e.lineWidth = 1.5 * a, e.stroke();
+        else if ("spike" === t.t) { e.fillStyle = "#161a26", Jt(o - 15 * a, n - 6 * a, 30 * a, 10 * a, 2 * a), e.fill(); for (let t = -1; t <= 1; t++) e.fillStyle = "#d8dce6", e.beginPath(), e.moveTo(o + 9 * t * a - 4 * a, n - 5 * a), e.lineTo(o + 9 * t * a + 4 * a, n - 5 * a), e.lineTo(o + 9 * t * a, n - 18 * a), e.closePath(), e.fill();
+          e.fillStyle = "#e03040", e.fillRect(o - 15 * a, n - 2 * a, 30 * a, 2 * a) } else if ("log" === t.t) { e.fillStyle = "#2a2014", e.beginPath(), e.moveTo(y(-1.62, l), n + 5 * a), e.lineTo(y(1.62, l), n + 5 * a), e.lineTo(y(1.62, l), n - 8 * a), e.lineTo(y(-1.62, l), n - 8 * a), e.closePath(), e.fill(), e.strokeStyle = "#120d07", e.lineWidth = 2; for (let t = -1; t <= 1; t++) { const o = y(t, l);
+            e.beginPath(), e.moveTo(o, n - 8 * a), e.lineTo(o, n + 5 * a), e.stroke() } e.fillStyle = "rgba(224,48,64,.7)", e.fillRect(y(-1.55, l), n - 8 * a, y(1.55, l) - y(-1.55, l), 1.5) } else if ("crate" === t.t) e.fillStyle = "#332a1a", Jt(o - 12 * a, n - 18 * a, 24 * a, 22 * a, 2 * a), e.fill(), e.strokeStyle = "#6a5636", e.lineWidth = 1.5 * a, e.strokeRect(o - 12 * a, n - 18 * a, 24 * a, 22 * a), e.strokeStyle = "rgba(238,241,248," + (.25 + .15 * Math.sin(.12 * E + t.ph)) + ")", e.lineWidth = 1, Jt(o - 13.5 * a, n - 19.5 * a, 27 * a, 25 * a, 3 * a), e.stroke();
+        else if ("grunt" === t.t || "brute" === t.t) { const l = "brute" === t.t,
+            i = (l ? 18 : 13) * a,
+            r = 2 * Math.sin(.18 * E + t.ph) * a; if ("windup" === t.state) { const t = .5 + .5 * Math.sin(.4 * E);
+            e.strokeStyle = "rgba(255,48,64," + (.35 + .45 * t) + ")", e.lineWidth = 2.5 * a, e.beginPath(), e.arc(o, n - 8 * a, i + 6 * a, 0, 2 * Math.PI), e.stroke(), e.fillStyle = "rgba(255,90,100,.95)", e.font = "900 " + 13 * a + "px Arial", e.textAlign = "center", e.fillText("!", o, n - i - 12 * a), e.textAlign = "left" } e.save(), e.translate(o, n - 8 * a + .3 * r), "lunge" === t.state && e.scale(1, 1.25), e.fillStyle = "#0e1119", _t(.55 * -i, .75 * i, .3 * i, .22 * i + 2 * Math.abs(Math.sin(.3 * E + t.ph)) * a), _t(.55 * i, .75 * i, .3 * i, .22 * i + 2 * Math.abs(Math.cos(.3 * E + t.ph)) * a); const f = e.createLinearGradient(0, -i, 0, i); if (f.addColorStop(0, l ? "#48566f" : "#3a4560"), f.addColorStop(1, l ? "#161c2c" : "#111626"), e.fillStyle = f, Jt(-i, .7 * -i, 2 * i, 1.3 * i, 4 * a), e.fill(), e.strokeStyle = "rgba(160,180,230,.4)", e.lineWidth = 1.5 * a, Jt(-i, .7 * -i, 2 * i, 1.3 * i, 4 * a), e.stroke(), e.fillStyle = "#42506a", _t(.85 * -i, 0, .3 * i, .34 * i), _t(.85 * i, 0, .3 * i, .34 * i), Zt(0, .24 * -i, .5 * i, "rgba(255,70,90,.35)", "rgba(255,48,64,0)"), e.fillStyle = "#ff4a5c", Jt(.6 * -i, .34 * -i, 1.2 * i, .22 * i, 2 * a), e.fill(), e.fillStyle = "#ffd0d6", e.fillRect(.5 * -i, .3 * -i, .9 * i, .06 * i), l) { const l = t.hp >= 2 ? "#ff3040" : "#ff8040";
+            Zt(0, .28 * i, .26 * i, "rgba(255,120,90,.3)", "rgba(255,48,64,0)"), e.fillStyle = l, _t(0, .28 * i, .2 * i, .2 * i), 1 === t.hp && (e.strokeStyle = "rgba(255,200,150,.7)", e.lineWidth = 1.2 * a, e.beginPath(), e.moveTo(.5 * -i, .2 * -i), e.lineTo(.2 * -i, 0), e.lineTo(.4 * -i, .3 * i), e.stroke()) } e.strokeStyle = "#6a7690", e.lineWidth = 1.5 * a, e.beginPath(), e.moveTo(0, .7 * -i), e.lineTo(0, 1.05 * -i), e.stroke(), e.fillStyle = Math.sin(.3 * E + t.ph) > 0 ? "#ffd75e" : "#6a5a10", _t(0, 1.1 * -i, 2.4 * a, 2.4 * a), e.fillStyle = "#a8b4cc", e.beginPath(), e.moveTo(.7 * i, .1 * i), e.lineTo(1.25 * i, .28 * i), e.lineTo(.7 * i, .5 * i), e.closePath(), e.fill(), t.flash > 0 && (e.globalAlpha = t.flash / 10 * .85, e.fillStyle = "#fff", Jt(-i, .7 * -i, 2 * i, 1.3 * i, 4 * a), e.fill(), e.globalAlpha = 1), e.restore() } else if ("rusher" === t.t) { const l = 12 * a; "rush" === t.state && (e.globalAlpha = .3, e.fillStyle = "#c1121f", _t(o, n + 16 * a, .8 * l, .5 * l), _t(o, n + 30 * a, .6 * l, .4 * l), e.globalAlpha = 1); const i = 3 * Math.sin(.18 * E + t.ph) * a; if (e.save(), e.translate(o, n - 14 * a + i), "windup" === t.state) { const t = .5 + .5 * Math.sin(.4 * E);
+            e.strokeStyle = "rgba(255,48,64," + (.35 + .45 * t) + ")", e.lineWidth = 2.5 * a, e.beginPath(), e.arc(0, 0, l + 6 * a, 0, 2 * Math.PI), e.stroke(), e.fillStyle = "rgba(255,90,100,.95)", e.font = "900 " + 13 * a + "px Arial", e.textAlign = "center", e.fillText("!", 0, -l - 10 * a), e.textAlign = "left" } e.fillStyle = "rgba(200,220,255," + (.4 + .3 * Math.sin(1.2 * E)) + ")", _t(0, .9 * -l, 1.1 * l, 2.6 * a); const r = e.createLinearGradient(0, -l, 0, l);
+          r.addColorStop(0, "#4a5470"), r.addColorStop(1, "#141826"), e.fillStyle = r, e.beginPath(), e.moveTo(0, l), e.lineTo(.8 * -l, .2 * -l), e.lineTo(0, .6 * -l), e.lineTo(.8 * l, .2 * -l), e.closePath(), e.fill(), e.strokeStyle = "rgba(160,180,230,.4)", e.lineWidth = 1.2 * a, e.stroke(), Zt(0, .15 * l, 3.4 * a, "rgba(255,70,90,.3)", "rgba(255,48,64,0)"), e.fillStyle = "#ff3040", _t(0, .15 * l, 3 * a, 3 * a), t.flash > 0 && (e.globalAlpha = t.flash / 10 * .85, e.fillStyle = "#fff", e.beginPath(), e.moveTo(0, l), e.lineTo(.8 * -l, .2 * -l), e.lineTo(0, .6 * -l), e.lineTo(.8 * l, .2 * -l), e.closePath(), e.fill(), e.globalAlpha = 1), e.restore() } else if ("shooter" === t.t) { const l = 15 * a;
+          e.save(), e.translate(o, n - 10 * a), e.strokeStyle = "#161a26", e.lineWidth = 2.5 * a, e.beginPath(), e.moveTo(.5 * -l, .4 * l), e.lineTo(.8 * -l, 1.1 * l), e.moveTo(.5 * l, .4 * l), e.lineTo(.8 * l, 1.1 * l), e.moveTo(0, .4 * l), e.lineTo(0, 1.1 * l), e.stroke(); const i = e.createLinearGradient(0, -l, 0, .5 * l);
+          i.addColorStop(0, "#4a5470"), i.addColorStop(1, "#131726"), e.fillStyle = i, _t(0, 0, l, .72 * l), e.strokeStyle = "rgba(160,180,230,.4)", e.lineWidth = 1.5 * a, e.beginPath(), e.ellipse(0, 0, l, .72 * l, 0, 0, 2 * Math.PI), e.stroke(); let r = Math.atan2(316 - (n - 10 * a), J - o); if ("leave" === t.state && (r = -1.2), e.save(), e.rotate(r), e.fillStyle = "#242e46", e.fillRect(.3 * l, -3 * a, .8 * l, 6 * a), e.fillStyle = "#42506a", _t(.3 * l, 0, 4.5 * a, 4.5 * a), "aim" === t.state && t.wt > 20) { const e = Math.min(1, (t.wt - 20) / 42);
+            Zt(.3 * l + .8 * l + (2 + 5 * e) * a, 0, (2 + 5 * e) * a, "rgba(255,48,64," + (.25 + .3 * e) + ")", "rgba(255,48,64,0)") } if (e.restore(), Zt(0, .3 * -l, 3 * a, Math.sin(.25 * E + t.ph) > 0 ? "rgba(255,215,94,.35)" : "rgba(255,215,94,0)", "rgba(255,215,94,0)"), e.fillStyle = Math.sin(.25 * E + t.ph) > 0 ? "#ffd75e" : "#7a6a20", _t(0, .3 * -l, 2.4 * a, 2.4 * a), t.flash > 0 && (e.globalAlpha = t.flash / 10 * .85, e.fillStyle = "#fff", _t(0, 0, l, .72 * l), e.globalAlpha = 1), e.restore(), "aim" === t.state && t.wt > 18) { const l = Math.min(1, (t.wt - 18) / 44);
+            e.strokeStyle = "rgba(255,48,64," + (.3 + .45 * l) + ")", e.lineWidth = 1.5, e.setLineDash([8, 7]), e.lineDashOffset = 2 * -E, e.beginPath(), e.moveTo(o, n - 10 * a), e.lineTo(J, 320), e.stroke(), e.setLineDash([]) } } }
+
+      function te(t) { const l = Math.max(0, Math.min(h, t.z)),
+          a = g(l),
+          n = u(l),
+          o = y(t.lane, l),
+          i = t.z > 700 ? Math.max(0, (h - t.z) / 60) : 1,
+          r = rt > 0;
+        e.save(), e.translate(o, n), e.scale(a, a), e.globalAlpha = i;
+        e.strokeStyle = r ? "rgba(255,180,60,.9)" : "rgba(255,48,64,.85)", e.lineWidth = 4, e.beginPath(), e.moveTo(-24, 2), e.quadraticCurveTo(0, -20.8, 24, 2), e.stroke(), e.fillStyle = r ? "rgba(255,240,190,.95)" : "rgba(240,244,255,.95)", e.beginPath(), e.moveTo(-24, 2), e.quadraticCurveTo(0, -20.8, 24, 2), e.quadraticCurveTo(0, -6.5, -24, 2), e.closePath(), e.fill(), e.fillStyle = "#fff", _t(0, -6.5, 3.5, 2), e.restore(), e.globalAlpha = 1 }
+
+      function ee(t) { const l = Math.max(-40, Math.min(h, t.z)),
+          a = g(l),
+          n = u(l),
+          o = y(t.lane, l);
+        t.deflected ? (Zt(o, n, 8 * a, "rgba(255,215,94,.4)", "rgba(255,215,94,0)"), e.fillStyle = "#ffd75e", _t(o, n, 4 * a, 4 * a), e.fillStyle = "#fff", _t(o, n, 1.8 * a, 1.8 * a)) : (Zt(o, n, 6.5 * a, "rgba(255,48,64,.4)", "rgba(255,48,64,0)"), e.fillStyle = "#ff3040", _t(o, n, 3.2 * a, 3.2 * a), e.fillStyle = "#fff", _t(o, n, 1.4 * a, 1.4 * a)) }
+
+      function le(t) { const l = g(t.z),
+          a = u(t.z),
+          n = 202 + t.side * (d + .22 + t.off) * c * l; if (!(n < -40 || n > 444 || a < -30))
+          if ("torii" === t.kind) e.fillStyle = "#0a0d18", e.fillRect(n - 16 * l, a - 52 * l, 7 * l, 52 * l), e.fillRect(n + 9 * l, a - 52 * l, 7 * l, 52 * l), e.fillRect(n - 24 * l, a - 50 * l, 48 * l, 6 * l), e.fillRect(n - 19 * l, a - 38 * l, 38 * l, 4 * l), e.strokeStyle = "rgba(140,160,220,.22)", e.lineWidth = 1, e.strokeRect(n - 24 * l, a - 50 * l, 48 * l, 6 * l), t.r < .5 && (e.fillStyle = "#c1121f", _t(n, a - 44 * l, 3.2 * l, 4.2 * l), e.fillStyle = "rgba(255,60,70,.28)", _t(n, a - 44 * l, 5.5 * l, 6.5 * l));
+          else { const o = (32 + 26 * t.r) * l;
+            e.fillStyle = "#0a0d18", e.fillRect(n - 2.5 * l, a - o, 5 * l, o), e.beginPath(), e.moveTo(n, a - o - (20 + 12 * t.r) * l), e.lineTo(n - (11 + 6 * t.r) * l, a - o), e.lineTo(n + (11 + 6 * t.r) * l, a - o), e.closePath(), e.fill(), e.strokeStyle = "rgba(140,160,220,.15)", e.lineWidth = 1, e.beginPath(), e.moveTo(n - (10 + 6 * t.r) * l, a - o), e.lineTo(n, a - o - (18 + 11 * t.r) * l), e.stroke() } } It.addEventListener("pointerdown", t => { t.preventDefault(), t.stopPropagation(), p = !p, It.textContent = p ? "🔇" : "🔊"; try { localStorage.setItem("shanks_mute", p ? "1" : "0") } catch (t) {} p ? P() : (b(), "play" === C && A()) }), p && (It.textContent = "🔇"); let ae = null,
+        ne = null,
+        oe = null;
+
+      function ie() { e.setTransform(n, 0, 0, n, 0, 0), e.fillStyle = ae, e.fillRect(-10, -10, 424, 90), e.fillStyle = "#e8ecf4", e.beginPath(), e.arc(320, 60, 15, 0, 2 * Math.PI), e.fill(), e.fillStyle = "#1a2238", e.beginPath(), e.arc(325, 56, 13, 0, 2 * Math.PI), e.fill(), e.fillStyle = oe, e.beginPath(), e.arc(320, 60, 46, 0, 2 * Math.PI), e.fill(), e.fillStyle = "#131a2c", e.beginPath(), e.moveTo(-10, 80); const t = .004 * -B; for (let l = 0; l <= 414; l += 30) e.lineTo(l, 72 - 16 * Math.sin(.02 * (l + t)) - 8 * Math.sin(.005 * (l + t)));
+        e.lineTo(414, 80), e.closePath(), e.fill(), e.fillStyle = "rgba(90,110,180,.1)", e.fillRect(-10, 74, 424, 10), e.save(); const o = 1.3 * Math.sin(2 * ft),
+          i = .06 * -_ - .06 * _;
+        G > 0 && e.translate((Math.random() - .5) * G, (Math.random() - .5) * G * .7), e.translate(.14 * -Y + .5 * i, o),
+          function() { const t = g(-130),
+              l = g(h),
+              a = u(-130),
+              n = u(h);
+            e.fillStyle = "#1b2030", e.beginPath(), e.moveTo(202 - d * c * t, a), e.lineTo(202 + d * c * t, a), e.lineTo(202 + d * c * l, n), e.lineTo(202 - d * c * l, n), e.closePath(), e.fill(), [-d, d].forEach(o => { e.strokeStyle = "#e03040", e.lineWidth = 3, e.beginPath(), e.moveTo(202 + o * c * t, a), e.lineTo(202 + o * c * l, n), e.stroke(), e.strokeStyle = "rgba(224,48,64,.35)", e.lineWidth = 1, e.beginPath(), e.moveTo(202 + (o + .09 * Math.sign(o)) * c * t, a), e.lineTo(202 + (o + .09 * Math.sign(o)) * c * l, n), e.stroke() }), [-.5, .5].forEach(t => { e.fillStyle = "rgba(150,170,220,.55)"; for (let l = 0; l < 10; l++) { const a = 90 * l - B % 90; if (a < -30) continue; if (a > h) break; const n = Math.max(0, a),
+                  o = Math.min(h, a + 16),
+                  i = 202 + t * c * g(n),
+                  r = u(n),
+                  f = 202 + t * c * g(o),
+                  s = u(o),
+                  d = 3.6 * g(a);
+                e.beginPath(), e.moveTo(i - d, r), e.lineTo(i + d, r), e.lineTo(f + .9 * d, s), e.lineTo(f - .9 * d, s), e.closePath(), e.fill() } }) }(), ct.forEach(le); if (ht.slice().sort((t, e) => e.z - t.z).forEach($t), yt.forEach(te), mt.forEach(ee), ht.forEach(t => { if ("rusher" === t.t && "rush" === t.state && t.z < -30) { const l = y(t.lane, 0),
+                a = .5 + .5 * Math.sin(.5 * E);
+              e.fillStyle = "rgba(255,48,64," + (.5 + .5 * a) + ")", e.beginPath(), e.moveTo(l - 9, 350), e.lineTo(l + 9, 350), e.lineTo(l, 366), e.closePath(), e.fill(), e.font = "900 11px Arial", e.textAlign = "center", e.fillStyle = "rgba(255,120,130," + (.6 + .4 * a) + ")", e.fillText("!", l, 346), e.textAlign = "left" } }), function() { if ("dead" === C) return; if (q > 0 && Math.floor(E / 4) % 2 == 0 && 0 === rt) return; const t = s,
+              l = 1.6 * Math.sin(2 * ft),
+              a = .008 * _; if (pt.forEach(t => { e.globalAlpha = .3 * t.t, e.fillStyle = "#2a3555", _t(t.x, 338, 13, 9.5), _t(t.x, 324, 8, 7.5), e.strokeStyle = "#2a3555", e.lineWidth = 4, e.lineCap = "round", e.beginPath(), e.moveTo(t.x - 3, 318), e.quadraticCurveTo(t.x - 14, 330, t.x - 20, 340), e.stroke(), e.globalAlpha = 1 }), e.fillStyle = "rgba(0,0,0,.5)", _t(J, 344, 15, 6), rt > 0 && !(rt < 60 && Math.floor(E / 3) % 2 == 0)) { const l = e.createRadialGradient(J, 328, 6, J, 328, 50);
+              l.addColorStop(0, "rgba(255,215,94,.5)"), l.addColorStop(1, "rgba(255,120,40,0)"), e.fillStyle = l, e.beginPath(), e.arc(J, 328, 50, 0, 2 * Math.PI), e.fill(); for (let l = 0; l < 3; l++) { const l = 6 * (Math.random() - .5),
+                  a = 26 + 18 * Math.random();
+                e.globalAlpha = .35 + .25 * Math.random(), e.fillStyle = "#ff9a3c", e.beginPath(), e.moveTo(J - 14, 346), e.quadraticCurveTo(J - 8 + l, t - .5 * a, J + l, t - a), e.quadraticCurveTo(J + 8 + l, t - .5 * a, J + 14, 346), e.closePath(), e.fill() } e.globalAlpha = 1, e.strokeStyle = "rgba(255,255,255," + (.4 + .3 * Math.random()) + ")", e.lineWidth = 1.5; for (let t = 0; t < 2; t++) { e.beginPath(); let t = J + 32 * (Math.random() - .5),
+                  l = 308 - 14 * Math.random();
+                e.moveTo(t, l); for (let a = 0; a < 3; a++) t += 12 * (Math.random() - .5), l += 8 + 7 * Math.random(), e.lineTo(t, l);
+                e.stroke() } } const n = Xt(St, St.amp, .28 + .02 * D);
+            jt(n, 6, 1.4, "#1a2238", "#3a4a78"); const o = n[4];
+            e.fillStyle = "#c1121f", e.save(), e.translate(o.x, o.y), e.rotate(.5), e.fillRect(-4, -2, 8, 4), e.restore(); const i = Math.sin(ft),
+              r = Math.cos(ft);
+            e.fillStyle = "#10141f", _t(J - 7 + 5 * i, 349 + 1.5 * Math.abs(i), 4.2, 3), _t(J + 7 - 5 * r, 349 + 1.5 * Math.abs(r), 4.2, 3), e.save(), e.translate(J, 338 + .4 * l), e.rotate(a), e.fillStyle = "#1d2540", _t(0, 0, 13, 9.5), e.strokeStyle = "rgba(143,180,255,.55)", e.lineWidth = 1.8, e.beginPath(), e.ellipse(0, 0, 12.8, 9.3, 0, -2.7, -1.1), e.stroke(), rt > 0 && (e.strokeStyle = "rgba(255,220,140," + (.6 + .4 * Math.sin(.6 * E)) + ")", e.lineWidth = 2, e.beginPath(), e.ellipse(0, 0, 13.8, 10, 0, 0, 2 * Math.PI), e.stroke()); const f = 2.2 * Math.sin(ft);
+            e.fillStyle = "#242e4a", _t(-12, 2 + .3 * f, 4.5, 4), _t(12, 2 - .3 * f, 4.5, 4), e.fillStyle = "#141928", _t(0, -14, 8.5, 8), e.fillStyle = "#eef1f8", e.fillRect(-8, -19, 16, 3), e.restore(), jt(Xt(Mt, 1.6, .32), 2.6, .8, "#eef1f8", "#fff"), jt(Xt(Tt, 1.6, .34), 2.6, .8, "#eef1f8", "#fff"); let h = .06 * Math.sin(.22 * E) - .5,
+              c = rt > 0; if (lt > 0 && lt < 46 && (h = .1 * Math.sin(.4 * E) - 1.95, c = !0), X >= 0) { let a = Math.min(1, X / 16);
+              a = 1 - Math.pow(1 - a, 3), h = 3.4 * a - 2.7, e.save(), e.translate(J, t + .4 * l - 2); const n = 3.4 * a - 2.7 - 1,
+                o = h,
+                i = e.createRadialGradient(0, 0, 16, 0, 0, 54);
+              i.addColorStop(0, "rgba(238,241,248,0)"), i.addColorStop(.7, rt > 0 ? "rgba(255,215,94," + .5 * (1 - a) + ")" : "rgba(238,241,248," + .45 * (1 - a) + ")"), i.addColorStop(1, "rgba(255,48,64," + .4 * (1 - a) + ")"), e.fillStyle = i, e.beginPath(), e.moveTo(0, 0), e.arc(0, 0, 54, n, o), e.closePath(), e.fill(), e.strokeStyle = "rgba(255,255,255," + .65 * (1 - a) + ")", e.lineWidth = 2.5, e.beginPath(), e.arc(0, 0, 50, n + .1, o), e.stroke(), e.restore(), Qt(h - .42, c, .1), Qt(h - .24, c, .22) } Qt(h, c) }(), ut.forEach(t => { e.globalAlpha = .8 * t.t, e.strokeStyle = "rgba(255,215,94,.9)", e.lineWidth = 2.5, e.beginPath(), e.arc(t.x, t.y, t.r0 + 46 * (1 - t.t), 0, 2 * Math.PI), e.stroke(), e.globalAlpha = 1 }), dt.forEach(t => { e.globalAlpha = Math.max(t.life, 0), e.fillStyle = t.c, e.fillRect(t.x, t.y, t.s, t.s) }), e.globalAlpha = 1, gt.forEach(t => { e.globalAlpha = Math.max(0, t.t), e.font = "900 12px Arial", e.textAlign = "center"; const l = t.y - 16 * (1 - t.t);
+            e.lineWidth = 3, e.strokeStyle = "rgba(5,5,12,.85)", e.strokeText(t.txt, t.sx, l), e.fillStyle = t.c, e.fillText(t.txt, t.sx, l) }), e.globalAlpha = 1, e.textAlign = "left", e.restore(), function() { if (lt <= 0) return; if (lt < 8) { const t = lt / 8; for (let l = 0; l < 3; l++) e.strokeStyle = "rgba(255,48,64," + (.6 - .4 * l) * t + ")", e.lineWidth = 2, e.beginPath(), e.arc(J, 328, (60 - 16 * l) * (1 - t) + 8, 0, 2 * Math.PI), e.stroke(); return } const t = Math.min(1, (lt - 8) / 34),
+              l = t * h,
+              a = Math.max(0, l - 130),
+              n = g(l),
+              o = g(a),
+              i = .9 * (1 - t);
+            e.save(); const r = e.createLinearGradient(0, u(l), 0, u(a));
+            r.addColorStop(0, "rgba(248,251,255," + i + ")"), r.addColorStop(.5, "rgba(255,48,64," + .7 * i + ")"), r.addColorStop(1, "rgba(193,18,31,0)"), e.fillStyle = r, e.beginPath(), e.moveTo(202 - d * c * o, u(a)), e.lineTo(202 + d * c * o, u(a)), e.lineTo(202 + d * c * n, u(l)), e.lineTo(202 - d * c * n, u(l)), e.closePath(), e.fill(), e.strokeStyle = "rgba(248,251,255," + i + ")", e.lineWidth = 5 * n + 2, e.beginPath(), e.moveTo(202 - d * c * n, u(l)), e.quadraticCurveTo(202, u(l) - 24 * n - 10, 202 + d * c * n, u(l)), e.stroke(), e.restore() }(), lt > 0 && lt < 50) { const t = Math.min(lt, 50 - lt) / 8 * 20;
+          t > 0 && (e.fillStyle = "#000", e.fillRect(0, 0, l, t), e.fillRect(0, a - t, l, t)) } e.fillStyle = ne, e.fillRect(0, 0, l, a), rt > 0 && (e.fillStyle = "rgba(255,150,40," + (.05 + .03 * Math.sin(.3 * E)) + ")", e.fillRect(0, 0, l, a)), L <= 30 && "play" === C && rt <= 0 && (e.fillStyle = "rgba(193,18,31," + (.06 + .05 * Math.sin(.2 * E)) + ")", e.fillRect(0, 0, l, a)), O > 0 && (e.fillStyle = "rgba(255,30,40," + .26 * O + ")", e.fillRect(0, 0, l, a)), V > 0 && (e.fillStyle = "rgba(255,255,255," + .28 * V + ")", e.fillRect(0, 0, l, a)); const r = 170,
+          m = 117;
+        Jt(115, 10, 174, 18, 6), e.fillStyle = "rgba(5,7,14,.75)", e.fill(), e.strokeStyle = "rgba(200,210,235,.35)", e.lineWidth = 1.5, e.stroke(); const p = Math.max(0, L / 100); if (p > .3) { const t = e.createLinearGradient(m, 0, 287, 0);
+          t.addColorStop(0, "#ff9aa2"), t.addColorStop(1, "#e8ecf4"), e.fillStyle = t } else e.fillStyle = L > 0 ? L <= 30 ? "rgba(255,48,64," + (.7 + .3 * Math.sin(.3 * E)) + ")" : "#ff3040" : "#500a10";
+        Jt(m, 12, r * p, 14, 4), e.fill(), e.strokeStyle = "rgba(5,7,14,.5)", e.lineWidth = 1; for (let t = 1; t < 10; t++) e.beginPath(), e.moveTo(m + r * t / 10, 13), e.lineTo(m + r * t / 10, 25), e.stroke();
+        e.font = "900 10px Arial", e.textAlign = "center", e.fillStyle = "#eef1f8", e.fillText(Math.max(0, Math.round(L)) + " / 100", 202, 37), e.textAlign = "left"; const b = 40;
+        Jt(8, 38, 96, 13, 5), e.fillStyle = "rgba(5,7,14,.75)", e.fill(), e.strokeStyle = "rgba(193,18,31,.5)", e.lineWidth = 1, e.stroke(); for (let t = 0; t < 10; t++) { if (t < et / 10) { const t = e.createLinearGradient(0, b, 0, 49);
+            t.addColorStop(0, "#ff8a94"), t.addColorStop(1, "#c1121f"), e.fillStyle = t } else e.fillStyle = "rgba(110,40,48,.25)";
+          e.fillRect(11 + 9.2 * t, 41, 7.4, 7) } e.font = "bold 8px monospace", et >= 100 ? (e.fillStyle = "rgba(255,120,130," + (.6 + .4 * Math.sin(.25 * E)) + ")", e.fillText("ULTI SIAP — U", 10, 62)) : (e.fillStyle = "rgba(200,206,222,.6)", e.fillText("ULTI " + Math.floor(et) + "%", 10, 62)); const S = 298,
+          M = 40;
+        Jt(296, 38, 96, 13, 5), e.fillStyle = "rgba(5,7,14,.75)", e.fill(), e.strokeStyle = "rgba(255,180,60,.5)", e.lineWidth = 1, e.stroke(); const T = rt > 0 ? rt / 340 : it / 100; for (let t = 0; t < 10; t++) { if (t < 10 * T) { const t = e.createLinearGradient(0, M, 0, 49);
+            t.addColorStop(0, "#ffe89a"), t.addColorStop(1, "#ff9a3c"), e.fillStyle = t } else e.fillStyle = "rgba(110,80,30,.25)";
+          e.fillRect(299 + 9.2 * t, 41, 7.4, 7) } if (rt > 0 ? (e.fillStyle = "rgba(255,215,94," + (.6 + .4 * Math.sin(.3 * E)) + ")", e.fillText("OVERDRIVE " + (rt / 60).toFixed(1) + "s", S, 62)) : it > 0 ? (e.fillStyle = "rgba(255,200,120,.75)", e.fillText("AURA " + Math.floor(it) + "%", S, 62)) : (e.fillStyle = "rgba(200,206,222,.5)", e.fillText("PARRY→AURA", S, 62)), e.fillStyle = "rgba(200,206,222,.6)", e.textAlign = "right", e.fillText("SPD " + (D + (rt > 0 ? 2.2 : 0)).toFixed(1), 392, 370), e.textAlign = "left", tt) { const t = tt.t,
+            l = Math.min(3 * t, 1),
+            a = t > .8 ? (1 - t) / .2 : 1,
+            n = 1 + .7 * (1 - l);
+          e.save(), e.translate(202, 120), e.scale(n, n), e.globalAlpha = a * l, e.font = "900 24px Arial", e.textAlign = "center", e.lineWidth = 5, e.strokeStyle = "rgba(5,5,12,.85)", e.strokeText(tt.txt, 0, 0), e.fillStyle = rt > 0 ? "#ffd75e" : "#eef1f8", e.fillText(tt.txt, 0, 0), e.restore(), e.globalAlpha = 1, e.textAlign = "left" } if (nt >= 3 && ot > 0) { e.save(), e.translate(346, 80), e.rotate(.08); const t = 1 + Math.max(0, (ot - 120) / 10 * .15);
+          e.scale(t, t), e.font = "900 20px Arial", e.textAlign = "center", e.lineWidth = 4, e.strokeStyle = "rgba(5,5,12,.8)", e.strokeText(nt + " HIT", 0, 0), e.fillStyle = nt >= 8 ? "#ffd75e" : "#eef1f8", e.fillText(nt + " HIT", 0, 0), e.restore(), e.textAlign = "left" } if ("ready" === C && (e.fillStyle = "rgba(5,7,14,.6)", e.fillRect(0, 0, l, a), e.textAlign = "center", e.font = "900 32px Arial", e.lineWidth = 7, e.strokeStyle = "#000", e.strokeText("KURO SLASH", 202, 158), e.fillStyle = "#eef1f8", e.fillText("KURO SLASH", 202, 158), e.strokeStyle = "#c1121f", e.lineWidth = 3, e.beginPath(), e.moveTo(110, 154), e.lineTo(294, 162), e.stroke(), e.font = "700 9px Arial", e.fillStyle = "#9aa2b8", e.fillText("SHANKS CODE · PARRY · OVERDRIVE", 202, 178), f > 0 && (e.font = "bold 11px monospace", e.fillStyle = "#c8cede", e.fillText("BEST: " + f, 202, 198)), e.font = "900 15px Arial", e.fillStyle = "rgba(238,241,248," + (.5 + .5 * Math.sin(.09 * E)) + ")", e.fillText("TAP UNTUK MULAI", 202, 226), e.font = "600 8.5px Arial", e.fillStyle = "#7a8296", e.fillText("Tebas peluru merah = PARRY · Kill = +5 HP", 202, 246), e.textAlign = "left"), "dead" === C) { const t = Math.min(1, (performance.now() - Z) / 900);
+          e.fillStyle = "rgba(2,3,6," + .65 * t + ")", e.fillRect(0, 0, l, a), e.textAlign = "center", e.globalAlpha = t, e.font = '900 28px "Times New Roman", serif'; const n = e.createLinearGradient(0, 178, 0, 206);
+          n.addColorStop(0, "#a01020"), n.addColorStop(1, "#e03040"), e.fillStyle = n, e.fillText("YOU DIED", 202, 200), e.font = "bold 12px monospace", e.fillStyle = "#c8cede", e.fillText("SCORE " + W, 202, 226), $ ? (e.fillStyle = "rgba(255,215,94," + (.6 + .4 * Math.sin(.2 * E)) + ")", e.font = "900 12px Arial", e.fillText("★ NEW BEST: " + I + " ★", 202, 244)) : (e.fillStyle = "#8a92a6", e.fillText("BEST: " + I, 202, 244)), e.font = "700 10px Arial", e.fillStyle = "rgba(200,206,222," + (.5 + .5 * Math.sin(.1 * E)) * t + ")", e.fillText("Tap untuk bangkit lagi", 202, 266), e.globalAlpha = 1, e.textAlign = "left" } } ae = e.createLinearGradient(0, 0, 0, 130), ae.addColorStop(0, "#0d1220"), ae.addColorStop(.7, "#1a2238"), ae.addColorStop(1, "#28324e"), oe = e.createRadialGradient(320, 60, 14, 320, 60, 46), oe.addColorStop(0, "rgba(216,221,232,.25)"), oe.addColorStop(1, "rgba(216,221,232,0)"), ne = e.createRadialGradient(202, 190, 150, 202, 190, 330), ne.addColorStop(0, "rgba(0,0,0,0)"), ne.addColorStop(1, "rgba(0,0,8,.42)"); let re = 0,
+        fe = 0,
+        se = !1,
+        he = 0;
+      requestAnimationFrame(function e(o) {!se && fe > 60 && fe < 160 && (re += o - he), se || 160 !== fe || (re /= 100, re > 22 && (n = 1, t.width = l, t.height = a), se = !0), fe++, he = o, Yt(), ie(), requestAnimationFrame(e) }) }()
+  </script>
+</body>
+
+</html>

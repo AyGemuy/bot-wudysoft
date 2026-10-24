@@ -375,19 +375,9 @@
         l = o.querySelector(".fly"),
         s = document.getElementById("textLeft"),
         c = document.getElementById("textRight"),
-        d = document.createElement("canvas").getContext("2d");
-
-      function f() { var e = function(e) { var t = String(e).trim().split(/\s+/).filter(Boolean); if (!t.length) return ["", ""]; if (1 === t.length) { var n = t[0]; if (n.length < 2) return [n, n]; var a = Math.ceil(n.length / 2); return [n.slice(0, a), n.slice(a)] } if (2 === t.length) return [t[0], t[1]]; for (var r = 1, o = 1 / 0, i = 1; i < t.length; i++) { var l = t.slice(0, i).join("").length,
-                s = t.slice(i).join("").length,
-                c = Math.abs(l - s);
-              c < o && (o = c, r = i) } return [t.slice(0, r).join(" "), t.slice(r).join(" ")] }(t),
-          n = e[0],
-          a = e[1];
-        s.textContent = n, c.textContent = a; var i = function(e, t) { if (!e && !t) return 190;
-          d.font = '700 100px "Space Grotesk", sans-serif'; var n = (e ? d.measureText(e).width || 1 : 0) + (t ? d.measureText(t).width || 1 : 0) || 1; return Math.min(48e3 / n, 190) }(n, a);
-        r.style.fontSize = i + "px", o.style.fontSize = i + "px" } var m = [],
-        h = [],
-        u = [
+        d = document.createElement("canvas").getContext("2d"); var f = [],
+        m = [],
+        h = [
           [255, 95, 158],
           [168, 85, 247],
           [96, 165, 250],
@@ -396,23 +386,30 @@
           [251, 191, 36]
         ];
 
-      function v() { return u[Math.floor(Math.random() * u.length)] }
+      function u() { return h[Math.floor(Math.random() * h.length)] }
 
-      function y() { n.classList.add("impact"),
-          function(e, t) { for (var n = 0; n < 90; n++) { var a = Math.random() * Math.PI * 2,
-                r = 16 * Math.random() + 2;
-              m.push({ x: e, y: t, vx: Math.cos(a) * r, vy: Math.sin(a) * r - 2, life: 1, decay: .012 + .012 * Math.random(), size: 16 + 26 * Math.random(), color: v(), shrink: .975 + .015 * Math.random() }) } for (var o = 0; o < 80; o++) { var i = Math.random() * Math.PI * 2,
-                l = 24 * Math.random() + 6;
-              h.push({ x: e, y: t, vx: Math.cos(i) * l, vy: Math.sin(i) * l - 3, life: 1, decay: .02 + .025 * Math.random(), size: 1.2 + 2.2 * Math.random() }) } }(256, 256) }
-
-      function g() { n.classList.remove("impact", "run"), m = [], h = [], a.clearRect(0, 0, 512, 512), [i, l].forEach(function(e) { e.style.animation = "none", e.offsetWidth, e.style.animation = "" }), requestAnimationFrame(function() { n.classList.add("run"); var e = function() { i.removeEventListener("animationend", e), y(), setTimeout(g, 3200) };
+      function v() { n.classList.remove("impact", "run"), f = [], m = [], a.clearRect(0, 0, 512, 512), [i, l].forEach(function(e) { e.style.animation = "none", e.offsetWidth, e.style.animation = "" }), requestAnimationFrame(function() { n.classList.add("run"); var e = function() { i.removeEventListener("animationend", e), n.classList.add("impact"),
+              function() { for (var e = 0; e < 90; e++) { var t = Math.random() * Math.PI * 2,
+                    n = 16 * Math.random() + 2;
+                  f.push({ x: 256, y: 256, vx: Math.cos(t) * n, vy: Math.sin(t) * n - 2, life: 1, decay: .012 + .012 * Math.random(), size: 16 + 26 * Math.random(), color: u(), shrink: .975 + .015 * Math.random() }) } for (var a = 0; a < 80; a++) { var r = Math.random() * Math.PI * 2,
+                    o = 24 * Math.random() + 6;
+                  m.push({ x: 256, y: 256, vx: Math.cos(r) * o, vy: Math.sin(r) * o - 3, life: 1, decay: .02 + .025 * Math.random(), size: 1.2 + 2.2 * Math.random() }) } }(), setTimeout(v, 3200) };
           i.addEventListener("animationend", e, { once: !0 }) }) }
 
-      function x() { f(), g() }! function e() { a.clearRect(0, 0, 512, 512), a.save(), a.filter = "blur(6px)", a.globalCompositeOperation = "lighter"; for (var t = m.length - 1; t >= 0; t--) { var n = m[t]; if (n.x += n.vx, n.y += n.vy, n.vx *= .93, n.vy *= .93, n.vy += .12, n.life -= n.decay, n.size *= n.shrink, n.life <= 0 || n.size < 2) m.splice(t, 1);
+      function y() {
+        (function() { var e = function(e) { var t = String(e).trim().split(/\s+/).filter(Boolean); if (!t.length) return ["", ""]; if (1 === t.length) { var n = t[0]; if (n.length < 2) return [n, n]; var a = Math.ceil(n.length / 2); return [n.slice(0, a), n.slice(a)] } if (2 === t.length) return [t[0], t[1]]; for (var r = 1, o = 1 / 0, i = 1; i < t.length; i++) { var l = t.slice(0, i).join("").length,
+                  s = t.slice(i).join("").length,
+                  c = Math.abs(l - s);
+                c < o && (o = c, r = i) } return [t.slice(0, r).join(" "), t.slice(r).join(" ")] }(t),
+            n = e[0],
+            a = e[1];
+          s.textContent = n, c.textContent = a; var i = function(e, t) { if (!e && !t) return 190;
+            d.font = '700 100px "Space Grotesk", sans-serif'; var n = (e ? d.measureText(e).width || 1 : 0) + (t ? d.measureText(t).width || 1 : 0) || 1; return Math.min(48e3 / n, 190) }(n, a);
+          r.style.fontSize = i + "px", o.style.fontSize = i + "px" })(), v() }! function e() { a.clearRect(0, 0, 512, 512), a.save(), a.filter = "blur(6px)", a.globalCompositeOperation = "lighter"; for (var t = f.length - 1; t >= 0; t--) { var n = f[t]; if (n.x += n.vx, n.y += n.vy, n.vx *= .93, n.vy *= .93, n.vy += .12, n.life -= n.decay, n.size *= n.shrink, n.life <= 0 || n.size < 2) f.splice(t, 1);
           else { var r = n.color,
               o = a.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.size);
-            o.addColorStop(0, "rgba(" + r[0] + "," + r[1] + "," + r[2] + "," + .9 * n.life + ")"), o.addColorStop(.7, "rgba(" + r[0] + "," + r[1] + "," + r[2] + "," + .4 * n.life + ")"), o.addColorStop(1, "rgba(" + r[0] + "," + r[1] + "," + r[2] + ",0)"), a.fillStyle = o, a.beginPath(), a.arc(n.x, n.y, n.size, 0, 7), a.fill() } } a.restore(), a.globalCompositeOperation = "lighter"; for (var i = h.length - 1; i >= 0; i--) { var l = h[i];
-          l.x += l.vx, l.y += l.vy, l.vx *= .94, l.vy *= .94, l.vy += .15, l.life -= l.decay, l.life <= 0 ? h.splice(i, 1) : (a.strokeStyle = "rgba(255,255,255," + .7 * l.life + ")", a.lineWidth = l.size, a.lineCap = "round", a.beginPath(), a.moveTo(l.x, l.y), a.lineTo(l.x - 1.8 * l.vx, l.y - 1.8 * l.vy), a.stroke(), a.fillStyle = "rgba(255,255,255," + l.life + ")", a.beginPath(), a.arc(l.x, l.y, .85 * l.size, 0, 7), a.fill()) } a.globalCompositeOperation = "source-over", requestAnimationFrame(e) }(), document.fonts && document.fonts.load ? document.fonts.load('700 100px "Space Grotesk"').then(x).catch(x) : x() }()
+            o.addColorStop(0, "rgba(" + r[0] + "," + r[1] + "," + r[2] + "," + .9 * n.life + ")"), o.addColorStop(.7, "rgba(" + r[0] + "," + r[1] + "," + r[2] + "," + .4 * n.life + ")"), o.addColorStop(1, "rgba(" + r[0] + "," + r[1] + "," + r[2] + ",0)"), a.fillStyle = o, a.beginPath(), a.arc(n.x, n.y, n.size, 0, 7), a.fill() } } a.restore(), a.globalCompositeOperation = "lighter"; for (var i = m.length - 1; i >= 0; i--) { var l = m[i];
+          l.x += l.vx, l.y += l.vy, l.vx *= .94, l.vy *= .94, l.vy += .15, l.life -= l.decay, l.life <= 0 ? m.splice(i, 1) : (a.strokeStyle = "rgba(255,255,255," + .7 * l.life + ")", a.lineWidth = l.size, a.lineCap = "round", a.beginPath(), a.moveTo(l.x, l.y), a.lineTo(l.x - 1.8 * l.vx, l.y - 1.8 * l.vy), a.stroke(), a.fillStyle = "rgba(255,255,255," + l.life + ")", a.beginPath(), a.arc(l.x, l.y, .85 * l.size, 0, 7), a.fill()) } a.globalCompositeOperation = "source-over", requestAnimationFrame(e) }(), document.fonts && document.fonts.load ? document.fonts.load('700 100px "Space Grotesk"').then(y).catch(y) : y() }()
   </script>
 </body>
 

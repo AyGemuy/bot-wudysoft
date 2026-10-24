@@ -3,173 +3,228 @@ import path from "path";
 import {
   simpleQuoted
 } from "../../lib/quoted.js";
-const formatSize = bytes => {
-  if (!bytes || bytes === 0) return "0 B";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+const CONFIG = {
+  FOLDERS_PER_PAGE: 3,
+  MAX_FILES_PER_FOLDER: 8
 };
 
-function getAllPlugins(dir, baseDir = dir) {
+function getAllPluginFiles(dir, baseDir = dir) {
   let results = [];
   if (!fs.existsSync(dir)) return results;
   const list = fs.readdirSync(dir);
   for (const file of list) {
     const fullPath = path.join(dir, file);
     const stat = fs.statSync(fullPath);
-    if (stat.isDirectory()) {
-      results = results.concat(getAllPlugins(fullPath, baseDir));
-    } else if (/\.(js|mjs|cjs)$/i.test(file)) {
-      const relativePath = path.relative(baseDir, fullPath).replace(/\\/g, "/");
-      const parts = relativePath.split("/");
-      const folder = parts.length > 1 ? parts.slice(0, -1).join("/") : "root";
-      results.push({
-        name: file.replace(/\.(js|mjs|cjs)$/i, ""),
-        filename: file,
-        relativePath: relativePath,
-        fullPath: fullPath,
-        folder: folder.toUpperCase(),
-        size: stat.size
-      });
+    if (stat && stat.isDirectory()) {
+      results = results.concat(getAllPluginFiles(fullPath, baseDir));
+    } else if (file.endsWith(".js")) {
+      const relPath = path.relative(baseDir, fullPath).replace(/\\/g, "/");
+      results.push(relPath);
     }
   }
-  return results;
+  return results.sort((a, b) => a.localeCompare(b, "id", {
+    sensitivity: "base"
+  }));
 }
 
-function parseCli(rawInput = "") {
-  const tokens = rawInput.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g)?.map(t => t.replace(/^["']|["']$/g, "")) || [];
-  const cli = {
-    delete: null,
-    search: null,
-    freeArgs: []
-  };
-  for (let i = 0; i < tokens.length; i++) {
-    const token = tokens[i];
-    const lower = token.toLowerCase();
-    if (["--delete", "--del", "-d", "delete", "del"].includes(lower) && tokens[i + 1]) {
-      cli.delete = tokens[++i];
-    } else if (["--search", "--find", "-s"].includes(lower) && tokens[i + 1]) {
-      cli.search = tokens[++i];
-    } else {
-      cli.freeArgs.push(token);
-    }
+function groupFilesByFolder(fileList = []) {
+  const folders = {};
+  for (const file of fileList) {
+    const dir = path.dirname(file);
+    const folderKey = dir === "." ? "root" : dir;
+    if (!folders[folderKey]) folders[folderKey] = [];
+    folders[folderKey].push(file);
   }
-  return cli;
+  return folders;
+}
+
+function normalizeInputPath(rawInput = "") {
+  let clean = rawInput.trim().replace(/\\/g, "/");
+  if (clean.startsWith("plugins/")) {
+    clean = clean.slice("plugins/".length);
+  }
+  if (!clean.endsWith(".js")) {
+    clean += ".js";
+  }
+  return clean;
+}
+
+function parseFlags(input = "") {
+  const flags = {};
+  const flagRegex = /(?:^|\s)(?:--|-)([a-zA-Z0-9_]+)(?:[=\s]+("(?:\\"|[^"])*"|'(?:\\'|[^'])*'|[^\s]+))?(?=\s|$)/g;
+  let match;
+  while ((match = flagRegex.exec(input)) !== null) {
+    let key = match[1].toLowerCase();
+    let rawVal = match[2];
+    let val = true;
+    if (rawVal !== undefined) {
+      if (rawVal.startsWith('"') && rawVal.endsWith('"') || rawVal.startsWith("'") && rawVal.endsWith("'")) {
+        rawVal = rawVal.slice(1, -1);
+      }
+      if (!isNaN(rawVal) && rawVal.trim() !== "") val = Number(rawVal);
+      else val = rawVal;
+    }
+    const aliasMap = {
+      page: ["p", "pg"],
+      path: ["file", "f", "target"],
+      list: ["l", "all"]
+    };
+    if (key === "p") {
+      if (typeof val === "number" || !isNaN(val) && val !== true) {
+        key = "page";
+        val = Number(val);
+      } else {
+        key = "path";
+      }
+    }
+    for (const [realKey, aliases] of Object.entries(aliasMap)) {
+      if (aliases.includes(key)) key = realKey;
+    }
+    flags[key] = val;
+  }
+  const cleanPrompt = input.replace(flagRegex, " ").trim();
+  return {
+    flags: flags,
+    cleanPrompt: cleanPrompt
+  };
 }
 export default {
-  name: "delplugin",
-  aliases: ["delcommand", "hapusplugin", "dp", "rmplugin"],
-  description: "Hapus file plugin dari database bot via CTA Sheet",
+  name: "deleteplugin",
+  aliases: ["delplugin", "dfp", "dp", "rmplugin", "removeplugin"],
+  description: "Hapus plugin via Multi-List Folder & File",
   category: "Owner",
   owner: true,
-  example: ".delplugin | .delplugin sample | .delplugin --search test | .delplugin -d tools/sample.js",
+  example: "dfp\ndfp tts/tts-rich",
   execute: async (sock, ctx, msg) => {
-    if (!ctx.isOwner) {
-      return ctx.reply("❌ Perintah ini hanya dapat diakses oleh Owner bot.");
-    }
     const prefix = ctx.prefix || ".";
-    const quotedMsg = typeof simpleQuoted === "function" ? simpleQuoted(ctx) : msg;
     const botName = global.bot?.name || "WudysoftBot";
-    const footerText = `${botName} • Plugin File Manager`;
+    const botFooter = global.bot?.footer || `${botName} • Plugin Manager`;
+    const userName = ctx.pushname || ctx.sender?.split("@")[0] || "Owner";
+    const quotedMsg = typeof simpleQuoted === "function" ? simpleQuoted(ctx) : msg;
     const pluginsDir = path.join(process.cwd(), "plugins");
-    if (!fs.existsSync(pluginsDir)) {
-      return ctx.reply("❌ Folder `plugins` tidak ditemukan di direktori root bot.");
-    }
-    const allPlugins = getAllPlugins(pluginsDir);
-    if (allPlugins.length === 0) {
-      return ctx.reply("📂 Tidak ada file plugin (`.js`) yang ditemukan di dalam folder `plugins`.");
-    }
-    const rawInput = (ctx.query || ctx.text || "").trim();
-    const cli = parseCli(rawInput);
-    let targetPlugin = null;
-    if (cli.delete) {
-      const q = cli.delete.toLowerCase().replace(/\\/g, "/");
-      targetPlugin = allPlugins.find(p => p.relativePath.toLowerCase() === q || p.relativePath.toLowerCase() === `${q}.js` || p.filename.toLowerCase() === q || p.name.toLowerCase() === q);
-    } else if (cli.freeArgs.length > 0 && !cli.search) {
-      const firstArg = cli.freeArgs[0].toLowerCase().replace(/\\/g, "/");
-      targetPlugin = allPlugins.find(p => p.relativePath.toLowerCase() === firstArg || p.relativePath.toLowerCase() === `${firstArg}.js` || p.filename.toLowerCase() === firstArg || p.name.toLowerCase() === firstArg);
-      if (!targetPlugin) {
-        cli.search = cli.freeArgs.join(" ").trim();
-      }
-    }
-    if (targetPlugin) {
-      try {
-        await ctx.react("⏳");
-        if (!path.resolve(targetPlugin.fullPath).startsWith(path.resolve(pluginsDir))) {
-          throw new Error("Akses direktori di luar folder plugins ditolak.");
+    try {
+      let rawText = ctx.args?.join(" ")?.trim() || "";
+      if (!rawText && ctx.text) {
+        const raw = ctx.text.trim();
+        const firstWord = raw.split(/\s+/)[0].toLowerCase();
+        if (["deleteplugin", "delplugin", "dfp", "dp", "rmplugin", "removeplugin"].some(a => firstWord.endsWith(a))) {
+          rawText = raw.slice(firstWord.length).trim();
         }
-        fs.unlinkSync(targetPlugin.fullPath);
-        const textSuccess = `🗑️ *PLUGIN BERHASIL DIHAPUS*\n\n` + `╭───『 *DETAIL FILE* 』\n` + `│ 📄 *File:* \`${targetPlugin.filename}\`\n` + `│ 📂 *Path:* \`plugins/${targetPlugin.relativePath}\`\n` + `│ 📊 *Ukuran:* ${formatSize(targetPlugin.size)}\n` + `╰──────────────────\n\n` + `_File telah dihapus secara permanen dari server._`;
-        await ctx.reply(textSuccess);
-        await ctx.react("✅");
-        return;
-      } catch (error) {
-        console.error("[DelPlugin Error]:", error?.message || error);
-        await ctx.react("❌");
-        return ctx.reply(`❌ Gagal menghapus file: ${error?.message || error}`);
       }
-    }
-    let filteredList = allPlugins;
-    const isSearch = Boolean(cli.search);
-    const searchQuery = cli.search || "";
-    if (isSearch) {
-      const q = searchQuery.toLowerCase();
-      filteredList = allPlugins.filter(p => p.name.toLowerCase().includes(q) || p.relativePath.toLowerCase().includes(q));
-    }
-    if (filteredList.length === 0) {
+      const {
+        flags,
+        cleanPrompt
+      } = parseFlags(rawText);
+      const allFiles = getAllPluginFiles(pluginsDir);
+      let targetPathInput = flags.path || cleanPrompt || "";
+      if (!targetPathInput || flags.list) {
+        if (!allFiles.length) {
+          await ctx.react("❌");
+          return ctx.reply("❌ Tidak ada file plugin yang ditemukan.");
+        }
+        await ctx.react("📁");
+        const folderGroups = groupFilesByFolder(allFiles);
+        const folderKeys = Object.keys(folderGroups).sort();
+        const perPage = CONFIG.FOLDERS_PER_PAGE;
+        const totalPages = Math.ceil(folderKeys.length / perPage) || 1;
+        let page = Number(flags.page) || 1;
+        if (page < 1) page = 1;
+        if (page > totalPages) page = totalPages;
+        const startIdx = (page - 1) * perPage;
+        const currentFolders = folderKeys.slice(startIdx, startIdx + perPage);
+        const multiSections = currentFolders.map(fld => {
+          const files = folderGroups[fld] || [];
+          const sectionTitle = fld === "root" ? "📁 ROOT DIRECTORY (/)" : `📁 ${fld.toUpperCase()}`;
+          const fileRows = files.slice(0, CONFIG.MAX_FILES_PER_FOLDER).map(filePath => {
+            const fileName = path.basename(filePath);
+            return {
+              title: `🗑️ ${fileName}`.slice(0, 24),
+              id: `${prefix}deleteplugin ${filePath}`,
+              description: `Hapus: plugins/${filePath}`.slice(0, 60)
+            };
+          });
+          return {
+            title: `${sectionTitle} (${files.length} File)`.slice(0, 24),
+            rows: fileRows
+          };
+        });
+        const bodyText = `Hi ${userName}!
+Silakan pilih file plugin yang ingin Anda hapus (Hal ${page}/${totalPages}).
+
+–  *D E L E T E  P L U G I N*
+
+┌  ◦  *Total File* : ${allFiles.length} Plugin
+│  ◦  *Total Folder* : ${folderKeys.length} Kategori
+└  ◦  *Halaman* : ${page} / ${totalPages}
+
+_Peringatan: Klik salah satu file di bawah untuk langsung menghapusnya secara permanen._`;
+        const buttons = [{
+          name: "single_select",
+          buttonParamsJson: JSON.stringify({
+            title: "📂 Buka Daftar File",
+            sections: multiSections
+          })
+        }];
+        let baseCmd = `${prefix}deleteplugin`;
+        if (page > 1) {
+          buttons.push({
+            name: "quick_reply",
+            buttonParamsJson: JSON.stringify({
+              display_text: `⬅️ Hal ${page - 1}`,
+              id: `${baseCmd} -p ${page - 1}`
+            })
+          });
+        }
+        if (page < totalPages) {
+          buttons.push({
+            name: "quick_reply",
+            buttonParamsJson: JSON.stringify({
+              display_text: `➡️ Hal ${page + 1}`,
+              id: `${baseCmd} -p ${page + 1}`
+            })
+          });
+        }
+        const options = {
+          params: {
+            bottom_sheet: {
+              list_title: `${botName} • Folder Explorer`,
+              button_title: "Hapus File Target"
+            }
+          },
+          contextInfo: {
+            forwardingScore: 999,
+            isForwarded: true
+          },
+          quoted: quotedMsg
+        };
+        if (typeof ctx.sendCta === "function") {
+          return await ctx.sendCta(bodyText, botFooter, buttons, options);
+        } else {
+          return ctx.reply(bodyText);
+        }
+      }
+      const normalizedInput = normalizeInputPath(targetPathInput);
+      const exactMatch = allFiles.find(f => f.toLowerCase() === normalizedInput.toLowerCase());
+      if (exactMatch) {
+        const fullTargetPath = path.join(pluginsDir, exactMatch);
+        const fileContent = fs.readFileSync(fullTargetPath, "utf8");
+        const fileSize = (Buffer.byteLength(fileContent, "utf8") / 1024).toFixed(2);
+        fs.unlinkSync(fullTargetPath);
+        const parentDir = path.dirname(fullTargetPath);
+        try {
+          if (parentDir !== pluginsDir && fs.readdirSync(parentDir).length === 0) {
+            fs.rmdirSync(parentDir);
+          }
+        } catch {}
+        await ctx.react("🗑️");
+        return ctx.reply(`–  *D E L E T E  P L U G I N*\n\n` + `┌  ◦  *Status* : Berhasil Dihapus Permanen 🗑️\n` + `│  ◦  *File* : \`${path.basename(exactMatch)}\`\n` + `│  ◦  *Folder* : \`plugins/${path.dirname(exactMatch)}\`\n` + `│  ◦  *Path* : \`plugins/${exactMatch}\`\n` + `└  ◦  *Ukuran Sebelumnya* : ${fileSize} KB\n\n` + `${botFooter}`);
+      }
       await ctx.react("❌");
-      return ctx.reply(`🔍 *PLUGIN TIDAK DITEMUKAN*\n\nTidak ditemukan plugin dengan keyword: *"${searchQuery}"*\n\nKetik \`${prefix}delplugin\` untuk melihat seluruh list.`);
+      return ctx.reply(`❌ Plugin *"${targetPathInput}"* tidak ditemukan.`);
+    } catch (err) {
+      console.error("[DeletePlugin Error]:", err);
+      await ctx.react("❌");
+      return ctx.reply(`❌ Terjadi kesalahan: ${err?.message || err}`);
     }
-    await ctx.react("⏳");
-    const folders = [...new Set(filteredList.map(p => p.folder))].sort();
-    const buttons = [];
-    for (const folder of folders) {
-      const folderPlugins = filteredList.filter(p => p.folder === folder);
-      if (folderPlugins.length === 0) continue;
-      buttons.push({
-        name: "single_select",
-        title: `🗑️ ${folder} (${folderPlugins.length})`,
-        sections: [{
-          title: `${botName} • Hapus di Folder: ${folder}`,
-          rows: folderPlugins.map(p => ({
-            title: `🗑️ ${p.filename}`.slice(0, 24),
-            description: `Hapus plugins/${p.relativePath} (${formatSize(p.size)})`,
-            id: `${prefix}delplugin -d ${p.relativePath}`
-          }))
-        }]
-      });
-    }
-    const bodyText = isSearch ? `🔍 *HAPUS PLUGIN (PENCARIAN)*\n\n` + `╭───『 *HASIL PENCARIAN* 』\n` + `│ 🔑 *Query:* "${searchQuery}"\n` + `│ 📊 *Ditemukan:* ${filteredList.length} file\n` + `╰──────────────────\n\n` + `⚠️ *PERINGATAN:* Memilih plugin dari menu di bawah akan *langsung menghapus* file secara permanen!` : `🗑️ *DELETE PLUGIN MANAGER*\n\n` + `╭───『 *DATABASE PLUGINS* 』\n` + `│ 📊 *Total Plugins:* ${allPlugins.length} file\n` + `│ 📁 *Total Folder:* ${folders.length} folder\n` + `╰──────────────────\n\n` + `⚠️ *PERINGATAN:* Memilih file di dalam folder bawah akan *langsung menghapus* file dari server!`;
-    const bannerMedia = global.bot?.media?.banner1 || global.bot?.media?.banner2 || "https://files.catbox.moe/g2e6i5.jpg";
-    const options = {
-      image: bannerMedia,
-      params: {
-        bottom_sheet: {
-          in_thread_buttons_limit: 1,
-          divider_indices: [1],
-          list_title: `${botName} • Pilih Plugin Dihapus`,
-          button_title: "🗑️ Buka Menu Hapus"
-        }
-      },
-      contextInfo: {
-        forwardingScore: 999,
-        isForwarded: true,
-        forwardedAiBotMessageInfo: {
-          botJid: "0@bot"
-        }
-      },
-      quoted: quotedMsg
-    };
-    if (typeof ctx.sendCta === "function") {
-      await ctx.sendCta(bodyText, footerText, buttons, options);
-    } else {
-      let listText = bodyText + "\n\n";
-      filteredList.forEach((p, idx) => {
-        listText += `${idx + 1}. \`${prefix}delplugin -d ${p.relativePath}\`\n`;
-      });
-      await ctx.reply(listText);
-    }
-    await ctx.react("✅");
   }
 };

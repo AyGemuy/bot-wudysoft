@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Tactical Ops 512</title>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    body,
+    html {
+      height: 100%;
+      background: #000;
+      display: grid;
+      place-items: center;
+      overflow: hidden
+    }
+
+    .stage {
+      position: relative;
+      width: 512px;
+      height: 512px;
+      overflow: hidden;
+      border-radius: 3px;
+      isolation: isolate;
+      background: radial-gradient(ellipse at 50% 50%, #071410 0, #030805 60%, #010402 100%);
+      box-shadow: 0 30px 80px rgba(0, 0, 0, .95), 0 0 0 1px rgba(120, 255, 140, .08) inset, 0 0 0 2px #000, 0 0 0 3px rgba(120, 255, 140, .05)
+    }
+
+    .bg-hex {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      opacity: .6;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100' viewBox='0 0 56 100'%3E%3Cg fill='none' stroke='%237dff8f' stroke-opacity='0.05' stroke-width='1'%3E%3Cpath d='M28 66L0 50L0 16L28 0L56 16L56 50L28 66L28 100'/%3E%3Cpath d='M28 0L28 34L0 50L0 84L28 100L56 84L56 50L28 34'/%3E%3C/g%3E%3C/svg%3E")
+    }
+
+    .bg-vignette {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      background: radial-gradient(circle at 50% 50%, transparent 0, transparent 42%, rgba(0, 0, 0, .4) 75%, rgba(0, 0, 0, .85) 100%)
+    }
+
+    .radar-rings {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 560px;
+      height: 560px;
+      margin: -280px 0 0 -280px;
+      z-index: 2;
+      pointer-events: none;
+      opacity: .5;
+      background: repeating-radial-gradient(circle, transparent 0 44px, rgba(120, 255, 140, .055) 44px 45px);
+      -webkit-mask-image: radial-gradient(circle, #000 0%, #000 50%, transparent 80%);
+      mask-image: radial-gradient(circle, #000 0%, #000 50%, transparent 80%)
+    }
+
+    .radar {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 560px;
+      height: 560px;
+      margin: -280px 0 0 -280px;
+      z-index: 3;
+      pointer-events: none;
+      border-radius: 50%;
+      background: conic-gradient(from 0deg, transparent 0deg, transparent 300deg, rgba(120, 255, 140, .015) 320deg, rgba(120, 255, 140, .09) 345deg, rgba(160, 255, 190, .3) 359deg, transparent 360deg);
+      animation: radarSpin 9s linear infinite;
+      -webkit-mask-image: radial-gradient(circle, #000 0%, #000 45%, transparent 78%);
+      mask-image: radial-gradient(circle, #000 0%, #000 45%, transparent 78%)
+    }
+
+    @keyframes radarSpin {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    .crosshair {
+      position: absolute;
+      inset: 0;
+      z-index: 4;
+      pointer-events: none
+    }
+
+    .crosshair::after,
+    .crosshair::before {
+      content: '';
+      position: absolute;
+      background: rgba(120, 255, 140, .1)
+    }
+
+    .crosshair::before {
+      left: 0;
+      right: 0;
+      top: 50%;
+      height: 1px
+    }
+
+    .crosshair::after {
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 1px
+    }
+
+    .tick {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      z-index: 8;
+      pointer-events: none;
+      border-color: rgba(120, 255, 140, .5)
+    }
+
+    .tick.tl {
+      top: 16px;
+      left: 16px;
+      border-top: 1.5px solid;
+      border-left: 1.5px solid
+    }
+
+    .tick.tr {
+      top: 16px;
+      right: 16px;
+      border-top: 1.5px solid;
+      border-right: 1.5px solid
+    }
+
+    .tick.bl {
+      bottom: 16px;
+      left: 16px;
+      border-bottom: 1.5px solid;
+      border-left: 1.5px solid
+    }
+
+    .tick.br {
+      bottom: 16px;
+      right: 16px;
+      border-bottom: 1.5px solid;
+      border-right: 1.5px solid
+    }
+
+    .hud-top {
+      position: absolute;
+      top: 22px;
+      left: 30px;
+      right: 30px;
+      z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .22em;
+      color: rgba(150, 255, 180, .82);
+      text-transform: uppercase;
+      pointer-events: none
+    }
+
+    .hud-top .rec {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #ff3b3b;
+      box-shadow: 0 0 8px #ff3b3b;
+      margin-right: 6px;
+      vertical-align: middle;
+      animation: blink 1.2s ease-in-out infinite
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: .25
+      }
+    }
+
+    .bars {
+      display: inline-flex;
+      gap: 2px;
+      margin-left: 5px;
+      vertical-align: middle
+    }
+
+    .bars i {
+      display: block;
+      width: 3px;
+      background: #7dff8f;
+      animation: sigPulse 1.5s ease-in-out infinite
+    }
+
+    .bars i:first-child {
+      height: 5px;
+      animation-delay: 0s
+    }
+
+    .bars i:nth-child(2) {
+      height: 8px;
+      animation-delay: .15s
+    }
+
+    .bars i:nth-child(3) {
+      height: 11px;
+      animation-delay: .3s
+    }
+
+    @keyframes sigPulse {
+
+      0%,
+      100% {
+        opacity: .35
+      }
+
+      50% {
+        opacity: 1
+      }
+    }
+
+    .hud-side {
+      position: absolute;
+      z-index: 9;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8px;
+      font-weight: 500;
+      letter-spacing: .18em;
+      color: rgba(120, 220, 150, .5);
+      text-transform: uppercase;
+      line-height: 1.75;
+      pointer-events: none
+    }
+
+    .hud-side.l {
+      left: 22px;
+      top: 50%;
+      transform: translateY(-50%);
+      text-align: left
+    }
+
+    .hud-side.r {
+      right: 22px;
+      top: 50%;
+      transform: translateY(-50%);
+      text-align: right
+    }
+
+    .reticle {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 388px;
+      height: 172px;
+      margin: -86px 0 0 -194px;
+      z-index: 9;
+      pointer-events: none;
+      --ret: rgba(120, 255, 140, .7);
+      --retGlow: rgba(120, 255, 140, .45)
+    }
+
+    .reticle span {
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      border-color: var(--ret);
+      transition: border-color .25s ease, filter .25s ease;
+      filter: drop-shadow(0 0 6px var(--retGlow))
+    }
+
+    .reticle .tl {
+      top: 0;
+      left: 0;
+      border-top: 2px solid;
+      border-left: 2px solid
+    }
+
+    .reticle .tr {
+      top: 0;
+      right: 0;
+      border-top: 2px solid;
+      border-right: 2px solid
+    }
+
+    .reticle .bl {
+      bottom: 0;
+      left: 0;
+      border-bottom: 2px solid;
+      border-left: 2px solid
+    }
+
+    .reticle .br {
+      bottom: 0;
+      right: 0;
+      border-bottom: 2px solid;
+      border-right: 2px solid
+    }
+
+    .reticle::after,
+    .reticle::before {
+      content: '';
+      position: absolute;
+      left: 50%;
+      width: 1px;
+      height: 8px;
+      background: var(--ret);
+      transform: translateX(-50%);
+      transition: background .25s ease
+    }
+
+    .reticle::before {
+      top: -12px
+    }
+
+    .reticle::after {
+      bottom: -12px
+    }
+
+    .stage.armed .reticle {
+      --ret: rgba(255, 80, 80, .95);
+      --retGlow: rgba(255, 60, 60, .65)
+    }
+
+    .stage.armed .reticle span {
+      animation: reticleLock .5s ease-in-out infinite alternate
+    }
+
+    @keyframes reticleLock {
+      0% {
+        transform: scale(1)
+      }
+
+      100% {
+        transform: scale(1.12)
+      }
+    }
+
+    .stage.impact .reticle {
+      animation: reticleBurst .55s cubic-bezier(.2, .8, .3, 1) forwards
+    }
+
+    @keyframes reticleBurst {
+      0% {
+        opacity: 1;
+        transform: scale(1)
+      }
+
+      50% {
+        opacity: 1;
+        transform: scale(1.15)
+      }
+
+      100% {
+        opacity: 0;
+        transform: scale(1.6)
+      }
+    }
+
+    .word-wrap {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      display: grid;
+      place-items: center;
+      padding: 0 56px;
+      pointer-events: none
+    }
+
+    .word {
+      font-family: Anton, sans-serif;
+      font-weight: 400;
+      text-align: center;
+      white-space: nowrap;
+      line-height: 1;
+      letter-spacing: .015em
+    }
+
+    .letter {
+      display: inline-block;
+      color: #9ee8a5;
+      text-shadow: 0 0 8px rgba(120, 255, 140, .4), 0 0 22px rgba(100, 255, 130, .15);
+      transition: color .22s ease, text-shadow .22s ease;
+      will-change: transform, opacity, color, text-shadow
+    }
+
+    .letter.scrambling {
+      color: #3a7a45;
+      text-shadow: 0 0 3px rgba(80, 200, 120, .25)
+    }
+
+    .letter.flash {
+      color: #fff;
+      text-shadow: 0 0 18px #fff, 0 0 38px rgba(140, 255, 170, .9), 0 0 60px rgba(100, 255, 140, .5)
+    }
+
+    .space {
+      display: inline-block;
+      width: .32em
+    }
+
+    .stage.impact .letter {
+      animation: shatter .7s cubic-bezier(.4, .1, .3, 1) forwards;
+      animation-delay: var(--impD, 0s)
+    }
+
+    @keyframes shatter {
+      0% {
+        opacity: 1;
+        transform: translate(0, 0) rotate(0) scale(1);
+        color: #fff;
+        text-shadow: 0 0 20px #ff4040, 0 0 50px rgba(255, 60, 60, .8)
+      }
+
+      25% {
+        opacity: 1;
+        color: #fff;
+        text-shadow: 0 0 30px #ff2020, 0 0 70px rgba(255, 60, 60, .95)
+      }
+
+      100% {
+        opacity: 0;
+        transform: translate(var(--tx), var(--ty)) rotate(var(--rot)) scale(.3);
+        color: #ff4040;
+        text-shadow: 0 0 20px #ff2020
+      }
+    }
+
+    .scanlines {
+      position: absolute;
+      inset: 0;
+      z-index: 18;
+      pointer-events: none;
+      opacity: .3;
+      background: repeating-linear-gradient(0deg, transparent 0 2px, rgba(0, 0, 0, .2) 2px 3px);
+      mix-blend-mode: multiply
+    }
+
+    .scan-sweep {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 3px;
+      z-index: 19;
+      pointer-events: none;
+      background: linear-gradient(90deg, transparent 0, rgba(120, 255, 140, .12) 20%, rgba(120, 255, 140, .45) 50%, rgba(120, 255, 140, .12) 80%, transparent 100%);
+      filter: blur(.5px);
+      opacity: 0;
+      animation: scanMove 5s linear infinite
+    }
+
+    @keyframes scanMove {
+      0% {
+        top: -5px;
+        opacity: 0
+      }
+
+      5% {
+        opacity: 1
+      }
+
+      95% {
+        opacity: 1
+      }
+
+      100% {
+        top: 100%;
+        opacity: 0
+      }
+    }
+
+    .hud-bottom {
+      position: absolute;
+      left: 22px;
+      right: 22px;
+      bottom: 20px;
+      z-index: 12;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8.5px;
+      font-weight: 700;
+      letter-spacing: .2em;
+      color: rgba(150, 255, 180, .7);
+      text-transform: uppercase;
+      pointer-events: none
+    }
+
+    .status {
+      color: #ffd83a;
+      text-shadow: 0 0 8px rgba(255, 216, 58, .5);
+      transition: color .2s ease
+    }
+
+    .status.armed {
+      color: #ff3b3b;
+      text-shadow: 0 0 12px rgba(255, 59, 59, .9);
+      animation: statusBlink .5s ease-in-out infinite
+    }
+
+    @keyframes statusBlink {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: .45
+      }
+    }
+
+    .progress {
+      flex: 1;
+      max-width: 150px;
+      height: 3px;
+      background: rgba(120, 255, 140, .1);
+      position: relative;
+      overflow: hidden
+    }
+
+    .progress .fill {
+      display: block;
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, #4aff7a, #af4);
+      transform: scaleX(0);
+      transform-origin: left;
+      box-shadow: 0 0 8px rgba(120, 255, 140, .6);
+      transition: transform .06s linear
+    }
+
+    .impact-ring {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 80px;
+      height: 80px;
+      margin: -40px 0 0 -40px;
+      border-radius: 50%;
+      border: 3px solid rgba(255, 80, 80, .95);
+      box-shadow: 0 0 44px rgba(255, 60, 60, .7), inset 0 0 30px rgba(255, 60, 60, .4);
+      opacity: 0;
+      z-index: 16;
+      pointer-events: none
+    }
+
+    .stage.impact .impact-ring {
+      animation: ringOut 1s cubic-bezier(.2, .8, .3, 1) forwards
+    }
+
+    @keyframes ringOut {
+      0% {
+        opacity: 0;
+        transform: scale(.2);
+        border-width: 4px
+      }
+
+      15% {
+        opacity: 1
+      }
+
+      100% {
+        opacity: 0;
+        transform: scale(6);
+        border-width: 1px
+      }
+    }
+
+    .impact-flash {
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+      pointer-events: none;
+      opacity: 0;
+      background: radial-gradient(circle at 50% 50%, rgba(255, 240, 240, .98) 0, rgba(255, 100, 100, .65) 15%, rgba(255, 60, 60, .3) 35%, transparent 65%)
+    }
+
+    .stage.impact .impact-flash {
+      animation: flashPop .45s ease-out
+    }
+
+    @keyframes flashPop {
+      0% {
+        opacity: 0
+      }
+
+      25% {
+        opacity: 1
+      }
+
+      100% {
+        opacity: 0
+      }
+    }
+
+    .stage.impact {
+      animation: shake .5s cubic-bezier(.36, .07, .19, .97)
+    }
+
+    @keyframes shake {
+
+      0%,
+      100% {
+        transform: translate(0, 0)
+      }
+
+      20% {
+        transform: translate(3px, -2px) rotate(.22deg)
+      }
+
+      40% {
+        transform: translate(-3px, 2px) rotate(-.22deg)
+      }
+
+      60% {
+        transform: translate(3px, -1px) rotate(.15deg)
+      }
+
+      80% {
+        transform: translate(-2px, 1px) rotate(-.1deg)
+      }
+    }
+
+    .grain {
+      position: absolute;
+      inset: 0;
+      z-index: 22;
+      pointer-events: none;
+      opacity: .1;
+      mix-blend-mode: overlay;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")
+    }
+  </style>
+</head>
+
+<body>
+  <div id="kalimat-src" data-text="{{TEXT}}" hidden></div>
+  <div class="stage" id="stage">
+    <div class="bg-hex"></div>
+    <div class="bg-vignette"></div>
+    <div class="radar-rings"></div>
+    <div class="radar"></div>
+    <div class="crosshair"></div>
+    <div class="tick tl"></div>
+    <div class="tick tr"></div>
+    <div class="tick bl"></div>
+    <div class="tick br"></div>
+    <div class="hud-top"><span>TACTICAL &middot; GHOST</span> <span><i class="rec"></i>LIVE</span> <span>SIG<span class="bars"><i></i><i></i><i></i></span></span></div>
+    <div class="hud-side l">
+      <div>LAT 51.50&deg;N</div>
+      <div>LON 00.12&deg;W</div>
+      <div>ALT 002.4K</div>
+    </div>
+    <div class="hud-side r">
+      <div>AMMO 30/30</div>
+      <div>ARMOR 100%</div>
+      <div>T+<span id="timer">00:00</span></div>
+    </div>
+    <div class="reticle"><span class="tl"></span> <span class="tr"></span> <span class="bl"></span> <span class="br"></span></div>
+    <div class="word-wrap">
+      <div class="word" id="word"></div>
+    </div>
+    <div class="scanlines"></div>
+    <div class="scan-sweep"></div>
+    <div class="hud-bottom"><span>STATUS <span class="status" id="status">STANDBY</span></span> <span class="progress"><i class="fill" id="fill"></i></span> <span>OP 512 / CLS</span></div>
+    <div class="impact-ring"></div>
+    <div class="impact-flash"></div>
+    <div class="grain"></div>
+  </div>
+  <script>
+    ! function() { var t = document.getElementById("kalimat-src"),
+        e = (t && t.dataset.text || "GHOST PROTOCOL").trim() || "GHOST PROTOCOL",
+        n = document.getElementById("stage"),
+        a = document.getElementById("word"),
+        o = document.getElementById("status"),
+        s = document.getElementById("fill"),
+        l = document.getElementById("timer"),
+        r = "!@#$%&*<>?/[]{}=+-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+        c = document.createElement("canvas").getContext("2d");
+
+      function m() { return r[54 * Math.random() | 0] } c.font = "400 100px Anton"; var i = [],
+        d = [],
+        u = null,
+        f = null;
+
+      function v() { var t, n, o;
+        a.innerHTML = "", i = [], a.style.fontSize = (t = e, n = c.measureText(t).width || 1, (o = Math.min(84, 424 / n * 100)) < 16 && (o = 16), o.toFixed(1) + "px"); for (var s = 0, l = e.length, r = Math.min(90, 900 / Math.max(1, l)), d = 0; d < l; d++) { var u = e[d]; if (" " !== u) { var f = document.createElement("span");
+            f.className = "letter scrambling", f.textContent = m(); var v = Math.random() * Math.PI * 2,
+              h = 60 + 190 * Math.random();
+            f.style.setProperty("--tx", (Math.cos(v) * h).toFixed(1) + "px"), f.style.setProperty("--ty", (Math.sin(v) * h * .9 - 35).toFixed(1) + "px"), f.style.setProperty("--rot", (720 * (Math.random() - .5)).toFixed(0) + "deg"), f.style.setProperty("--impD", (.025 * s).toFixed(3) + "s"), a.appendChild(f), i.push({ el: f, ch: u, resolved: !1, resolveAt: 420 + s * r }), s++ } else { var p = document.createElement("span");
+            p.className = "space", p.innerHTML = "&nbsp;", a.appendChild(p) } } } var h = 0,
+        p = 0;
+
+      function x() { i.forEach(function(t) { t.resolved = !1, t.el.classList.add("scrambling"), t.el.classList.remove("flash"), t.el.textContent = m() }), o.textContent = "DECODING", o.classList.remove("armed"), s.style.transform = "scaleX(0)"; var t = i.length ? i[i.length - 1].resolveAt : 400;
+        p = t + 750, h = performance.now(), f = setInterval(function() { var t = performance.now() - h,
+            e = Math.min(1, t / p);
+          s.style.transform = "scaleX(" + e.toFixed(3) + ")", e >= 1 && (clearInterval(f), f = null) }, 60), u = setInterval(function() { for (var t = performance.now() - h, e = !0, n = 0; n < i.length; n++) { var a = i[n];
+            a.resolved || (e = !1, t >= a.resolveAt ? (a.resolved = !0, a.el.textContent = a.ch, a.el.classList.remove("scrambling"), a.el.classList.add("flash"), function(t) { d.push(setTimeout(function() { t.classList.remove("flash") }, 220)) }(a.el)) : a.el.textContent = m()) } e && (clearInterval(u), u = null, d.push(setTimeout(y, 700))) }, 45) }
+
+      function y() { n.classList.add("armed"), o.textContent = "LOCKED", o.classList.add("armed"), d.push(setTimeout(function() { n.classList.remove("armed"), n.classList.add("impact"), o.textContent = "STRIKE", d.push(setTimeout(I, 1800)) }, 500)) }
+
+      function I() { d.forEach(function(t) { clearTimeout(t) }), d = [], u && (clearInterval(u), u = null), f && (clearInterval(f), f = null), n.classList.remove("impact", "armed"), n.offsetWidth, x() } var L = Date.now();
+
+      function M() { v(), x() } setInterval(function() { var t = Math.floor((Date.now() - L) / 1e3),
+          e = ("0" + Math.floor(t / 60) % 100).slice(-2),
+          n = ("0" + t % 60).slice(-2);
+        l.textContent = e + ":" + n }, 500), document.fonts && document.fonts.load ? Promise.all([document.fonts.load("400 100px Anton"), document.fonts.load('700 9px "JetBrains Mono"')]).then(M).catch(M) : M() }()
+  </script>
+</body>
+
+</html>

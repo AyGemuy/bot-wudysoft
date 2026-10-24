@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+  <meta name="theme-color" content="#070a0e">
+  <title>Warfront Commando - 2D War Zone</title>
+  <style>
+    *,
+    ::after,
+    ::before {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent
+    }
+
+    body,
+    html {
+      margin: 0;
+      padding: 0
+    }
+
+    body {
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: clamp(10px, 2.2vw, 24px);
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: #eaf2ff;
+      background: radial-gradient(1200px 700px at 15% -10%, rgba(239, 68, 68, .22), transparent 62%), radial-gradient(1000px 700px at 88% 0, rgba(245, 158, 11, .18), transparent 60%), radial-gradient(900px 800px at 50% 120%, rgba(59, 130, 246, .16), transparent 62%), #070a0e;
+      background-attachment: fixed;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      position: relative
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: -25vmax;
+      z-index: -1;
+      pointer-events: none;
+      background: radial-gradient(38vmax 38vmax at 18% 14%, rgba(220, 38, 38, .28), transparent 60%), radial-gradient(34vmax 34vmax at 82% 20%, rgba(245, 158, 11, .22), transparent 60%), radial-gradient(40vmax 40vmax at 50% 92%, rgba(15, 23, 42, .5), transparent 62%);
+      filter: blur(28px);
+      animation: drift 26s ease-in-out infinite alternate
+    }
+
+    @keyframes drift {
+      0% {
+        transform: translate3d(-1.5%, 0, 0) scale(1)
+      }
+
+      100% {
+        transform: translate3d(1.5%, -2%, 0) scale(1.1)
+      }
+    }
+
+    .glass {
+      background: linear-gradient(158deg, rgba(255, 255, 255, .11), rgba(255, 255, 255, .028) 46%, rgba(255, 255, 255, .07));
+      border: 1px solid rgba(255, 255, 255, .13);
+      border-radius: 20px;
+      backdrop-filter: blur(22px) saturate(175%);
+      -webkit-backdrop-filter: blur(22px) saturate(175%);
+      box-shadow: 0 18px 46px rgba(0, 0, 0, .58), inset 0 1px 0 rgba(255, 255, 255, .2), inset 0 -1px 0 rgba(255, 255, 255, .05)
+    }
+
+    .app {
+      width: min(100%, 880px);
+      display: flex;
+      flex-direction: column;
+      gap: clamp(9px, 1.5vw, 15px);
+      margin: auto
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: clamp(9px, 1.5vw, 15px) clamp(12px, 2vw, 20px);
+      border-radius: 22px
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: clamp(9px, 1.6vw, 13px);
+      min-width: 0
+    }
+
+    .logo {
+      flex: none;
+      width: clamp(38px, 7.5vw, 50px);
+      height: clamp(38px, 7.5vw, 50px);
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      font-size: clamp(19px, 3.8vw, 26px);
+      background: linear-gradient(140deg, #ef4444, #f59e0b);
+      box-shadow: 0 10px 30px rgba(239, 68, 68, .45), inset 0 1px 0 rgba(255, 255, 255, .55)
+    }
+
+    .brand-txt {
+      min-width: 0
+    }
+
+    .brand-txt h1 {
+      margin: 0;
+      font-size: clamp(13px, 2.4vw, 18px);
+      font-weight: 800;
+      letter-spacing: .2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis
+    }
+
+    .brand-txt p {
+      margin: 2px 0 0;
+      font-size: clamp(9.5px, 1.6vw, 12px);
+      color: #94a3b8;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis
+    }
+
+    .status {
+      flex: none;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 13px;
+      border-radius: 999px;
+      font-size: clamp(9px, 1.5vw, 11px);
+      font-weight: 800;
+      letter-spacing: .12em;
+      color: #cbd5e1;
+      background: rgba(255, 255, 255, .06);
+      border: 1px solid rgba(255, 255, 255, .12);
+      white-space: nowrap
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #38bdf8;
+      box-shadow: 0 0 10px #38bdf8;
+      animation: pulse 1.6s ease-in-out infinite
+    }
+
+    .status.ready .dot {
+      background: #38bdf8;
+      box-shadow: 0 0 10px #38bdf8
+    }
+
+    .status.play .dot {
+      background: #ef4444;
+      box-shadow: 0 0 12px #ef4444
+    }
+
+    .status.over .dot {
+      background: #64748b;
+      box-shadow: 0 0 10px #64748b;
+      animation: none
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1)
+      }
+
+      50% {
+        opacity: .35;
+        transform: scale(.72)
+      }
+    }
+
+    .stage {
+      position: relative;
+      padding: clamp(5px, 1vw, 9px);
+      border-radius: 26px;
+      overflow: hidden
+    }
+
+    .stage::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      border-radius: 26px;
+      background: linear-gradient(140deg, rgba(255, 255, 255, .14), transparent 30%, transparent 70%, rgba(255, 255, 255, .06));
+      mix-blend-mode: overlay
+    }
+
+    #gameCanvas {
+      display: block;
+      width: 100%;
+      aspect-ratio: 16/9;
+      border-radius: 20px;
+      background: #090d14;
+      touch-action: none
+    }
+
+    .hud {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: clamp(7px, 1.3vw, 12px)
+    }
+
+    .stat {
+      padding: clamp(8px, 1.4vw, 13px) 6px;
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      text-align: center
+    }
+
+    .stat-label {
+      font-size: clamp(8px, 1.5vw, 10px);
+      font-weight: 800;
+      letter-spacing: .16em;
+      color: #94a3b8;
+      text-transform: uppercase
+    }
+
+    .stat strong {
+      font-size: clamp(14px, 3.2vw, 22px);
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: .02em;
+      color: #f87171;
+      text-shadow: 0 0 20px rgba(239, 68, 68, .55);
+      line-height: 1.15
+    }
+
+    .stat:nth-child(2) strong {
+      color: #fbbf24;
+      text-shadow: 0 0 20px rgba(251, 191, 36, .55)
+    }
+
+    .stat:nth-child(3) strong {
+      color: #38bdf8;
+      text-shadow: 0 0 20px rgba(56, 189, 248, .45)
+    }
+
+    .hint {
+      margin: 0;
+      padding: clamp(9px, 1.5vw, 13px) clamp(12px, 2vw, 18px);
+      border-radius: 16px;
+      font-size: clamp(10px, 1.7vw, 12.5px);
+      line-height: 1.55;
+      color: #94a3b8;
+      text-align: center
+    }
+
+    .hint kbd {
+      display: inline-block;
+      padding: 1px 7px;
+      margin: 0 1px;
+      border-radius: 7px;
+      background: rgba(255, 255, 255, .1);
+      border: 1px solid rgba(255, 255, 255, .16);
+      box-shadow: 0 1px 0 rgba(0, 0, 0, .35);
+      font-family: inherit;
+      font-size: .92em;
+      font-weight: 700;
+      color: #f1f5f9
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.35fr;
+      gap: clamp(8px, 1.3vw, 12px)
+    }
+
+    .ctrl {
+      position: relative;
+      min-height: clamp(52px, 8.5vh, 68px);
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, .15);
+      color: #fff;
+      font-family: inherit;
+      font-weight: 800;
+      font-size: clamp(11.5px, 2.1vw, 14px);
+      letter-spacing: .04em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      user-select: none;
+      touch-action: none;
+      overflow: hidden;
+      background: linear-gradient(158deg, rgba(255, 255, 255, .13), rgba(255, 255, 255, .035));
+      backdrop-filter: blur(16px) saturate(165%);
+      -webkit-backdrop-filter: blur(16px) saturate(165%);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, .42), inset 0 1px 0 rgba(255, 255, 255, .24);
+      transition: transform .1s ease, box-shadow .22s ease, filter .22s ease
+    }
+
+    .ctrl span {
+      position: relative;
+      z-index: 1
+    }
+
+    .ctrl::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(160deg, rgba(255, 255, 255, .22), transparent 55%);
+      opacity: .6;
+      pointer-events: none
+    }
+
+    .ctrl.fire {
+      border-color: rgba(239, 68, 68, .5);
+      background: linear-gradient(140deg, #ef4444, #dc2626 45%, #b91c1c 100%);
+      box-shadow: 0 14px 34px rgba(220, 38, 38, .45), inset 0 1px 0 rgba(255, 255, 255, .55)
+    }
+
+    .ctrl.jump {
+      border-color: rgba(245, 158, 11, .5);
+      background: linear-gradient(140deg, #f59e0b, #d97706 45%, #b45309 100%);
+      box-shadow: 0 14px 34px rgba(217, 119, 6, .45), inset 0 1px 0 rgba(255, 255, 255, .55)
+    }
+
+    .ctrl:active {
+      transform: translateY(2px) scale(.985);
+      filter: brightness(1.1)
+    }
+
+    @media (hover:hover) {
+      .ctrl:hover {
+        filter: brightness(1.12)
+      }
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(4, 7, 12, .75);
+      backdrop-filter: blur(16px) saturate(130%);
+      -webkit-backdrop-filter: blur(16px) saturate(130%)
+    }
+
+    .overlay.show {
+      display: flex;
+      animation: fadeIn .22s ease
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0
+      }
+
+      to {
+        opacity: 1
+      }
+    }
+
+    .modal {
+      width: min(94vw, 400px);
+      padding: clamp(22px, 4vw, 30px);
+      border-radius: 26px;
+      text-align: center;
+      animation: pop .3s cubic-bezier(.2, .9, .3, 1.2)
+    }
+
+    @keyframes pop {
+      from {
+        transform: translateY(14px) scale(.94);
+        opacity: 0
+      }
+
+      to {
+        transform: none;
+        opacity: 1
+      }
+    }
+
+    .modalIcon {
+      width: 74px;
+      height: 74px;
+      margin: 0 auto 12px;
+      border-radius: 24px;
+      display: grid;
+      place-items: center;
+      font-size: 36px;
+      background: linear-gradient(140deg, rgba(239, 68, 68, .4), rgba(245, 158, 11, .26));
+      border: 1px solid rgba(255, 255, 255, .16);
+      box-shadow: 0 14px 40px rgba(239, 68, 68, .4), inset 0 1px 0 rgba(255, 255, 255, .28)
+    }
+
+    .modal h2 {
+      margin: 0 0 6px;
+      font-size: clamp(20px, 4.2vw, 25px);
+      letter-spacing: .06em;
+      font-weight: 800
+    }
+
+    .modal .final {
+      margin: 0 0 4px;
+      font-size: clamp(12px, 2.2vw, 14px);
+      color: #94a3b8
+    }
+
+    .modal .final b {
+      color: #f87171;
+      font-variant-numeric: tabular-nums;
+      font-size: 1.25em
+    }
+
+    .modal .best {
+      margin: 0 0 20px;
+      font-size: clamp(10px, 1.8vw, 12px);
+      color: #fbbf24;
+      letter-spacing: .08em;
+      font-weight: 700
+    }
+
+    .btn-restart {
+      width: 100%;
+      min-height: 52px;
+      border: none;
+      border-radius: 16px;
+      font-family: inherit;
+      font-weight: 800;
+      font-size: clamp(13px, 2.4vw, 15px);
+      letter-spacing: .05em;
+      color: #fff;
+      cursor: pointer;
+      background: linear-gradient(140deg, #ef4444, #dc2626 40%, #ea580c);
+      box-shadow: 0 16px 38px rgba(220, 38, 38, .45), inset 0 1px 0 rgba(255, 255, 255, .5);
+      transition: transform .1s ease, filter .2s ease
+    }
+
+    .btn-restart:active {
+      transform: scale(.975);
+      filter: brightness(1.1)
+    }
+
+    @media (max-width:440px) {
+      .topbar {
+        border-radius: 18px
+      }
+
+      .hint {
+        display: none
+      }
+
+      .brand-txt p {
+        display: none
+      }
+    }
+
+    @media (max-height:640px) {
+      .hint {
+        display: none
+      }
+
+      .ctrl {
+        min-height: 48px
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <header class="topbar glass">
+      <div class="brand">
+        <div class="logo">🎖️</div>
+        <div class="brand-txt">
+          <h1>Warfront: Commando Run</h1>
+          <p>Tembak musuh &amp; lewati rintangan tempur</p>
+        </div>
+      </div>
+      <div class="status ready" id="statusBox"><span class="dot"></span><span id="statusLabel">SIAP TEMPUR</span></div>
+    </header>
+    <div class="stage glass"><canvas id="gameCanvas" width="640" height="360"></canvas></div>
+    <div class="hud">
+      <div class="stat glass"><span class="stat-label">Skor Tempur</span> <strong id="scoreVal">00000</strong></div>
+      <div class="stat glass"><span class="stat-label">Rekor</span> <strong id="highScoreVal">00000</strong></div>
+      <div class="stat glass"><span class="stat-label">Eliminasi</span> <strong id="killVal">000</strong></div>
+    </div>
+    <p class="hint glass"><kbd>Spasi</kbd> / <kbd>↑</kbd> lompat &nbsp;•&nbsp; <kbd>↓</kbd> merayap &nbsp;•&nbsp; <kbd>F</kbd> / <kbd>X</kbd> tembak senapan</p>
+    <div class="controls"><button class="ctrl glass" id="btnDuck" aria-label="Merayap">🔽 <span>TIARAP</span></button> <button class="ctrl jump" id="btnJump" aria-label="Lompat">🔼 <span>LOMPAT</span></button> <button class="ctrl fire" id="btnFire" aria-label="Tembak">🔥 <span>TEMBAK</span></button></div>
+  </div>
+  <div class="overlay" id="overlay">
+    <div class="modal glass">
+      <div class="modalIcon">💥</div>
+      <h2>GUGUR DI MEDAN TEMPUR</h2>
+      <p class="final">Skor perang: <b id="finalScoreDesc">0</b></p>
+      <p class="best" id="bestDesc">REKOR TERTINGGI: 0</p><button class="btn-restart" id="btnRestart">🔄 TEMPUR LAGI</button>
+    </div>
+  </div>
+  <script>
+    "use strict";
+    let audioCtx = null;
+
+    function initAudio() { try { audioCtx || (audioCtx = new(window.AudioContext || window.webkitAudioContext)), "suspended" === audioCtx.state && audioCtx.resume() } catch (t) {} }
+
+    function playSound(t) { if (audioCtx) try { const e = audioCtx.currentTime,
+          i = audioCtx.createOscillator(),
+          l = audioCtx.createGain();
+        i.connect(l), l.connect(audioCtx.destination), "jump" === t ? (i.type = "sine", i.frequency.setValueAtTime(140, e), i.frequency.exponentialRampToValueAtTime(320, e + .12), l.gain.setValueAtTime(.08, e), l.gain.exponentialRampToValueAtTime(.001, e + .14), i.start(e), i.stop(e + .15)) : "shoot" === t ? (i.type = "sawtooth", i.frequency.setValueAtTime(600, e), i.frequency.exponentialRampToValueAtTime(80, e + .1), l.gain.setValueAtTime(.12, e), l.gain.exponentialRampToValueAtTime(.001, e + .11), i.start(e), i.stop(e + .12)) : "hit" === t || "explode" === t ? (i.type = "square", i.frequency.setValueAtTime(120, e), i.frequency.linearRampToValueAtTime(25, e + .28), l.gain.setValueAtTime(.18, e), l.gain.exponentialRampToValueAtTime(.001, e + .3), i.start(e), i.stop(e + .3)) : "duck" === t && (i.type = "triangle", i.frequency.setValueAtTime(240, e), i.frequency.exponentialRampToValueAtTime(130, e + .08), l.gain.setValueAtTime(.05, e), l.gain.exponentialRampToValueAtTime(.001, e + .09), i.start(e), i.stop(e + .1)) } catch (t) {} }
+    const canvas = document.getElementById("gameCanvas"),
+      ctx = canvas.getContext("2d", { alpha: !1 }),
+      W = 640,
+      H = 360,
+      GROUND = 286;
+
+    function fitCanvas() { const t = canvas.getBoundingClientRect(),
+        e = Math.max(t.width || W, 1),
+        i = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(e * i), canvas.height = Math.round(e * (H / W) * i); const l = e / W * i;
+      ctx.setTransform(l, 0, 0, l, 0, 0), ctx.imageSmoothingEnabled = !0 }
+    const clamp = (t, e, i) => t < e ? e : t > i ? i : t;
+    let state = "ready",
+      score = 0,
+      highScore = 0,
+      kills = 0,
+      speed = 5.2,
+      time = 0,
+      spawnDist = 380,
+      groundScroll = 0,
+      cityScrollA = 0,
+      cityScrollB = 0,
+      lastShownScore = -1,
+      lastShownKills = -1;
+    const particles = [],
+      bullets = [];
+    let obstacles = [];
+    class Soldier { constructor() { this.x = 65, this.standW = 38, this.standH = 46, this.duckW = 46, this.duckH = 24, this.reset() } reset() { this.w = this.standW, this.h = this.standH, this.y = 286 - this.h, this.vy = 0, this.grounded = !0, this.ducking = !1, this.legPhase = 0, this.muzzleTime = 0 } get bottom() { return this.y + this.h } jump() { "over" !== state && this.grounded && (this.ducking && this.setDuck(!1), this.vy = -13.6, this.grounded = !1, playSound("jump"), spawnDust(this.x + 18, 286, 9, "#718096")) } releaseJump() { this.vy < -5.2 && (this.vy = -5.2) } setDuck(t) { if (this.ducking === t) return; const e = this.bottom;
+        this.ducking = t, this.w = t ? this.duckW : this.standW, this.h = t ? this.duckH : this.standH, this.y = e - this.h, t && this.grounded && playSound("duck") } shoot() { if ("playing" !== state) return;
+        playSound("shoot"), this.muzzleTime = 4; const t = this.x + (this.ducking ? 46 : 38),
+          e = this.y + (this.ducking ? 13 : 19);
+        bullets.push({ x: t, y: e, vx: 16, alive: !0 }), spawnShell(this.x + 22, this.y + 18) } update(t) { this.vy += .8 * t, this.y += this.vy * t, this.y + this.h >= 286 ? (this.grounded || spawnDust(this.x + 18, 286, 7, "#718096"), this.y = 286 - this.h, this.vy = 0, this.grounded = !0) : this.grounded = !1, this.grounded && (this.legPhase += (this.ducking ? .7 : .44) * t * clamp(speed / 5.2, .7, 1.8)), this.muzzleTime > 0 && (this.muzzleTime -= t) } draw() { const t = 286 - this.bottom,
+          e = clamp(1 - t / 160, .3, .8); if (ctx.save(), ctx.globalAlpha = .35 * e, ctx.fillStyle = "#000", ctx.beginPath(), ctx.ellipse(this.x + .5 * this.w, 289, (this.ducking ? 25 : 20) * e, 5 * e, 0, 0, 2 * Math.PI), ctx.fill(), ctx.restore(), ctx.save(), ctx.translate(this.x, this.y), this.ducking ? this.drawCrawl() : this.drawRunning(), this.muzzleTime > 0) { const t = this.ducking ? 48 : 42,
+            e = this.ducking ? 12 : 18;
+          ctx.fillStyle = "#fbbf24", ctx.beginPath(), ctx.arc(t, e, 7 + 4 * Math.random(), 0, 2 * Math.PI), ctx.fill(), ctx.fillStyle = "#fff", ctx.beginPath(), ctx.arc(t, e, 4, 0, 2 * Math.PI), ctx.fill() } ctx.restore() } drawRunning() { const t = this.legPhase,
+          e = Math.sin(t),
+          i = Math.sin(t + Math.PI);
+        ctx.strokeStyle = "#1e293b", ctx.lineWidth = 5, ctx.lineCap = "round", ctx.beginPath(), ctx.moveTo(16, 30), ctx.lineTo(16 + 11 * i, 44), ctx.stroke(), ctx.strokeStyle = "#334155", ctx.beginPath(), ctx.moveTo(22, 30), ctx.lineTo(22 + 11 * e, 44), ctx.stroke(), ctx.fillStyle = "#273426", ctx.fillRect(10, 16, 17, 18), ctx.fillStyle = "#b45309", ctx.fillRect(13, 27, 12, 4), ctx.fillStyle = "#1e3a1f", ctx.beginPath(), ctx.arc(18, 10, 8.5, Math.PI, 0), ctx.fill(), ctx.fillStyle = "#d4a373", ctx.fillRect(14, 9, 8, 5), ctx.fillStyle = "#38bdf8", ctx.fillRect(18, 9, 5, 2.5), ctx.fillStyle = "#0f172a", ctx.fillRect(16, 18, 24, 5), ctx.fillRect(20, 23, 4, 6), ctx.fillRect(12, 20, 6, 3) } drawCrawl() { ctx.fillStyle = "#1e293b", ctx.fillRect(4, 15, 22, 7), ctx.fillStyle = "#273426", ctx.fillRect(18, 10, 20, 10), ctx.fillStyle = "#1e3a1f", ctx.beginPath(), ctx.arc(40, 11, 7, 0, 2 * Math.PI), ctx.fill(), ctx.fillStyle = "#38bdf8", ctx.fillRect(41, 10, 4, 2.5), ctx.fillStyle = "#0f172a", ctx.fillRect(24, 13, 26, 4) } } class Obstacle { constructor(t) { this.type = t, this.dead = !1, this.hp = "drone" === t ? 2 : 1, this.phase = Math.random() * Math.PI * 2, "mine" === t ? (this.w = 26, this.h = 16, this.y = 286 - this.h) : "barricade" === t ? (this.w = 32, this.h = 36, this.y = 286 - this.h) : "enemy_soldier" === t ? (this.w = 34, this.h = 44, this.y = 286 - this.h) : (this.w = 40, this.h = 24, this.y = Math.random() < .5 ? 200 : 160), this.x = 680 } update(t) { this.x -= speed * t, "drone" === this.type && (this.y += .7 * Math.sin(.1 * time + this.phase)), this.x + this.w < -60 && (this.dead = !0) } draw() { ctx.save(), ctx.translate(this.x, this.y), "mine" === this.type ? (ctx.fillStyle = "#334155", ctx.beginPath(), ctx.ellipse(this.w / 2, this.h - 4, 12, 6, 0, 0, 2 * Math.PI), ctx.fill(), ctx.fillStyle = "#ef4444", ctx.beginPath(), ctx.arc(this.w / 2, this.h - 7, 2.5, 0, 2 * Math.PI), ctx.fill()) : "barricade" === this.type ? (ctx.fillStyle = "#78350f", ctx.fillRect(2, 18, 28, 18), ctx.fillStyle = "#92400e", ctx.fillRect(6, 6, 20, 12), ctx.strokeStyle = "#94a3b8", ctx.lineWidth = 1.5, ctx.beginPath(), ctx.moveTo(0, 4), ctx.lineTo(32, 2), ctx.moveTo(0, 14), ctx.lineTo(32, 12), ctx.stroke()) : "enemy_soldier" === this.type ? (ctx.fillStyle = "#450a0a", ctx.fillRect(10, 16, 16, 18), ctx.fillStyle = "#1e293b", ctx.fillRect(8, 32, 8, 12), ctx.fillRect(18, 32, 8, 12), ctx.fillStyle = "#18181b", ctx.beginPath(), ctx.arc(18, 10, 8, Math.PI, 0), ctx.fill(), ctx.fillStyle = "#ef4444", ctx.fillRect(12, 9, 6, 2.5), ctx.fillStyle = "#0f172a", ctx.fillRect(0, 18, 16, 5)) : "drone" === this.type && (ctx.fillStyle = "#1e293b", ctx.beginPath(), ctx.ellipse(this.w / 2, this.h / 2, 18, 8, 0, 0, 2 * Math.PI), ctx.fill(), ctx.strokeStyle = "rgba(255,255,255,0.7)", ctx.lineWidth = 2, ctx.beginPath(), ctx.moveTo(2, 4), ctx.lineTo(16, 4), ctx.moveTo(24, 4), ctx.lineTo(38, 4), ctx.stroke(), ctx.fillStyle = "#ef4444", ctx.beginPath(), ctx.arc(8, this.h / 2 + 1, 2.8, 0, 2 * Math.PI), ctx.fill()), ctx.restore() } }
+
+    function spawnDust(t, e, i, l) { for (let a = 0; a < i; a++) particles.push({ x: t + 12 * (Math.random() - .5), y: e - 4 * Math.random(), vx: 3 * (Math.random() - .5) - 1, vy: 2.5 * -Math.random(), life: 1, decay: .03 + .03 * Math.random(), size: 2 + 3 * Math.random(), col: l || "rgba(180,180,180,1)" }) }
+
+    function spawnExplosion(t, e) { playSound("explode"); for (let i = 0; i < 18; i++) { const i = Math.random() * Math.PI * 2,
+          l = 2 + 4.5 * Math.random();
+        particles.push({ x: t, y: e, vx: Math.cos(i) * l, vy: Math.sin(i) * l - 1.2, life: 1, decay: .024 + .03 * Math.random(), size: 2.5 + 4 * Math.random(), col: Math.random() < .6 ? "#f59e0b" : "#ef4444" }) } }
+
+    function spawnShell(t, e) { particles.push({ x: t, y: e, vx: -1.5 - 2 * Math.random(), vy: -2.8 - 1.5 * Math.random(), life: 1, decay: .04, size: 2, col: "#fbbf24" }) }
+
+    function updateParticles(t) { for (let e = particles.length - 1; e >= 0; e--) { const i = particles[e];
+        i.x += i.vx * t, i.y += i.vy * t, i.vy += .15 * t, i.life -= i.decay * t, i.life <= 0 && particles.splice(e, 1) } }
+
+    function drawParticles() { for (const t of particles) ctx.globalAlpha = clamp(t.life, 0, 1), ctx.fillStyle = t.col, ctx.beginPath(), ctx.arc(t.x, t.y, t.size * t.life, 0, 2 * Math.PI), ctx.fill();
+      ctx.globalAlpha = 1 }
+    const soldier = new Soldier,
+      clouds = [{ x: 120, y: 55, s: 1.2, sp: .2 }, { x: 380, y: 80, s: .9, sp: .15 }, { x: 580, y: 45, s: .7, sp: .22 }];
+
+    function resetGame() { state = "ready", score = 0, kills = 0, speed = 5.2, spawnDist = 380, obstacles = [], bullets.length = 0, particles.length = 0, soldier.reset(), document.getElementById("overlay").classList.remove("show"), setStatus("ready", "SIAP TEMPUR"), updateHUD(!0) }
+
+    function startGame() { "ready" === state && (state = "playing", setStatus("play", "MEDAN TEMPUR")) }
+
+    function endGame() { state = "over", playSound("hit"), setStatus("over", "GUGUR (K.I.A)"); const t = Math.floor(score);
+      t > highScore && (highScore = t), document.getElementById("finalScoreDesc").textContent = t, document.getElementById("bestDesc").textContent = "REKOR TERTINGGI: " + highScore, document.getElementById("overlay").classList.add("show"), updateHUD(!0) }
+
+    function setStatus(t, e) { document.getElementById("statusBox").className = "status " + t, document.getElementById("statusLabel").textContent = e }
+
+    function checkCollision(t, e) { const i = t.x + (t.ducking ? 4 : 8),
+        l = t.w - (t.ducking ? 8 : 14),
+        a = t.y + 4,
+        s = t.h - 6,
+        n = e.x + 4,
+        c = e.w - 8,
+        o = e.y + 4,
+        r = e.h - 6; return i < n + c && i + l > n && a < o + r && a + s > o }
+
+    function update(t) { if (time += t, "over" !== state) { if ("playing" === state) { if (speed = 5.2 + Math.min(score / 170, 7.5), score += .15 * t, spawnDist -= speed * t, spawnDist <= 0) { const t = Math.random(); let e = "mine";
+            t < .28 ? e = "barricade" : t < .6 ? e = "enemy_soldier" : t < .88 && (e = "drone"), obstacles.push(new Obstacle(e)), spawnDist = speed * (45 + 32 * Math.random()) } } else speed = 5.2;
+        groundScroll += speed * t, cityScrollA += .15 * speed * t, cityScrollB += .35 * speed * t, soldier.update(t); for (let e = bullets.length - 1; e >= 0; e--) { const i = bullets[e]; if (i.x += i.vx * t, i.x > 660) bullets.splice(e, 1);
+          else { for (let t = obstacles.length - 1; t >= 0; t--) { const e = obstacles[t]; if (!e.dead && ("enemy_soldier" === e.type || "drone" === e.type) && i.x >= e.x && i.x <= e.x + e.w && i.y >= e.y && i.y <= e.y + e.h) { i.alive = !1, e.hp--, spawnExplosion(i.x, i.y), e.hp <= 0 && (e.dead = !0, kills++, score += 45); break } } i.alive || bullets.splice(e, 1) } } for (let e = obstacles.length - 1; e >= 0; e--) { const i = obstacles[e];
+          i.update(t), !i.dead && checkCollision(soldier, i) && (spawnExplosion(soldier.x + soldier.w / 2, soldier.y + soldier.h / 2), endGame()), i.dead && obstacles.splice(e, 1) } for (const e of clouds) e.x -= speed * e.sp * .35 * t, e.x < -120 && (e.x = 680, e.y = 30 + 80 * Math.random()) } updateParticles(t) }
+
+    function render() { const t = ctx.createLinearGradient(0, 0, 0, 286);
+      t.addColorStop(0, "#120a16"), t.addColorStop(.5, "#2b1414"), t.addColorStop(1, "#3f1b1b"), ctx.fillStyle = t, ctx.fillRect(0, 0, W, 286), ctx.save(), ctx.globalAlpha = .08, ctx.fillStyle = "#fbbf24"; const e = 220 + 120 * Math.sin(.02 * time);
+      ctx.beginPath(), ctx.moveTo(e, 286), ctx.lineTo(e - 70, 0), ctx.lineTo(e + 50, 0), ctx.fill(), ctx.restore(), ctx.save(), ctx.fillStyle = "rgba(40, 25, 25, 0.4)"; for (const t of clouds) ctx.beginPath(), ctx.arc(t.x, t.y, 24 * t.s, 0, 2 * Math.PI), ctx.arc(t.x + 20 * t.s, t.y - 6 * t.s, 18 * t.s, 0, 2 * Math.PI), ctx.arc(t.x + 40 * t.s, t.y + 4 * t.s, 22 * t.s, 0, 2 * Math.PI), ctx.fill();
+      ctx.restore(), drawCitySkyline(cityScrollA, 210, 48, "rgba(22, 14, 20, 0.65)"), drawCitySkyline(cityScrollB, 240, 32, "rgba(15, 10, 14, 0.88)"), ctx.fillStyle = "#1e1310", ctx.fillRect(0, 286, W, 74), ctx.strokeStyle = "#ef4444", ctx.lineWidth = 2, ctx.beginPath(), ctx.moveTo(0, 286), ctx.lineTo(W, 286), ctx.stroke(); const i = groundScroll % 36;
+      ctx.strokeStyle = "rgba(255,255,255,0.08)", ctx.lineWidth = 2; for (let t = -36; t < 676; t += 36) ctx.beginPath(), ctx.moveTo(t - i, 298), ctx.lineTo(t - i + 16, 298), ctx.stroke();
+      ctx.fillStyle = "#fef08a"; for (const t of bullets) ctx.fillRect(t.x, t.y - 1.5, 9, 3); for (const t of obstacles) t.draw();
+      soldier.draw(), drawParticles(); const l = ctx.createRadialGradient(320, 180, .35 * H, 320, 180, 352);
+      l.addColorStop(0, "rgba(0,0,0,0)"), l.addColorStop(1, "rgba(0,0,0,0.5)"), ctx.fillStyle = l, ctx.fillRect(0, 0, W, H) }
+
+    function drawCitySkyline(t, e, i, l) { const a = 60,
+        s = (t % a + a) % a;
+      ctx.fillStyle = l, ctx.beginPath(), ctx.moveTo(-60 - s, 286); for (let t = -60 - s; t < 760; t += a) { const l = Math.sin(12.3 * t) * (.5 * i);
+        ctx.lineTo(t, e - l), ctx.lineTo(t + 45, e - l), ctx.lineTo(t + 45, 286) } ctx.closePath(), ctx.fill() }
+
+    function updateHUD(t) { const e = Math.floor(score);
+      (t || e !== lastShownScore) && (lastShownScore = e, e > highScore && (highScore = e), document.getElementById("scoreVal").textContent = String(e).padStart(5, "0"), document.getElementById("highScoreVal").textContent = String(highScore).padStart(5, "0")), (t || kills !== lastShownKills) && (lastShownKills = kills, document.getElementById("killVal").textContent = String(kills).padStart(3, "0")) }
+    let lastT = 0;
+
+    function loop(t) { lastT || (lastT = t); let e = (t - lastT) / 16.6667;
+      lastT = t, (!isFinite(e) || e <= 0) && (e = 1), e = Math.min(e, 2.5), update(e), render(), updateHUD(!1), requestAnimationFrame(loop) }
+
+    function handleJump() { initAudio(), "over" !== state ? ("ready" === state && startGame(), soldier.jump()) : resetGame() }
+
+    function handleDuck(t) { initAudio(), "over" !== state && soldier.setDuck(t) }
+
+    function handleFire() { initAudio(), "ready" === state && startGame(), soldier.shoot() } window.addEventListener("keydown", t => { "Space" === t.code || "ArrowUp" === t.code || "KeyW" === t.code ? (t.preventDefault(), t.repeat || handleJump()) : "ArrowDown" === t.code || "KeyS" === t.code ? (t.preventDefault(), t.repeat || handleDuck(!0)) : "KeyF" === t.code || "KeyX" === t.code ? (t.preventDefault(), t.repeat || handleFire()) : "Enter" === t.code && "over" === state && (t.preventDefault(), resetGame()) }, { passive: !1 }), window.addEventListener("keyup", t => { "Space" === t.code || "ArrowUp" === t.code || "KeyW" === t.code ? soldier.releaseJump() : "ArrowDown" !== t.code && "KeyS" !== t.code || handleDuck(!1) });
+    const btnJump = document.getElementById("btnJump"),
+      btnDuck = document.getElementById("btnDuck"),
+      btnFire = document.getElementById("btnFire");
+    btnJump.addEventListener("pointerdown", t => { t.preventDefault(), handleJump() }), btnJump.addEventListener("pointerup", t => { t.preventDefault(), soldier.releaseJump() }), btnJump.addEventListener("pointercancel", () => soldier.releaseJump()), btnDuck.addEventListener("pointerdown", t => { t.preventDefault(), handleDuck(!0) }), btnDuck.addEventListener("pointerup", t => { t.preventDefault(), handleDuck(!1) }), btnDuck.addEventListener("pointercancel", () => handleDuck(!1)), btnDuck.addEventListener("pointerleave", () => handleDuck(!1)), btnFire.addEventListener("pointerdown", t => { t.preventDefault(), handleFire() }), canvas.addEventListener("pointerdown", t => { t.preventDefault(), handleJump() }), canvas.addEventListener("pointerup", t => { t.preventDefault(), soldier.releaseJump() }), document.getElementById("btnRestart").addEventListener("click", () => { initAudio(), resetGame() }), window.ResizeObserver ? new ResizeObserver(() => fitCanvas()).observe(canvas) : window.addEventListener("resize", fitCanvas), window.addEventListener("orientationchange", () => setTimeout(fitCanvas, 150)), fitCanvas(), resetGame(), requestAnimationFrame(loop), window.addEventListener("load", fitCanvas), setTimeout(fitCanvas, 250)
+  </script>
+</body>
+
+</html>

@@ -88,9 +88,7 @@ export default {
         await clearJadibotSession(sock, senderNum, true);
         await deleteJadiBot(senderNum);
         if (typeof ctx?.react === "function") await ctx.react("🛑");
-        await ctx.reply(`–  *C A N C E L L E D*
-
-Sesi penautan Jadibot untuk @${senderNum} berhasil dibatalkan dan pesan pairing telah dibersihkan.`, {
+        await ctx.reply(`–  *C A N C E L L E D*\n\nSesi penautan Jadibot untuk @${senderNum} berhasil dibatalkan dan pesan pairing telah dibersihkan.`, {
           mentions: [`${senderNum}@s.whatsapp.net`]
         });
         return true;
@@ -108,19 +106,32 @@ Sesi penautan Jadibot untuk @${senderNum} berhasil dibatalkan dan pesan pairing 
     const isOwner = Boolean(opt.isOwner ?? ctx.isOwner ?? false);
     const subCmd = (args[0] || "").toLowerCase();
     const prefix = ctx.prefix || ".";
-    const senderNum = (ctx.senderNumber || ctx.sender || "").split("@")[0].replace(/\D/g, "");
-    const targetPrivateJid = `${senderNum}@s.whatsapp.net`;
+    const myNum = (ctx.senderNumber || ctx.sender || "").split("@")[0].replace(/\D/g, "");
+    let targetNum = myNum;
+    if (ctx.quoted?.sender) {
+      targetNum = ctx.quoted.sender.split("@")[0].replace(/\D/g, "");
+    } else if (ctx.mentionedJid && ctx.mentionedJid.length > 0) {
+      targetNum = ctx.mentionedJid[0].split("@")[0].replace(/\D/g, "");
+    } else if (args[1] && args[1].replace(/\D/g, "").length >= 7) {
+      targetNum = args[1].replace(/\D/g, "");
+    } else if (subCmd && subCmd.replace(/\D/g, "").length >= 7) {
+      targetNum = subCmd.replace(/\D/g, "");
+    }
+    if (targetNum.startsWith("0")) {
+      targetNum = "62" + targetNum.slice(1);
+    }
+    const targetPrivateJid = `${targetNum}@s.whatsapp.net`;
     const botName = global.bot?.name || "WudysoftBot";
     const botFooter = global.bot?.footer || `${botName} • Jadibot Manager`;
     if (["clean", "cleansession", "cs"].includes(subCmd) || command === "cleanbot") {
-      let targetNum = (args[1] || senderNum).replace(/\D/g, "");
-      if (!isOwner && targetNum !== senderNum) {
-        targetNum = senderNum;
+      let cleanTarget = targetNum;
+      if (!isOwner && cleanTarget !== myNum) {
+        cleanTarget = myNum;
       }
-      const sessionPath = path.join(process.cwd(), "session_jadibot", targetNum);
+      const sessionPath = path.join(process.cwd(), "session_jadibot", cleanTarget);
       if (!fs.existsSync(sessionPath)) {
-        return ctx.reply(`❌ Folder session untuk sub-bot *@${targetNum}* tidak ditemukan.`, {
-          mentions: [`${targetNum}@s.whatsapp.net`]
+        return ctx.reply(`❌ Folder session untuk sub-bot *@${cleanTarget}* tidak ditemukan.`, {
+          mentions: [`${cleanTarget}@s.whatsapp.net`]
         });
       }
       if (typeof ctx.react === "function") await ctx.react("⏳");
@@ -151,29 +162,15 @@ Sesi penautan Jadibot untuk @${senderNum} berhasil dibatalkan dan pesan pairing 
         } catch (_) {}
       }
       if (typeof ctx.react === "function") await ctx.react("✅");
-      const cleanText = `–  *C L E A N  J A D I B O T*
-
-Pembersihan sesi sub-bot *@${targetNum}* selesai.
-
-┌  ◦  *Total File* : ${files.length}
-│  ◦  *File Dihapus* : ${deleted} file
-│  ◦  *File Corrupt* : ${corrupted} file
-│  ◦  *Memori Bebas* : ${formatSize(freedBytes)}
-└  ◦  *Status* : Optimal & Tetap Terhubung ✅`;
+      const cleanText = `–  *C L E A N  J A D I B O T*\n\nPembersihan sesi sub-bot *@${cleanTarget}* selesai.\n\n┌  ◦  *Total File* : ${files.length}\n│  ◦  *File Dihapus* : ${deleted} file\n│  ◦  *File Corrupt* : ${corrupted} file\n│  ◦  *Memori Bebas* : ${formatSize(freedBytes)}\n└  ◦  *Status* : Optimal & Tetap Terhubung ✅`;
       return await ctx.reply(cleanText, {
-        mentions: [`${targetNum}@s.whatsapp.net`]
+        mentions: [`${cleanTarget}@s.whatsapp.net`]
       });
     }
     if (command === "listjadibot" || subCmd === "list") {
       const list = getJadiBotsList();
       if (!list.length) {
-        const emptyText = `Hi @${senderNum}!
-–  *J A D I B O T*
-
-Saat ini belum ada sub-bot yang terdaftar atau online.
-
-┌  ◦  *Total* : 0 Sub-Bot
-└  ◦  *Action* : Tautkan nomor Anda via menu di bawah`;
+        const emptyText = `Hi @${myNum}!\n–  *J A D I B O T*\n\nSaat ini belum ada sub-bot yang terdaftar atau online.\n\n┌  ◦  *Total* : 0 Sub-Bot\n└  ◦  *Action* : Tautkan nomor Anda via menu di bawah`;
         const buttons = [{
           name: "single_select",
           buttonParamsJson: JSON.stringify({
@@ -207,7 +204,7 @@ Saat ini belum ada sub-bot yang terdaftar atau online.
           contextInfo: {
             forwardingScore: 999,
             isForwarded: true,
-            mentionedJid: [targetPrivateJid]
+            mentionedJid: [`${myNum}@s.whatsapp.net`]
           },
           quoted: msg
         };
@@ -215,7 +212,7 @@ Saat ini belum ada sub-bot yang terdaftar atau online.
           return await ctx.sendCta(emptyText, botFooter, buttons, options);
         }
         return await ctx.reply(emptyText, {
-          mentions: [targetPrivateJid]
+          mentions: [`${myNum}@s.whatsapp.net`]
         });
       }
       const botListText = list.map((b, i) => {
@@ -225,17 +222,7 @@ Saat ini belum ada sub-bot yang terdaftar atau online.
         const uptime = b.uptime ? runtime(b.uptime / 1e3) : "Tidak Aktif";
         return `${branch}  ◦  *${i + 1}.* @${b.number} [${status}] (${uptime})`;
       }).join("\n");
-      const bodyText = `Hi @${senderNum}!
-Berikut adalah daftar sub-bot yang terdaftar dan beroperasi.
-
-–  *J A D I B O T*
-
-┌  ◦  *Total* : ${list.length} Sub-Bots
-└  ◦  *Action* : Pilih bot dari menu di bawah untuk melihat rincian
-
-–  *A C T I V E  B O T S*
-
-${botListText}`;
+      const bodyText = `Hi @${myNum}!\nBerikut adalah daftar sub-bot yang terdaftar dan beroperasi.\n\n–  *J A D I B O T*\n\n┌  ◦  *Total* : ${list.length} Sub-Bots\n└  ◦  *Action* : Pilih bot dari menu di bawah untuk melihat rincian\n\n–  *A C T I V E  B O T S*\n\n${botListText}`;
       const botRows = list.map(b => ({
         title: `+${b.number} [${b.status}]`.slice(0, 24),
         description: `Lihat status & rincian bot ini`.slice(0, 72),
@@ -262,7 +249,7 @@ ${botListText}`;
           }]
         })
       }];
-      const allMentions = [targetPrivateJid, ...list.map(b => `${b.number}@s.whatsapp.net`)];
+      const allMentions = [`${myNum}@s.whatsapp.net`, ...list.map(b => `${b.number}@s.whatsapp.net`)];
       const options = {
         params: {
           bottom_sheet: {
@@ -286,12 +273,11 @@ ${botListText}`;
       });
     }
     if (command === "infojadibot" || subCmd === "info") {
-      let targetNum = (args[1] || args[0] || senderNum).replace(/\D/g, "");
       const list = getJadiBotsList();
       const botData = list.find(b => b.number === targetNum);
       if (!botData) {
         return ctx.reply(`❌ Jadibot dengan nomor *@${targetNum}* tidak ditemukan di dalam sistem database.`, {
-          mentions: [`${targetNum}@s.whatsapp.net`]
+          mentions: [targetPrivateJid]
         });
       }
       const isOnline = botData.status === "ONLINE";
@@ -301,17 +287,7 @@ ${botListText}`;
       const platformStr = botData.platform || "WhatsApp Web (Baileys)";
       const speedStr = isOnline ? `${botData.speed || 120}ms` : "-";
       const sessionPath = `session_jadibot/${botData.number}`;
-      const bodyText = `–  *J A D I B O T  I N F O*
-
-┌  ◦  *Number* : @${botData.number}
-│  ◦  *Status* : ${statusBadge}
-│  ◦  *Uptime* : ${uptimeStr}
-│  ◦  *Connected* : ${joinTime}
-│  ◦  *Platform* : ${platformStr}
-│  ◦  *Speed* : ${speedStr}
-└  ◦  *Session* : ${sessionPath}
-
-Gunakan menu di bawah untuk mengelola sub-bot ini.`;
+      const bodyText = `–  *J A D I B O T  I N F O*\n\n┌  ◦  *Number* : @${botData.number}\n│  ◦  *Status* : ${statusBadge}\n│  ◦  *Uptime* : ${uptimeStr}\n│  ◦  *Connected* : ${joinTime}\n│  ◦  *Platform* : ${platformStr}\n│  ◦  *Speed* : ${speedStr}\n└  ◦  *Session* : ${sessionPath}\n\nGunakan menu di bawah untuk mengelola sub-bot ini.`;
       const buttons = [{
         name: "single_select",
         buttonParamsJson: JSON.stringify({
@@ -356,7 +332,7 @@ Gunakan menu di bawah untuk mengelola sub-bot ini.`;
         contextInfo: {
           forwardingScore: 999,
           isForwarded: true,
-          mentionedJid: [`${botData.number}@s.whatsapp.net`, targetPrivateJid]
+          mentionedJid: [targetPrivateJid, `${myNum}@s.whatsapp.net`]
         },
         quoted: msg
       };
@@ -364,24 +340,19 @@ Gunakan menu di bawah untuk mengelola sub-bot ini.`;
         return await ctx.sendCta(bodyText, botFooter, buttons, options);
       }
       return await ctx.reply(bodyText, {
-        mentions: [`${botData.number}@s.whatsapp.net`, targetPrivateJid]
+        mentions: [targetPrivateJid, `${myNum}@s.whatsapp.net`]
       });
     }
     if (command === "deljadibot" || command === "stopjadibot" || subCmd === "delete" || subCmd === "stop") {
-      let targetNum = args[1] || args[0];
-      if (targetNum === "delete" || targetNum === "stop") targetNum = args[1];
-      if (!targetNum || !isOwner && targetNum !== senderNum) {
-        targetNum = senderNum;
+      if (!isOwner && targetNum !== myNum) {
+        targetNum = myNum;
       }
-      targetNum = targetNum.replace(/\D/g, "");
       await clearJadibotSession(sock, targetNum, true);
       if (typeof ctx.react === "function") await ctx.react("⏳");
       const success = await deleteJadiBot(targetNum);
       if (typeof ctx.react === "function") await ctx.react(success ? "✅" : "❌");
       if (success) {
-        const bodyText = `–  *J A D I B O T*
-
-Sesi sub-bot untuk nomor *@${targetNum}* telah diputus dan dibersihkan dari server.`;
+        const bodyText = `–  *J A D I B O T*\n\nSesi sub-bot untuk nomor *@${targetNum}* telah diputus dan dibersihkan dari server.`;
         const buttons = [{
           name: "single_select",
           buttonParamsJson: JSON.stringify({
@@ -391,7 +362,7 @@ Sesi sub-bot untuk nomor *@${targetNum}* telah diputus dan dibersihkan dari serv
               rows: [{
                 title: "➕ Sambungkan Ulang",
                 description: "Buat sesi Jadibot baru via pairing",
-                id: `${prefix}jadibot pair`
+                id: `${prefix}jadibot pair ${targetNum}`
               }, {
                 title: "📋 Cek Daftar Sub-Bot",
                 description: "Lihat daftar bot yang masih aktif",
@@ -415,7 +386,7 @@ Sesi sub-bot untuk nomor *@${targetNum}* telah diputus dan dibersihkan dari serv
           contextInfo: {
             forwardingScore: 999,
             isForwarded: true,
-            mentionedJid: [`${targetNum}@s.whatsapp.net`, targetPrivateJid]
+            mentionedJid: [targetPrivateJid, `${myNum}@s.whatsapp.net`]
           },
           quoted: msg
         };
@@ -423,38 +394,30 @@ Sesi sub-bot untuk nomor *@${targetNum}* telah diputus dan dibersihkan dari serv
           return await ctx.sendCta(bodyText, botFooter, buttons, options);
         }
         return await ctx.reply(bodyText, {
-          mentions: [`${targetNum}@s.whatsapp.net`, targetPrivateJid]
+          mentions: [targetPrivateJid, `${myNum}@s.whatsapp.net`]
         });
       } else {
         return ctx.reply(`❌ Gagal menghapus sesi atau nomor *@${targetNum}* tidak ditemukan.`, {
-          mentions: [`${targetNum}@s.whatsapp.net`]
+          mentions: [targetPrivateJid]
         });
       }
     }
     if (subCmd === "qr") {
-      await clearJadibotSession(sock, senderNum, true);
+      await clearJadibotSession(sock, targetNum, true);
       if (ctx.isGroup) {
-        await ctx.reply(`📩 QR Code dikirimkan ke chat pribadi @${senderNum} demi privasi dan keamanan akun.`, {
+        await ctx.reply(`📩 QR Code Jadibot untuk @${targetNum} dikirimkan ke chat pribadi demi privasi dan keamanan akun.`, {
           mentions: [targetPrivateJid]
         });
       } else {
-        await ctx.reply(`⏳ Menyiapkan QR Code Jadibot untuk @${senderNum}, mohon tunggu sebentar...`, {
+        await ctx.reply(`⏳ Menyiapkan QR Code Jadibot untuk @${targetNum}, mohon tunggu sebentar...`, {
           mentions: [targetPrivateJid]
         });
       }
       return await startJadiBot(sock, targetPrivateJid, {
         mode: "qr",
         onQR: async (qrBuffer, attempt, max) => {
-          await clearJadibotSession(sock, senderNum, true);
-          const caption = `–  *Q R  C O D E*
-
-Arahkan kamera WhatsApp ke QR Code di atas.
-
-┌  ◦  *Attempt* : ${attempt} / ${max}
-│  ◦  *Expiry* : 30 Detik (Auto-Delete)
-└  ◦  *Cancel* : Balas pesan ini dengan kata "batal"
-
-Buka WhatsApp > Perangkat Tertaut > Tautkan Perangkat.`;
+          await clearJadibotSession(sock, targetNum, true);
+          const caption = `–  *Q R  C O D E*\n\nArahkan kamera WhatsApp ke QR Code di atas.\n\n┌  ◦  *Target* : @${targetNum}\n│  ◦  *Attempt* : ${attempt} / ${max}\n│  ◦  *Expiry* : 30 Detik (Auto-Delete)\n└  ◦  *Cancel* : Balas pesan ini dengan kata "batal"\n\nBuka WhatsApp > Perangkat Tertaut > Tautkan Perangkat.`;
           const sentMsg = await sock.sendMessage(targetPrivateJid, {
             image: qrBuffer,
             caption: caption,
@@ -462,7 +425,7 @@ Buka WhatsApp > Perangkat Tertaut > Tautkan Perangkat.`;
           });
           if (sentMsg?.key) {
             initDB();
-            global.db.jadibot[senderNum] = {
+            global.db.jadibot[targetNum] = {
               chatId: targetPrivateJid,
               msgKey: sentMsg.key,
               mode: "qr",
@@ -470,12 +433,12 @@ Buka WhatsApp > Perangkat Tertaut > Tautkan Perangkat.`;
             };
             saveDB();
             const timer = setTimeout(async () => {
-              if (global.db.jadibot[senderNum]) {
-                const s = global.db.jadibot[senderNum];
-                delete global.db.jadibot[senderNum];
+              if (global.db.jadibot[targetNum]) {
+                const s = global.db.jadibot[targetNum];
+                delete global.db.jadibot[targetNum];
                 saveDB();
                 if (attempt >= max) {
-                  await deleteJadiBot(senderNum);
+                  await deleteJadiBot(targetNum);
                 }
                 try {
                   await sock.sendMessage(targetPrivateJid, {
@@ -483,39 +446,30 @@ Buka WhatsApp > Perangkat Tertaut > Tautkan Perangkat.`;
                   });
                 } catch (_) {}
               }
-              global.jadibotTimers.delete(senderNum);
+              global.jadibotTimers.delete(targetNum);
             }, 30 * 1e3);
-            global.jadibotTimers.set(senderNum, timer);
+            global.jadibotTimers.set(targetNum, timer);
           }
         }
       });
     }
     if (subCmd === "pair" || subCmd === "code" || !subCmd && !command.includes("jadibot")) {
-      await clearJadibotSession(sock, senderNum, true);
+      await clearJadibotSession(sock, targetNum, true);
       if (ctx.isGroup) {
-        await ctx.reply(`📩 Kode pairing dikirimkan ke chat pribadi @${senderNum} demi keamanan akun.`, {
+        await ctx.reply(`📩 Kode pairing Jadibot untuk @${targetNum} telah dikirimkan ke chat pribadinya.`, {
           mentions: [targetPrivateJid]
         });
       } else {
-        await ctx.reply(`⏳ Sedang meminta kode pairing untuk @${senderNum} dari server WhatsApp...`, {
+        await ctx.reply(`⏳ Sedang meminta kode pairing untuk @${targetNum} dari server WhatsApp...`, {
           mentions: [targetPrivateJid]
         });
       }
       return await startJadiBot(sock, targetPrivateJid, {
         mode: "pair",
         onPairingCode: async (pairingCode, attempt, max) => {
-          await clearJadibotSession(sock, senderNum, true);
+          await clearJadibotSession(sock, targetNum, true);
           const codeFormatted = pairingCode?.match(/.{1,4}/g)?.join("-") || pairingCode;
-          const bodyText = `–  *P A I R I N G  C O D E*
-
-Kode penautan perangkat berhasil dibuat.
-
-┌  ◦  *Code* : ${codeFormatted}
-│  ◦  *Attempt* : ${attempt} / ${max}
-│  ◦  *Expiry* : 2 Menit (Auto-Delete)
-└  ◦  *Cancel* : Balas pesan ini dengan kata "batal"
-
-Buka Perangkat Tertaut > Tautkan dengan nomor telepon > Masukkan kode.`;
+          const bodyText = `–  *P A I R I N G  C O D E*\n\nKode penautan perangkat berhasil dibuat.\n\n┌  ◦  *Target* : @${targetNum}\n│  ◦  *Code* : ${codeFormatted}\n│  ◦  *Attempt* : ${attempt} / ${max}\n│  ◦  *Expiry* : 2 Menit (Auto-Delete)\n└  ◦  *Cancel* : Balas pesan ini dengan kata "batal"\n\nBuka Perangkat Tertaut > Tautkan dengan nomor telepon > Masukkan kode.`;
           const buttons = [{
             name: "cta_copy",
             buttonParamsJson: JSON.stringify({
@@ -531,11 +485,11 @@ Buka Perangkat Tertaut > Tautkan dengan nomor telepon > Masukkan kode.`;
                 rows: [{
                   title: "🛑 Batalkan Penautan",
                   description: "Hapus sesi dan batalkan proses pairing",
-                  id: `${prefix}deljadibot ${senderNum}`
+                  id: `${prefix}deljadibot ${targetNum}`
                 }, {
                   title: "📷 Ganti ke Mode QR Code",
                   description: "Tautkan perangkat dengan scan QR Code",
-                  id: `${prefix}jadibot qr`
+                  id: `${prefix}jadibot qr ${targetNum}`
                 }, {
                   title: "📋 Lihat Daftar Sub-Bot",
                   description: "Cek bot yang sedang aktif",
@@ -570,7 +524,7 @@ Buka Perangkat Tertaut > Tautkan dengan nomor telepon > Masukkan kode.`;
           }
           if (sentMsg?.key) {
             initDB();
-            global.db.jadibot[senderNum] = {
+            global.db.jadibot[targetNum] = {
               chatId: targetPrivateJid,
               msgKey: sentMsg.key,
               mode: "pair",
@@ -579,12 +533,12 @@ Buka Perangkat Tertaut > Tautkan dengan nomor telepon > Masukkan kode.`;
             };
             saveDB();
             const timer = setTimeout(async () => {
-              if (global.db.jadibot[senderNum]) {
-                const s = global.db.jadibot[senderNum];
-                delete global.db.jadibot[senderNum];
+              if (global.db.jadibot[targetNum]) {
+                const s = global.db.jadibot[targetNum];
+                delete global.db.jadibot[targetNum];
                 saveDB();
                 if (attempt >= max) {
-                  await deleteJadiBot(senderNum);
+                  await deleteJadiBot(targetNum);
                 }
                 try {
                   await sock.sendMessage(targetPrivateJid, {
@@ -592,27 +546,17 @@ Buka Perangkat Tertaut > Tautkan dengan nomor telepon > Masukkan kode.`;
                   });
                 } catch (_) {}
               }
-              global.jadibotTimers.delete(senderNum);
+              global.jadibotTimers.delete(targetNum);
             }, 120 * 1e3);
-            global.jadibotTimers.set(senderNum, timer);
+            global.jadibotTimers.set(targetNum, timer);
           }
         }
       });
     }
     const list = getJadiBotsList();
-    const myBot = list.find(b => b.number === senderNum);
+    const myBot = list.find(b => b.number === myNum);
     const myBotStatus = myBot ? `Active (+${myBot.number})` : "Inactive";
-    const bodyText = `Hi @${senderNum}!
-Selamat datang di Jadibot Control Center.
-
-–  *C O N T R O L  H U B*
-
-┌  ◦  *Number* : @${senderNum}
-│  ◦  *Status* : ${myBotStatus}
-│  ◦  *Total Bots* : ${list.length} Sub-Bots
-└  ◦  *Engine* : Cloned Instance (Multi-Device)
-
-Pilih opsi navigasi di bawah untuk mulai mengelola Jadibot.`;
+    const bodyText = `Hi @${myNum}!\nSelamat datang di Jadibot Control Center.\n\n–  *C O N T R O L  H U B*\n\n┌  ◦  *User* : @${myNum}\n│  ◦  *Status Bot Anda* : ${myBotStatus}\n│  ◦  *Total Bots* : ${list.length} Sub-Bots\n└  ◦  *Engine* : Cloned Instance (Multi-Device)\n\n_Tips: Anda bisa tag/reply user lain untuk membuatkan sesi Jadibot (contoh: ${prefix}jadibot pair @user)._`;
     const menuRows = [{
       title: "🔑 Tautkan via Pairing Code",
       description: "Dapatkan 8 digit kode pairing instan (Rekomendasi)",
@@ -629,17 +573,17 @@ Pilih opsi navigasi di bawah untuk mulai mengelola Jadibot.`;
     if (myBot) {
       menuRows.unshift({
         title: "ℹ️ Rincian Sub-Bot Saya",
-        description: `Lihat statistik & uptime bot kamu (+${senderNum})`,
-        id: `${prefix}infojadibot ${senderNum}`
+        description: `Lihat statistik & uptime bot kamu (+${myNum})`,
+        id: `${prefix}infojadibot ${myNum}`
       }, {
         title: "🧹 Bersihkan Sesi Bot Saya",
         description: "Hapus file sampah tanpa logout",
-        id: `${prefix}jadibot clean ${senderNum}`
+        id: `${prefix}jadibot clean ${myNum}`
       });
       menuRows.push({
         title: "🛑 Hentikan Bot Saya",
         description: "Hapus sesi Jadibot dari nomor kamu",
-        id: `${prefix}deljadibot ${senderNum}`
+        id: `${prefix}deljadibot ${myNum}`
       });
     }
     const buttons = [{
@@ -663,7 +607,7 @@ Pilih opsi navigasi di bawah untuk mulai mengelola Jadibot.`;
       contextInfo: {
         forwardingScore: 999,
         isForwarded: true,
-        mentionedJid: [targetPrivateJid]
+        mentionedJid: [`${myNum}@s.whatsapp.net`]
       },
       quoted: msg
     };
@@ -671,7 +615,7 @@ Pilih opsi navigasi di bawah untuk mulai mengelola Jadibot.`;
       return await ctx.sendCta(bodyText, botFooter, buttons, options);
     }
     return await ctx.reply(bodyText, {
-      mentions: [targetPrivateJid]
+      mentions: [`${myNum}@s.whatsapp.net`]
     });
   }
 };

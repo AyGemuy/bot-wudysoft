@@ -175,8 +175,8 @@ async function fetchImageBuffer(urlList) {
 }
 export default {
   name: "ping",
-  aliases: ["speed", "p", "status", "botinfo", "system", "benchmark", "speedtest"],
-  description: "Memeriksa kecepatan internet (speedtest), CPU Core List, RAM/RSS, Disk, dan status server.",
+  aliases: ["speed", "p", "status", "botinfo", "system", "benchmark", "speedtest", "runtime", "uptime", "rt"],
+  description: "Memeriksa performa server, runtime, CPU, RAM, Disk, dan speedtest secara ringkas.",
   category: "General",
   execute: async (sock, ctx, msg) => {
     try {

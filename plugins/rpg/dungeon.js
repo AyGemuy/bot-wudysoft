@@ -1,70 +1,69 @@
+import axios from "axios";
 import db from "../../data/db.js";
 const DUNGEON_MONSTERS = [{
   name: "Goblin Thief",
+  icon: "👺",
   hp: 110,
   atk: 18,
   def: 6,
-  exp: 40,
-  money: 1200,
+  exp: 45,
+  money: 1500,
   ore: "coal",
   crate: "common"
 }, {
   name: "Orc Berserker",
+  icon: "👹",
   hp: 240,
   atk: 35,
   def: 12,
-  exp: 85,
-  money: 2500,
+  exp: 90,
+  money: 3e3,
   ore: "iron",
   crate: "uncommon"
 }, {
   name: "Undead Knight",
+  icon: "💀",
   hp: 380,
   atk: 52,
   def: 22,
-  exp: 170,
-  money: 4500,
+  exp: 180,
+  money: 5500,
   ore: "gold",
   crate: "uncommon"
 }, {
   name: "Lava Golem",
+  icon: "🗿",
   hp: 600,
   atk: 72,
   def: 35,
-  exp: 320,
-  money: 8e3,
+  exp: 350,
+  money: 9500,
   ore: "diamond",
   crate: "legendary"
 }, {
   name: "Ancient Wyvern",
+  icon: "🐉",
   hp: 1e3,
   atk: 105,
   def: 55,
-  exp: 650,
-  money: 2e4,
+  exp: 700,
+  money: 25e3,
   ore: "platinum",
   crate: "mythic"
 }];
+const WEAPON_BONUS = {
+  sword_stone: 8,
+  sword_iron: 18,
+  sword_diamond: 35,
+  sword_light: 60,
+  sword_dark: 85
+};
+const ARMOR_BONUS = {
+  armor_leather: 6,
+  armor_iron: 15,
+  armor_crystal: 32
+};
 const SESSION_TIMEOUT = 2 * 60 * 1e3;
-
-function getEquipmentStats(user) {
-  let bonusAtk = 0;
-  let bonusDef = 0;
-  const w = user?.equipped?.weapon;
-  if (w === "sword_stone") bonusAtk += 8;
-  else if (w === "sword_iron") bonusAtk += 18;
-  else if (w === "sword_diamond") bonusAtk += 35;
-  else if (w === "sword_light") bonusAtk += 65;
-  else if (w === "sword_dark") bonusAtk += 95;
-  const a = user?.equipped?.armor;
-  if (a === "armor_leather") bonusDef += 6;
-  else if (a === "armor_iron") bonusDef += 18;
-  else if (a === "armor_crystal") bonusDef += 42;
-  return {
-    bonusAtk: bonusAtk,
-    bonusDef: bonusDef
-  };
-}
 
 function checkLevelUp(user) {
   let isLevelUp = false;
@@ -89,87 +88,317 @@ function checkLevelUp(user) {
   };
 }
 
-function ensureUserInventory(user) {
-  user.inventory = user.inventory || {};
-  user.inventory.ores = user.inventory.ores || {
-    stone: 0,
-    coal: 0,
-    iron: 0,
-    gold: 0,
-    diamond: 0,
-    platinum: 0
+function calculateFullCombatStats(user) {
+  const wpnKey = user.equipped?.weapon;
+  const armKey = user.equipped?.armor;
+  const wpnBase = WEAPON_BONUS[wpnKey] || 0;
+  const armBase = ARMOR_BONUS[armKey] || 0;
+  const wpnRefine = user.refine?.[wpnKey] || 0;
+  const armRefine = user.refine?.[armKey] || 0;
+  const strBonus = (user.stats?.str || 10) * 2;
+  const vitBonus = (user.stats?.vit || 10) * 1;
+  const now = Date.now();
+  let foodAtkBonus = 0;
+  let foodDefBonus = 0;
+  if (user.buffs?.atk && user.buffs.atk.expireTime > now) foodAtkBonus = user.buffs.atk.val || 0;
+  if (user.buffs?.def && user.buffs.def.expireTime > now) foodDefBonus = user.buffs.def.val || 0;
+  let petAtkBonus = 0;
+  if (user.pet && user.pet.type === "wolf") petAtkBonus = 8 + user.pet.level * 2;
+  const totalAtk = (user.atk || 10) + wpnBase + wpnRefine * 6 + strBonus + foodAtkBonus + petAtkBonus;
+  const totalDef = (user.def || 5) + armBase + armRefine * 4 + vitBonus + foodDefBonus;
+  return {
+    totalAtk: totalAtk,
+    totalDef: totalDef,
+    wpnRefine: wpnRefine,
+    armRefine: armRefine
   };
-  user.inventory.crate = user.inventory.crate || {
-    common: 0,
-    uncommon: 0,
-    legendary: 0,
-    mythic: 0,
-    secret: 0
-  };
-  user.inventory.nature = user.inventory.nature || {
-    bait: 0,
-    leather: 0
-  };
-  user.inventory.drink = user.inventory.drink || {
-    water: 0,
-    mana_potion: 0,
-    herbal_tea: 0,
-    elixir: 0
-  };
-  user.inventory.food = user.inventory.food || {
-    bread: 0,
-    grilled_fish: 0,
-    roast_chicken: 0,
-    steak: 0
-  };
-  user.inventory.weapon = user.inventory.weapon || {};
-  user.inventory.armor = user.inventory.armor || {};
-  user.equipped = user.equipped || {
-    weapon: null,
-    armor: null
-  };
-  user.cooldown = user.cooldown || {};
-  user.hp = typeof user.hp === "number" ? user.hp : 100;
-  user.hpMax = Number(user.hpMax) || 100;
-  user.mana = typeof user.mana === "number" ? user.mana : 50;
-  user.manaMax = Number(user.manaMax) || 50;
-  user.atk = Number(user.atk) || 10;
-  user.def = Number(user.def) || 5;
-  user.level = Number(user.level) || 1;
-  user.exp = Number(user.exp) || 0;
-  user.money = Number(user.money) || 0;
 }
-async function renderDungeonUI(sock, ctx, session, battleLog = "", quotedMsg = null) {
+
+function generateDungeonHTML(data) {
+  const {
+    floor,
+    playerName,
+    playerHp,
+    playerHpMax,
+    playerMana,
+    playerManaMax,
+    totalAtk,
+    totalDef,
+    monster,
+    monsterHp,
+    monsterMaxHp,
+    battleLog
+  } = data;
+  const hpPct = Math.max(0, Math.min(100, Math.round(playerHp / playerHpMax * 100)));
+  const mpPct = Math.max(0, Math.min(100, Math.round(playerMana / playerManaMax * 100)));
+  const monHpPct = Math.max(0, Math.min(100, Math.round(monsterHp / monsterMaxHp * 100)));
+  return `<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 960px;
+      height: 540px;
+      background: #0a0606;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .arena-frame {
+      width: 960px;
+      height: 540px;
+      background: radial-gradient(circle at 50% 30%, #301111 0%, #150606 65%, #080202 100%);
+      border: 8px solid #280d0d;
+      outline: 2px solid #e53e3e;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 24px 30px;
+      box-shadow: inset 0 0 100px rgba(0,0,0,0.95);
+      position: relative;
+    }
+    .top-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid rgba(229, 62, 62, 0.4);
+      padding-bottom: 12px;
+    }
+    .title {
+      font-size: 24px;
+      font-weight: 900;
+      color: #feb2b2;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      text-shadow: 0 0 14px rgba(229, 62, 62, 0.6);
+    }
+    .floor-badge {
+      background: rgba(0,0,0,0.7);
+      border: 1.5px solid #e53e3e;
+      color: #fed7d7;
+      padding: 5px 18px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 340px 100px 340px;
+      gap: 16px;
+      align-items: center;
+      justify-content: center;
+      margin: 10px 0;
+    }
+
+    /* Combatant Card */
+    .combat-card {
+      background: rgba(22, 9, 9, 0.88);
+      border: 2px solid rgba(229, 62, 62, 0.35);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+    }
+    .combat-card.monster { border-color: rgba(237, 137, 54, 0.5); }
+    .card-title { font-size: 17px; font-weight: 900; color: #fff; }
+
+    .bar-box { display: flex; flex-direction: column; gap: 4px; }
+    .bar-lbl { display: flex; justify-content: space-between; font-size: 11px; font-weight: 800; }
+    .bar-shell {
+      width: 100%;
+      height: 14px;
+      background: #140505;
+      border-radius: 7px;
+      border: 1px solid rgba(255,255,255,0.15);
+      overflow: hidden;
+    }
+    .hp-fill { height: 100%; background: linear-gradient(90deg, #c53030, #e53e3e); border-radius: 7px; }
+    .mp-fill { height: 100%; background: linear-gradient(90deg, #2b6cb0, #4299e1); border-radius: 7px; }
+    .mon-fill { height: 100%; background: linear-gradient(90deg, #dd6b20, #ed8936); border-radius: 7px; }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      padding-top: 8px;
+      font-size: 12px;
+      font-weight: 800;
+      color: #cbd5e0;
+    }
+
+    /* VS Emblem */
+    .vs-emblem {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      font-weight: 900;
+      color: #e53e3e;
+      text-shadow: 0 0 16px rgba(229, 62, 62, 0.8);
+    }
+
+    .bottom-bar {
+      background: rgba(0,0,0,0.7);
+      border: 1px solid rgba(229, 62, 62, 0.35);
+      border-radius: 12px;
+      padding: 10px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="arena-frame">
+    <div class="top-header">
+      <div class="title">⚔️ DUNGEON RAID ARENA ⚔️</div>
+      <div class="floor-badge">CHAMBER FLOOR ${floor}</div>
+    </div>
+
+    <div class="main-grid">
+      <!-- Player Card -->
+      <div class="combat-card">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="font-size: 30px;">🗡️</div>
+          <div>
+            <div class="card-title">${playerName}</div>
+            <div style="font-size: 11px; color: #48bb78; font-weight: 700;">Player Status Ready</div>
+          </div>
+        </div>
+
+        <div class="bar-box">
+          <div class="bar-lbl"><span style="color: #feb2b2;">HEALTH</span><span>${playerHp} / ${playerHpMax}</span></div>
+          <div class="bar-shell"><div class="hp-fill" style="width: ${hpPct}%;"></div></div>
+        </div>
+
+        <div class="bar-box">
+          <div class="bar-lbl"><span style="color: #bee3f8;">MANA</span><span>${playerMana} / ${playerManaMax}</span></div>
+          <div class="bar-shell"><div class="mp-fill" style="width: ${mpPct}%;"></div></div>
+        </div>
+
+        <div class="stat-row">
+          <span>⚔️ ${totalAtk} ATK</span>
+          <span>🛡️ ${totalDef} DEF</span>
+        </div>
+      </div>
+
+      <!-- VS Sign -->
+      <div class="vs-emblem">
+        <span>⚔️</span>
+        <span style="font-size: 20px;">VS</span>
+      </div>
+
+      <!-- Monster Card -->
+      <div class="combat-card monster">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="font-size: 30px;">${monster.icon || "👹"}</div>
+          <div>
+            <div class="card-title">${monster.name}</div>
+            <div style="font-size: 11px; color: #ed8936; font-weight: 700;">Dungeon Threat Level</div>
+          </div>
+        </div>
+
+        <div class="bar-box">
+          <div class="bar-lbl"><span style="color: #fbd38d;">MONSTER HEALTH</span><span>${Math.max(0, monsterHp)} / ${monsterMaxHp}</span></div>
+          <div class="bar-shell"><div class="mon-fill" style="width: ${monHpPct}%;"></div></div>
+        </div>
+
+        <div style="height: 25px;"></div>
+
+        <div class="stat-row">
+          <span>⚔️ ${monster.atk} ATK</span>
+          <span>🛡️ ${monster.def} DEF</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Battle Log Strip -->
+    <div class="bottom-bar">
+      <div style="color: #feb2b2; font-weight: 700;">${battleLog || "Pertarungan dungeon dimulai. Tentukan langkah tempurmu!"}</div>
+      <div style="color: #ecc94b; font-weight: 900;">BATTLE IN PROGRESS</div>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+async function renderHtmlToImage(htmlContent) {
+  const rawApi = global.bot?.api?.wudysoft || "";
+  const cleanApi = rawApi.replace(/^https?:\/\//i, "").replace(/\/+$/, "");
+  const baseUrl = `https://${cleanApi}/api/tools/html2img/`;
+  const headers = {
+    "Content-Type": "application/json",
+    "User-Agent": "Mozilla/5.0"
+  };
+  const payload = {
+    html: htmlContent,
+    fullPage: true,
+    quality: 100
+  };
+  const versions = ["v5", "v1", "v2", "v3", "v4", "v6", "v7", "v8", "v9", "v10"];
+  for (const ver of versions) {
+    try {
+      const res = await axios.post(`${baseUrl}${ver}`, payload, {
+        headers: headers,
+        timeout: 15e3
+      });
+      const imgUrl = res.data?.url || res.data?.result || (typeof res.data === "string" ? res.data : null);
+      if (imgUrl && /^https?:\/\//i.test(imgUrl)) {
+        let buffer = null;
+        try {
+          const imgRes = await axios.get(imgUrl, {
+            responseType: "arraybuffer",
+            timeout: 12e3
+          });
+          if (imgRes.data) buffer = Buffer.from(imgRes.data);
+        } catch {}
+        return {
+          url: imgUrl,
+          buffer: buffer
+        };
+      }
+    } catch {
+      continue;
+    }
+  }
+  return {
+    url: null,
+    buffer: null
+  };
+}
+async function renderDungeonBattleUI(sock, ctx, user, session, battleLog = "") {
   const prefix = ctx.prefix || ".";
-  const user = global.db.user[ctx.sender];
-  const botName = global.bot?.name || "WudysoftBot";
-  const botFooter = global.bot?.footer || `${botName} • Dungeon Raid`;
-  const bannerImage = global.bot?.media?.banner1 || "https://files.catbox.moe/g2e6i5.jpg";
   const userName = user.name || ctx.pushname || ctx.sender.split("@")[0];
   const {
-    bonusAtk,
-    bonusDef
-  } = getEquipmentStats(user);
-  const totalAtk = (user.atk || 10) + bonusAtk;
-  const totalDef = (user.def || 5) + bonusDef;
-  const text = `–  *D U N G E O N  R A I D*
-
-Pertarungan aktif di Dungeon Floor ${session.floor}.
-
-–  *P L A Y E R*
-
-┌  ◦  *Name* : ${userName} (Lv. ${user.level})
-│  ◦  *Health* : ${user.hp} / ${user.hpMax} HP
-│  ◦  *Mana* : ${user.mana} / ${user.manaMax} MP
-└  ◦  *Stats* : ${totalAtk} ATK | ${totalDef} DEF
-
-–  *M O N S T E R*
-
-┌  ◦  *Enemy* : ${session.monster.name}
-│  ◦  *Health* : ${Math.max(0, session.monsterHp)} / ${session.monsterMaxHp} HP
-└  ◦  *Stats* : ${session.monster.atk} ATK | ${session.monster.def} DEF
-
-${battleLog ? `–  *B A T T L E  L O G*\n\n${battleLog}\n\n` : ""}Pilih tindakan tempur Anda melalui tombol di bawah.`;
+    totalAtk,
+    totalDef
+  } = calculateFullCombatStats(user);
+  const html = generateDungeonHTML({
+    floor: session.floor,
+    playerName: userName,
+    playerHp: user.hp || 100,
+    playerHpMax: user.hpMax || 100,
+    playerMana: user.mana || 50,
+    playerManaMax: user.manaMax || 50,
+    totalAtk: totalAtk,
+    totalDef: totalDef,
+    monster: session.monster,
+    monsterHp: session.monsterHp,
+    monsterMaxHp: session.monsterMaxHp,
+    battleLog: battleLog
+  });
+  const {
+    buffer
+  } = await renderHtmlToImage(html);
+  const text = `–  *D U N G E O N  B A T T L E  F L O O R  ${session.floor}*\n\n` + `• 👤 *Player:* @${ctx.sender.split("@")[0]} (Lv. ${user.level})\n` + `• 🩸 *HP:* ${user.hp}/${user.hpMax} | 🔷 *MP:* ${user.mana}/${user.manaMax}\n` + `• 👹 *Enemy:* ${session.monster.name} (${session.monsterHp}/${session.monsterMaxHp} HP)\n\n` + `${battleLog ? `📜 *Log:* ${battleLog}\n\n` : ""}` + `_Pilih tindakan tempur Anda melalui tombol di bawah:_`;
   const buttons = [{
     name: "quick_reply",
     buttonParamsJson: JSON.stringify({
@@ -196,38 +425,31 @@ ${battleLog ? `–  *B A T T L E  L O G*\n\n${battleLog}\n\n` : ""}Pilih tindaka
     })
   }];
   const options = {
-    image: bannerImage,
-    title: `✦ Dungeon Floor ${session.floor} • Battle ✦`,
+    image: buffer,
     params: {
       bottom_sheet: {
         in_thread_buttons_limit: 2,
-        divider_indices: [2],
-        list_title: `${botName} • Dungeon Raid`,
+        list_title: "Battle Actions",
         button_title: "Aksi Tempur"
       }
     },
     contextInfo: {
-      forwardingScore: 999,
-      isForwarded: true
-    },
-    quoted: quotedMsg || ctx.msg
+      mentionedJid: [ctx.sender]
+    }
   };
-  if (typeof ctx.sendCta === "function") {
-    return await ctx.sendCta(text, botFooter, buttons, options);
-  }
+  if (typeof ctx.sendCta === "function") return await ctx.sendCta(text, "Wudysoft • Dungeon Raid", buttons, options);
   return await sock.sendMessage(ctx.id, {
-    image: {
-      url: bannerImage
-    },
-    caption: text
+    image: buffer,
+    caption: text,
+    mentions: [ctx.sender]
   }, {
-    quoted: quotedMsg || ctx.msg
+    quoted: ctx.msg
   });
 }
 export default {
   name: "dungeon",
-  aliases: ["adv", "adventure", "petualang", "raid"],
-  description: "Menjelajahi dungeon bersesi dan bertarung dengan monster (tersimpan di database)",
+  aliases: ["adv", "adventure", "petualang"],
+  description: "Menjelajahi dungeon bersesi realtime dan mengalahkan monster dengan Dynamic HTML Canvas",
   category: "RPG",
   register: true,
   before: async (msg, {
@@ -240,120 +462,81 @@ export default {
       if (!user || !user.dungeonSession) return;
       const now = Date.now();
       if (user.dungeonSession.expiresAt && now > user.dungeonSession.expiresAt) {
-        const monsterName = user.dungeonSession.monster?.name || "Monster";
         delete user.dungeonSession;
         db.write(global.db);
-        return ctx.reply(`–  *T I M E  O U T*
-
-Sesi dungeon telah berakhir karena tidak ada aksi. *${monsterName}* telah kabur!`);
+        return ctx.reply("⏳ Sesi pertempuran dungeon telah kadaluarsa karena tidak ada respon.");
       }
       const raw = (ctx.text || ctx.body || "").toLowerCase().trim();
       const prefix = ctx.prefix || ".";
-      const botName = global.bot?.name || "WudysoftBot";
-      const botFooter = global.bot?.footer || `${botName} • Dungeon Raid`;
-      const bannerImage = global.bot?.media?.banner1 || "https://files.catbox.moe/g2e6i5.jpg";
       const userName = user.name || ctx.pushname || sender.split("@")[0];
       if (["serang", "attack", "sihir", "magic", "heal", "potion", "kabur", "run"].some(cmd => raw.endsWith(cmd))) {
-        const action = raw.replace(/^[.!/#]?\s*(dungeon|adv|adventure|raid)\s*/i, "").trim();
+        const action = raw.replace(/^[.!/#]?\s*(dungeon|adv|adventure)\s*/i, "").trim();
         const session = user.dungeonSession;
-        ensureUserInventory(user);
         const {
-          bonusAtk,
-          bonusDef
-        } = getEquipmentStats(user);
-        const totalAtk = (user.atk || 10) + bonusAtk;
-        const totalDef = (user.def || 5) + bonusDef;
+          totalAtk,
+          totalDef
+        } = calculateFullCombatStats(user);
         let log = "";
         if (action === "kabur" || action === "run") {
-          const monsterName = session.monster.name;
           delete user.dungeonSession;
           db.write(global.db);
           await ctx.react("🏃");
-          return ctx.reply(`–  *E S C A P E*
-
-Anda berhasil melarikan diri dari *${monsterName}* dengan selamat.`);
+          return ctx.reply(`🏃 Anda berhasil mundur dan melarikan diri dari *${session.monster.name}*!`);
         }
         if (action === "heal" || action === "potion") {
-          if ((user.inventory.drink.elixir || 0) > 0 || (user.inventory.drink.herbal_tea || 0) > 0 || (user.inventory.food.grilled_fish || 0) > 0 || (user.inventory.food.bread || 0) > 0) {
-            let healVal = 40;
-            if ((user.inventory.drink.elixir || 0) > 0) {
-              user.inventory.drink.elixir -= 1;
-              healVal = 100;
-            } else if ((user.inventory.drink.herbal_tea || 0) > 0) {
-              user.inventory.drink.herbal_tea -= 1;
-              healVal = 60;
-            } else if ((user.inventory.food.grilled_fish || 0) > 0) {
+          const hasPotion = (user.inventory?.drink?.mana_potion || 0) > 0;
+          const hasFood = (user.inventory?.food?.grilled_fish || 0) > 0;
+          if (hasPotion || hasFood) {
+            let healVal = 50;
+            if (hasFood) {
               user.inventory.food.grilled_fish -= 1;
-              healVal = 50;
+              healVal = 60;
             } else {
-              user.inventory.food.bread -= 1;
-              healVal = 35;
+              user.inventory.drink.mana_potion -= 1;
+              healVal = 40;
             }
-            user.hp = Math.min(user.hpMax, user.hp + healVal);
-            log += `🧪 Kamu mengonsumsi bekal dan memulihkan *+${healVal} HP*! `;
+            user.hp = Math.min(user.hpMax || 100, (user.hp || 0) + healVal);
+            log = `🧪 Kamu mengonsumsi perbekalan dan memulihkan *+${healVal} HP*!`;
           } else {
-            return ctx.reply(`❌ Anda tidak memiliki makanan atau ramuan pemulih di dalam tas.`);
+            return ctx.reply("❌ Kamu tidak memiliki potion atau makanan pemulih di tas!");
           }
         }
         if (action === "sihir" || action === "magic") {
-          if (user.mana < 20) {
-            return ctx.reply("❌ Mana tidak mencukupi untuk mantra sihir. (Dibutuhkan minimal 20 MP)");
+          if ((user.mana || 0) < 20) {
+            return ctx.reply("❌ Mana tidak cukup untuk merapal mantra! (Butuh minimal 20 MP)");
           }
           user.mana -= 20;
-          const magicDmg = Math.max(15, Math.floor(totalAtk * 1.7 + Math.random() * 25));
+          const magicDmg = Math.max(25, Math.floor(totalAtk * 1.8 - session.monster.def * .2 + Math.random() * 20));
           session.monsterHp -= magicDmg;
-          log += `🔮 Serangan Sihir Suci menghasilkan *${magicDmg} DMG*! `;
+          log = `🔮 Serangan sihir kosmikmu menghantam *${magicDmg} DMG*! (-20 MP)`;
         }
         if (action === "serang" || action === "attack") {
-          const dmg = Math.max(8, Math.floor(totalAtk - session.monster.def * .35 + Math.random() * 12));
+          const dmg = Math.max(12, Math.floor(totalAtk - session.monster.def * .35 + Math.random() * 12));
           session.monsterHp -= dmg;
-          log += `🗡️ Tebasan pedangmu menghasilkan *${dmg} DMG*! `;
+          log = `🗡️ Tebasan senjatamu melukai musuh sebesar *${dmg} DMG*!`;
         }
         if (session.monsterHp <= 0) {
           const m = session.monster;
           delete user.dungeonSession;
-          user.exp += m.exp;
-          user.money += m.money;
+          user.exp = (user.exp || 0) + m.exp;
+          user.money = (Number(user.money) || 0) + m.money;
+          user.inventory = user.inventory || {};
+          user.inventory.ores = user.inventory.ores || {};
+          user.inventory.crate = user.inventory.crate || {};
           if (m.ore) user.inventory.ores[m.ore] = (user.inventory.ores[m.ore] || 0) + 1;
           if (m.crate) user.inventory.crate[m.crate] = (user.inventory.crate[m.crate] || 0) + 1;
-          if (Math.random() < .5) user.inventory.nature.leather = (user.inventory.nature.leather || 0) + 1;
           const lvlResult = checkLevelUp(user);
           db.write(global.db);
           await ctx.react("🏆");
-          let winText = `Hi ${userName}!
-Selamat, musuh dungeon berhasil ditaklukkan!
-
-–  *V I C T O R Y*
-
-┌  ◦  *Defeated* : ${m.name}
-│  ◦  *Balance* : +Rp ${m.money.toLocaleString("id-ID")}
-│  ◦  *Exp* : +${m.exp} XP
-│  ◦  *Ore* : +1 ${m.ore.toUpperCase()}
-│  ◦  *Crate* : +1 ${m.crate.toUpperCase()} Box
-└  ◦  *Material* : +1 Kulit Monster
-
-–  *S T A T U S*
-
-┌  ◦  *Current Level* : Lv. ${user.level} (${user.exp} / ${user.level * 100} XP)
-└  ◦  *Health* : ${user.hp} / ${user.hpMax} HP\n\n`;
+          let winText = `🎉 *VICTORY! ${m.name.toUpperCase()} BERHASIL DITUMBANGKAN!* 🎉\n\n` + `–  *R E W A R D*\n\n` + `┌  ◦  *Balance* : +Rp ${m.money.toLocaleString("id-ID")}\n` + `├  ◦  *Exp* : +${m.exp} XP\n` + `├  ◦  *Mineral Drop* : +1x ${m.ore.toUpperCase()}\n` + `└  ◦  *Peti Harta* : +1x ${m.crate.toUpperCase()} Crate\n\n`;
           if (lvlResult.isLevelUp) {
-            winText += `–  *L E V E L  U P*
-
-Selamat, level karakter naik ke *Lv. ${lvlResult.newLevel}*!
-HP dan Mana telah dipulihkan penuh.\n\n`;
+            winText += `🌟 *LEVEL UP!* Level karakter naik ke *Lv. ${lvlResult.newLevel}*! Darah & Mana pulih penuh.\n\n`;
           }
-          winText += `Gunakan tombol di bawah untuk bertualang kembali atau beristirahat.`;
           const winButtons = [{
             name: "quick_reply",
             buttonParamsJson: JSON.stringify({
-              display_text: "⚔️ Masuk Dungeon Lagi",
+              display_text: "⚔️ Dungeon Lagi",
               id: `${prefix}dungeon`
-            })
-          }, {
-            name: "quick_reply",
-            buttonParamsJson: JSON.stringify({
-              display_text: "⛺ Berkemah (Rest)",
-              id: `${prefix}rest`
             })
           }, {
             name: "quick_reply",
@@ -362,65 +545,30 @@ HP dan Mana telah dipulihkan penuh.\n\n`;
               id: `${prefix}inv`
             })
           }];
-          const options = {
-            image: bannerImage,
-            title: `✦ Dungeon Victory • ${m.name} ✦`,
-            params: {
-              bottom_sheet: {
-                in_thread_buttons_limit: 2,
-                divider_indices: [1],
-                list_title: `${botName} • Victory Reward`,
-                button_title: "Opsi Selanjutnya"
-              }
-            },
-            contextInfo: {
-              mentionedJid: [ctx.sender],
-              forwardingScore: 999,
-              isForwarded: true
-            },
-            quoted: msg
-          };
-          if (typeof ctx.sendCta === "function") {
-            return await ctx.sendCta(winText, botFooter, winButtons, options);
-          }
           return await sock.sendMessage(ctx.id, {
-            image: {
-              url: bannerImage
-            },
-            caption: winText
+            text: winText
           }, {
             quoted: msg
           });
         }
-        const enemyDmg = Math.max(5, Math.floor(session.monster.atk - totalDef * .45 + Math.random() * 10));
-        user.hp = Math.max(0, user.hp - enemyDmg);
-        log += `\n👹 ${session.monster.name} membalas serangan sebesar *${enemyDmg} DMG*!`;
+        const enemyDmg = Math.max(6, Math.floor(session.monster.atk - totalDef * .45 + Math.random() * 8));
+        user.hp = Math.max(0, (user.hp || 100) - enemyDmg);
+        log += `\n💥 ${session.monster.name} membalas dan melukaimu sebesar *-${enemyDmg} HP*!`;
         if (user.hp <= 0) {
-          const monsterName = session.monster.name;
           delete user.dungeonSession;
-          user.hp = Math.floor(user.hpMax * .25);
-          const penaltyExp = Math.min(user.exp, 60);
-          user.exp -= penaltyExp;
+          user.hp = Math.floor((user.hpMax || 100) * .25);
+          user.exp = Math.max(0, (user.exp || 0) - 50);
           db.write(global.db);
           await ctx.react("☠️");
-          const defeatMsg = `–  *D E F E A T E D*
-
-Karakter Anda gugur di dalam dungeon.
-
-┌  ◦  *Enemy* : ${monsterName}
-│  ◦  *Penalty* : -${penaltyExp} EXP
-└  ◦  *Health* : ${user.hp} / ${user.hpMax} HP (25%)
-
-Segera pulihkan kondisi fisikmu dengan *${prefix}rest* atau *${prefix}use*.`;
-          return ctx.reply(defeatMsg);
+          return ctx.reply(`💀 *KAMU TEWAS DI DUNGEON!* 💀\n\nTubuhmu diangkut keluar dalam kondisi kritis (-50 XP). Beristirahatlah dengan *${prefix}rest*!`);
         }
         session.expiresAt = Date.now() + SESSION_TIMEOUT;
         db.write(global.db);
-        await renderDungeonUI(sock, ctx, session, log, msg);
+        await renderDungeonBattleUI(sock, ctx, user, session, log);
         return true;
       }
     } catch (err) {
-      console.error("[Dungeon Session Error]:", err);
+      console.error("[Dungeon Before Error]:", err);
     }
   },
   execute: async (sock, ctx, msg) => {
@@ -428,42 +576,26 @@ Segera pulihkan kondisi fisikmu dengan *${prefix}rest* atau *${prefix}use*.`;
       db.ensureUser(ctx.sender, ctx.pushname);
       const user = global.db.user[ctx.sender];
       const prefix = ctx.prefix || ".";
-      ensureUserInventory(user);
       const now = Date.now();
       if (user.dungeonSession) {
         if (user.dungeonSession.expiresAt && now > user.dungeonSession.expiresAt) {
           delete user.dungeonSession;
           db.write(global.db);
         } else {
-          return await renderDungeonUI(sock, ctx, user.dungeonSession, "Pertarunganmu masih aktif di dungeon!", msg);
+          return await renderDungeonBattleUI(sock, ctx, user, user.dungeonSession, "Pertarunganmu masih aktif di dungeon!");
         }
       }
-      if (user.hp < 30) {
-        const lowHpText = `–  *L O W  H E A L T H*
-
-Kondisi fisikmu terlalu lemah untuk memasuki dungeon.
-
-┌  ◦  *Health* : ${user.hp} / ${user.hpMax} HP
-└  ◦  *Minimum* : 30 HP
-
-Gunakan *${prefix}rest* untuk beristirahat atau *${prefix}use* untuk mengonsumsi bekal.`;
-        return ctx.reply(lowHpText);
+      if ((user.hp || 100) < 30) {
+        return ctx.reply(`❌ Tubuhmu terlalu lemah (*${user.hp}/${user.hpMax} HP*). Pulihkan diri dengan *${prefix}rest* sebelum masuk dungeon!`);
       }
-      const COOLDOWN = 3 * 60 * 1e3;
-      const lastCooldown = user.cooldown?.dungeon || user.cooldown?.adventure || 0;
-      if (lastCooldown && now - lastCooldown < COOLDOWN) {
-        const sisa = COOLDOWN - (now - lastCooldown);
+      const COOLDOWN = 2 * 60 * 1e3;
+      if (user.cooldown?.dungeon && now - user.cooldown.dungeon < COOLDOWN) {
+        const sisa = COOLDOWN - (now - user.cooldown.dungeon);
         const m = Math.floor(sisa / 6e4);
         const s = Math.floor(sisa % 6e4 / 1e3);
-        const cdText = `–  *C O O L D O W N*
-
-Tubuhmu masih memulihkan stamina sehabis bertarung.
-
-┌  ◦  *Remaining* : ${m}m ${s}s
-└  ◦  *Status* : Exhausted`;
-        return ctx.reply(cdText);
+        return ctx.reply(`⏳ Kamu masih kelelahan sehabis menjelajah. Tunggu *${m}m ${s}s* lagi.`);
       }
-      const floorIdx = Math.min(DUNGEON_MONSTERS.length - 1, Math.floor((user.level - 1) / 3));
+      const floorIdx = Math.min(DUNGEON_MONSTERS.length - 1, Math.floor(((user.level || 1) - 1) / 3));
       const monster = DUNGEON_MONSTERS[floorIdx];
       user.dungeonSession = {
         floor: floorIdx + 1,
@@ -473,14 +605,14 @@ Tubuhmu masih memulihkan stamina sehabis bertarung.
         createdAt: now,
         expiresAt: now + SESSION_TIMEOUT
       };
+      user.cooldown = user.cooldown || {};
       user.cooldown.dungeon = now;
-      user.cooldown.adventure = now;
       db.write(global.db);
       await ctx.react("⚔️");
-      await renderDungeonUI(sock, ctx, user.dungeonSession, `Kamu melangkah ke lantai ${floorIdx + 1} dan dihadang oleh *${monster.name}*!`, msg);
+      await renderDungeonBattleUI(sock, ctx, user, user.dungeonSession, `Kamu memasuki lantai ${floorIdx + 1} dan berhadapan dengan *${monster.name}*!`);
     } catch (err) {
-      console.error("[Dungeon Exec Error]:", err);
-      ctx.reply(`❌ Terjadi kesalahan: ${err.message}`);
+      console.error("[Dungeon Execute Error]:", err);
+      ctx.reply(`❌ Terjadi kendala di dungeon: ${err.message}`);
     }
   }
 };

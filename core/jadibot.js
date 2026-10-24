@@ -16,7 +16,8 @@ import {
   jidNormalizedUser,
   extractMessageContent,
   isJidBroadcast,
-  S_WHATSAPP_NET
+  S_WHATSAPP_NET,
+  useMultiFileAuthState
 } from "@whiskeysockets/baileys";
 import {
   Boom
@@ -31,9 +32,6 @@ import {
   UpsertMsgHandle
 } from "./handler.js";
 import db from "../data/db.js";
-import {
-  useDBAuthState
-} from "../index.js";
 const JADIBOT_DIR = path.resolve("./session_jadibot");
 const MAX_ATTEMPTS = 3;
 global.jadiBots = global.jadiBots || new Map();
@@ -118,9 +116,9 @@ export function cleanJadibotSession(sessionPath) {
   try {
     if (!fs.existsSync(sessionPath)) return;
     const files = fs.readdirSync(sessionPath);
-    const keepFiles = ["creds.json", "app-state-sync-version-", "pre-key-", "session-", "app-state-sync-key-", "lid-mapping-"];
     let deleted = 0;
     for (const file of files) {
+      if (file === "creds.json") continue;
       const filePath = path.join(sessionPath, file);
       try {
         const stats = fs.statSync(filePath);
@@ -131,19 +129,11 @@ export function cleanJadibotSession(sessionPath) {
         }
         if (file.startsWith("sender-key-")) {
           const daysOld = (Date.now() - stats.mtimeMs) / (1e3 * 60 * 60 * 24);
-          if (daysOld > 2) {
+          if (daysOld > 7) {
             fs.unlinkSync(filePath);
             deleted++;
           }
           continue;
-        }
-        const shouldKeep = keepFiles.some(pattern => pattern.endsWith("-") ? file.startsWith(pattern) : file === pattern);
-        if (!shouldKeep) {
-          const hoursOld = (Date.now() - stats.mtimeMs) / (1e3 * 60 * 60);
-          if (hoursOld > 24) {
-            fs.unlinkSync(filePath);
-            deleted++;
-          }
         }
       } catch (_) {}
     }
@@ -192,10 +182,6 @@ function unregisterBotFromPool(jid) {
 loadJadibotGroupCache();
 export function isSessionRegistered(number) {
   const cleanNum = String(number).replace(/\D/g, "");
-  const authRecord = global.db?.auth?.[`jadibot_${cleanNum}`]?.creds;
-  if (authRecord && (authRecord.registered === true || authRecord.me?.id)) {
-    return true;
-  }
   const sessionPath = path.join(JADIBOT_DIR, cleanNum, "creds.json");
   if (fs.existsSync(sessionPath)) {
     try {
@@ -328,7 +314,6 @@ export async function startJadiBot(parentSock, senderJid, options = {}) {
   const cleanNum = extractNum(senderJid);
   const targetPhoneJid = `${cleanNum}@s.whatsapp.net`;
   const sessionPath = path.join(JADIBOT_DIR, cleanNum);
-  const sessionDbKey = `jadibot_${cleanNum}`;
   const mode = (options.mode || "pair").toLowerCase();
   cleanJadibotSession(sessionPath);
   if (global.reconnectTimers.has(cleanNum)) {
@@ -349,21 +334,20 @@ export async function startJadiBot(parentSock, senderJid, options = {}) {
   }));
   const {
     state,
-    saveCreds,
-    clearAuth
-  } = await useDBAuthState(sessionDbKey, sessionPath);
+    saveCreds
+  } = await useMultiFileAuthState(sessionPath);
   if (state.creds && !state.creds.myAppStateKeyId) {
     state.creds.myAppStateKeyId = "AAAAAIDq";
   }
   const sock = makeWASocket({
     version: version,
     logger: pino({
-      level: "debug"
+      level: "silent"
     }),
     auth: {
       creds: state.creds,
       keys: makeCacheableSignalKeyStore(state.keys, pino({
-        level: "debug"
+        level: "silent"
       }))
     },
     browser: Browsers.ubuntu("Chrome"),
@@ -441,8 +425,6 @@ export async function startJadiBot(parentSock, senderJid, options = {}) {
       global.phoneLidCache.set(phoneClean, lidClean);
     }
   });
-  cloneSock(parentSock, sock);
-  cloneEvents(parentSock, sock);
   const enrichSubBotUser = () => {
     if (!sock.user && state.creds?.me) sock.user = {
       ...state.creds.me
@@ -474,7 +456,8 @@ export async function startJadiBot(parentSock, senderJid, options = {}) {
     mode: mode,
     speed: 120,
     qrAttempts: 0,
-    pairAttempts: 0
+    pairAttempts: 0,
+    failAttempts: 0
   };
   const isRegistered = Boolean(state.creds && (state.creds.registered === true || state.creds.me?.id));
   if (!isRegistered && mode === "pair" && typeof options.onPairingCode === "function") {
@@ -489,7 +472,8 @@ export async function startJadiBot(parentSock, senderJid, options = {}) {
           }).catch(() => {});
           return;
         }
-        const code = await sock.requestPairingCode(cleanNum);
+        let code = await sock.requestPairingCode(cleanNum);
+        code = code?.match(/.{1,4}/g)?.join("-") || code;
         options.onPairingCode(code, botInstance.pairAttempts, MAX_ATTEMPTS);
       } catch (err) {
         console.error(chalk.red(`[JADIBOT PAIR ERROR: ${cleanNum}]`), err.message);
@@ -498,13 +482,13 @@ export async function startJadiBot(parentSock, senderJid, options = {}) {
   }
   sock.ev.on("creds.update", async () => {
     try {
-      saveCreds();
+      await saveCreds();
       enrichSubBotUser();
     } catch (err) {
       console.error(chalk.red(`[JADIBOT CREDS SAVE ERROR: ${cleanNum}]`), err.message);
     }
   });
-  const triggerEndlessReconnect = (delay = 2500) => {
+  const triggerEndlessReconnect = (delay = 3e3) => {
     if (global.reconnectTimers.has(cleanNum)) {
       clearTimeout(global.reconnectTimers.get(cleanNum));
     }
@@ -545,19 +529,13 @@ export async function startJadiBot(parentSock, senderJid, options = {}) {
       }
     }
     if (connection === "open") {
+      botInstance.failAttempts = 0;
       enrichSubBotUser();
       botInstance.status = "ONLINE";
       botInstance.startTime = Date.now();
       botInstance.lastActivity = Date.now();
       botInstance.qrAttempts = 0;
       botInstance.pairAttempts = 0;
-      if (global.authKeysStore?.[sessionDbKey]) {
-        for (const k in global.authKeysStore[sessionDbKey]) {
-          if (k.startsWith("sender-key-")) {
-            delete global.authKeysStore[sessionDbKey][k];
-          }
-        }
-      }
       setTimeout(async () => {
         try {
           await sock.query({
@@ -583,7 +561,7 @@ export async function startJadiBot(parentSock, senderJid, options = {}) {
         jid: targetPhoneJid,
         connectedAt: global.db.jadibot[cleanNum]?.connectedAt || Date.now(),
         lastActive: Date.now(),
-        platform: "@whiskeysockets/baileys (Pure DB)",
+        platform: "@whiskeysockets/baileys (MultiFile)",
         status: "ONLINE"
       };
       saveDB();
@@ -605,10 +583,10 @@ export async function startJadiBot(parentSock, senderJid, options = {}) {
         }).catch(() => {});
       }
       const botName = sock.user?.name || `Sub-Bot (+${cleanNum})`;
-      console.log(chalk.gray(`[ JADIBOT ] `) + chalk.green(`${botName} terhubung (In-DB Pure Storage).`));
+      console.log(chalk.gray(`[ JADIBOT ] `) + chalk.green(`${botName} terhubung (MultiFile Sesi).`));
       await sock.sendPresenceUpdate("available").catch(() => {});
       await parentSock?.sendMessage(targetPhoneJid, {
-        text: `–  *J A D I B O T  -  C O N N E C T E D*\n\n` + `Sub-Bot berhasil diaktifkan dan terhubung ke server.\n\n` + `┌  ◦  *Nomor* : +${cleanNum}\n` + `│  ◦  *Status* : Online (24/7)\n` + `│  ◦  *Storage* : In-DB Pure Session\n` + `└  ◦  *Time* : ${new Date().toLocaleString("id-ID", {
+        text: `–  *J A D I B O T  -  C O N N E C T E D*\n\n` + `Sub-Bot berhasil diaktifkan dan terhubung ke server.\n\n` + `┌  ◦  *Nomor* : +${cleanNum}\n` + `│  ◦  *Status* : Online (24/7)\n` + `│  ◦  *Storage* : Multi-File Session\n` + `└  ◦  *Time* : ${new Date().toLocaleString("id-ID", {
 timeZone: "Asia/Jakarta"
 })} WIB\n\n` + `_Ketik *.menu* untuk mulai menggunakan bot ini._`
       }).catch(() => {});
@@ -626,27 +604,37 @@ timeZone: "Asia/Jakarta"
       }
       if (sock.user?.jid) unregisterBotFromPool(sock.user.jid);
       if (sock.user?.lid) unregisterBotFromPool(sock.user.lid);
+      if (global.jadiBots.has(cleanNum)) {
+        global.jadiBots.delete(cleanNum);
+      }
       closeSocketInstance(botInstance);
+      if (statusCode === 401 || statusCode === DisconnectReason.loggedOut) {
+        botInstance.failAttempts = (botInstance.failAttempts || 0) + 1;
+        if (botInstance.failAttempts <= 3 && isSessionRegistered(cleanNum)) {
+          console.log(chalk.yellow(`[ JADIBOT ] Mencoba menyambung kembali sub-bot (+${cleanNum}) tanpa hapus sesi (Percobaan ${botInstance.failAttempts}/3)...`));
+          return triggerEndlessReconnect(6e3);
+        } else {
+          console.log(chalk.red(`[ JADIBOT ] Sesi sub-bot (+${cleanNum}) benar-benar kadaluarsa/keluar dari WA.`));
+          deleteJadiBot(cleanNum);
+          await parentSock?.sendMessage(targetPhoneJid, {
+            text: `–  *J A D I B O T  -  D I S C O N N E C T*\n\nSesi Jadibot telah keluar dari akun WhatsApp kamu.\nSilakan hubungkan kembali dengan perintah *.jadibot*.`
+          }).catch(() => {});
+          return;
+        }
+      }
       switch (statusCode) {
         case 408:
         case 428:
         case 503:
         case 515:
         case DisconnectReason.connectionLost:
-          return triggerEndlessReconnect(2e3);
+          return triggerEndlessReconnect(3e3);
         case DisconnectReason.connectionReplaced:
           return triggerEndlessReconnect(5e3);
-        case 401:
-        case DisconnectReason.loggedOut:
-          deleteJadiBot(cleanNum);
-          await parentSock?.sendMessage(targetPhoneJid, {
-            text: `–  *J A D I B O T  -  D I S C O N N E C T*\n\nSesi Jadibot telah keluar dari akun WhatsApp kamu.\nSilakan hubungkan kembali dengan perintah *.jadibot*.`
-          }).catch(() => {});
-          return;
         case 403:
           deleteJadiBot(cleanNum);
           await parentSock?.sendMessage(targetPhoneJid, {
-            text: `–  *A C C O U N T  B A N N E D*\n\nAkun WhatsApp terblokir (403).\nSesi Jadibot telah dihapus otomatis dari database.`
+            text: `–  *A C C O U N T  B A N N E D*\n\nAkun WhatsApp terblokir (403).\nSesi Jadibot telah dihapus otomatis.`
           }).catch(() => {});
           return;
         case 405:

@@ -450,43 +450,39 @@
     ! function() { "use strict"; var t = document.getElementById("kalimat-src"),
         e = (t && t.dataset.text || "SUMI GLITCH").trim() || "SUMI GLITCH",
         a = 512,
-        n = 512,
-        r = document.getElementById("stage"),
-        o = document.getElementById("word"),
-        d = document.getElementById("fx").getContext("2d"),
-        i = document.createElement("canvas").getContext("2d"),
-        l = { base: document.getElementById("layerBase"), r: document.getElementById("layerR"), c: document.getElementById("layerC") },
+        n = document.getElementById("stage"),
+        r = document.getElementById("word"),
+        o = document.getElementById("fx").getContext("2d"),
+        d = document.createElement("canvas").getContext("2d"),
+        i = { base: document.getElementById("layerBase"), r: document.getElementById("layerR"), c: document.getElementById("layerC") },
+        l = [],
         c = [],
-        s = [],
-        m = 0,
-        h = [];
+        s = 0,
+        m = [];
 
-      function u(t, e) { var a = setTimeout(t, e); return h.push(a), a }
+      function h(t, e) { var a = setTimeout(t, e); return m.push(a), a }
 
-      function f(t, e) { t.innerHTML = ""; var a = document.createDocumentFragment();
+      function u(t, e) { t.innerHTML = ""; var a = document.createDocumentFragment();
         e.forEach(function(t) { var e = document.createElement("span");
           e.className = "ch", e.textContent = t.c, e.style.setProperty("--i", String(t.i)), e.style.setProperty("--dx", t.dx + "px"), e.style.setProperty("--dy", t.dy + "px"), e.style.setProperty("--rot", t.rot + "deg"), a.appendChild(e) }), t.appendChild(a) }
 
-      function y() { var t = e;
-        o.style.fontSize = function(t) { i.font = '800 100px "Shippori Mincho", serif'; var e = i.measureText(t).width || 1; return Math.min(44e3 / e, 158) }(t) + "px", c = function(t) { for (var e = [], a = 0; a < t.length; a++) e.push({ c: " " === t[a] ? " " : t[a], i: a, dx: Math.round(150 * Math.random() - 75), dy: (Math.random() < .5 ? -1 : 1) * Math.round(90 + 110 * Math.random()), rot: Math.round(26 * Math.random() - 13) }); return e }(t), f(l.base, c), f(l.r, c), f(l.c, c) }
+      function f() { n.classList.add("impact"), s = 26,
+          function() { for (var t = 0; t < 85; t++) { var e = Math.random() * Math.PI * 2,
+                a = 13 * Math.random() + 2;
+              c.push({ x: 256, y: 256, vx: Math.cos(e) * a, vy: Math.sin(e) * a, life: 1, decay: .014 + .02 * Math.random(), size: 1 + 3.5 * Math.random(), streak: !1 }) } for (var n = 0; n < 16; n++) { var r = Math.random() < .5 ? -1 : 1;
+              c.push({ x: 256 + 320 * (Math.random() - .5), y: 256 + 46 * (Math.random() - .5), vx: r * (12 + 18 * Math.random()), vy: 1.2 * (Math.random() - .5), life: 1, decay: .028 + .012 * Math.random(), size: .8 + 1.6 * Math.random(), streak: !0 }) } }(), h(function() { n.classList.remove("impact"), n.classList.add("settle") }, 700), h(y, 3400) }
 
-      function M() { h.forEach(clearTimeout), h = [], r.classList.remove("impact", "settle", "run"), s.length = 0, m = 0, d.clearRect(0, 0, a, n), r.offsetWidth }
+      function y() { m.forEach(clearTimeout), m = [], n.classList.remove("impact", "settle", "run"), c.length = 0, s = 0, o.clearRect(0, 0, a, 512), n.offsetWidth, requestAnimationFrame(function() { n.classList.add("run"), h(f, 28 * l.length + 760) }) }
 
-      function v() { r.classList.add("impact"), m = 26,
-          function(t, e) { for (var a = 0; a < 85; a++) { var n = Math.random() * Math.PI * 2,
-                r = 13 * Math.random() + 2;
-              s.push({ x: t, y: e, vx: Math.cos(n) * r, vy: Math.sin(n) * r, life: 1, decay: .014 + .02 * Math.random(), size: 1 + 3.5 * Math.random(), streak: !1 }) } for (var o = 0; o < 16; o++) { var d = Math.random() < .5 ? -1 : 1;
-              s.push({ x: t + 320 * (Math.random() - .5), y: e + 46 * (Math.random() - .5), vx: d * (12 + 18 * Math.random()), vy: 1.2 * (Math.random() - .5), life: 1, decay: .028 + .012 * Math.random(), size: .8 + 1.6 * Math.random(), streak: !0 }) } }(256, 256), u(function() { r.classList.remove("impact"), r.classList.add("settle") }, 700), u(p, 3400) }
-
-      function p() { M(), requestAnimationFrame(function() { r.classList.add("run"), u(v, 28 * c.length + 760) }) }
-
-      function x() { y(), p() }! function t() { if (d.clearRect(0, 0, a, n), m > 0) { m--; for (var e = 0; e < 3; e++) { var r = Math.random() * n,
-              o = 1 + 12 * Math.random(),
-              i = Math.random() * a * .5,
-              l = 179.2 + Math.random() * a * .65,
-              c = Math.random();
-            d.globalAlpha = .1 + .25 * Math.random(), d.fillStyle = c < .4 ? "#ff2f52" : c < .75 ? "#0aa2d8" : "#1a1612", d.fillRect(i, r, l, o) } d.globalAlpha = 1 } for (var h = s.length - 1; h >= 0; h--) { var u = s[h];
-          u.x += u.vx, u.y += u.vy, u.vx *= .93, u.vy *= .93, u.vy += .32, u.streak && (u.vx *= .96), u.life -= u.decay, u.life <= 0 ? s.splice(h, 1) : (d.globalAlpha = Math.max(0, u.life), u.streak ? (d.strokeStyle = "#1a1612", d.lineWidth = u.size, d.beginPath(), d.moveTo(u.x, u.y), d.lineTo(u.x - 3 * u.vx, u.y - 3 * u.vy), d.stroke()) : (d.fillStyle = "#1a1612", d.beginPath(), d.arc(u.x, u.y, u.size, 0, 6.2832), d.fill())) } d.globalAlpha = 1, requestAnimationFrame(t) }(), document.fonts && document.fonts.load ? document.fonts.load('800 100px "Shippori Mincho"').then(x).catch(x) : x() }()
+      function M() {
+        (function() { var t = e;
+          r.style.fontSize = function(t) { d.font = '800 100px "Shippori Mincho", serif'; var e = d.measureText(t).width || 1; return Math.min(44e3 / e, 158) }(t) + "px", l = function(t) { for (var e = [], a = 0; a < t.length; a++) e.push({ c: " " === t[a] ? " " : t[a], i: a, dx: Math.round(150 * Math.random() - 75), dy: (Math.random() < .5 ? -1 : 1) * Math.round(90 + 110 * Math.random()), rot: Math.round(26 * Math.random() - 13) }); return e }(t), u(i.base, l), u(i.r, l), u(i.c, l) })(), y() }! function t() { if (o.clearRect(0, 0, a, 512), s > 0) { s--; for (var e = 0; e < 3; e++) { var n = 512 * Math.random(),
+              r = 1 + 12 * Math.random(),
+              d = Math.random() * a * .5,
+              i = 179.2 + Math.random() * a * .65,
+              l = Math.random();
+            o.globalAlpha = .1 + .25 * Math.random(), o.fillStyle = l < .4 ? "#ff2f52" : l < .75 ? "#0aa2d8" : "#1a1612", o.fillRect(d, n, i, r) } o.globalAlpha = 1 } for (var m = c.length - 1; m >= 0; m--) { var h = c[m];
+          h.x += h.vx, h.y += h.vy, h.vx *= .93, h.vy *= .93, h.vy += .32, h.streak && (h.vx *= .96), h.life -= h.decay, h.life <= 0 ? c.splice(m, 1) : (o.globalAlpha = Math.max(0, h.life), h.streak ? (o.strokeStyle = "#1a1612", o.lineWidth = h.size, o.beginPath(), o.moveTo(h.x, h.y), o.lineTo(h.x - 3 * h.vx, h.y - 3 * h.vy), o.stroke()) : (o.fillStyle = "#1a1612", o.beginPath(), o.arc(h.x, h.y, h.size, 0, 6.2832), o.fill())) } o.globalAlpha = 1, requestAnimationFrame(t) }(), document.fonts && document.fonts.load ? document.fonts.load('800 100px "Shippori Mincho"').then(M).catch(M) : M() }()
   </script>
 </body>
 

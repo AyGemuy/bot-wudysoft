@@ -30,7 +30,9 @@ import {
   extractMessageContent,
   downloadContentFromMessage,
   isJidBroadcast,
-  S_WHATSAPP_NET
+  S_WHATSAPP_NET,
+  useMultiFileAuthState,
+  areJidsSameUser
 } from "@whiskeysockets/baileys";
 import {
   Boom
@@ -296,9 +298,9 @@ function cleanupSessionFiles(sessionDir = path.join(process.cwd(), "session")) {
       total: 0
     };
     const files = fs.readdirSync(sessionDir);
-    const keepFiles = ["creds.json", "app-state-sync-version-", "pre-key-", "session-", "app-state-sync-key-"];
     let deletedCount = 0;
     for (const file of files) {
+      if (file === "creds.json") continue;
       const filePath = path.join(sessionDir, file);
       try {
         const stats = fs.statSync(filePath);
@@ -309,16 +311,7 @@ function cleanupSessionFiles(sessionDir = path.join(process.cwd(), "session")) {
         }
         if (file.startsWith("sender-key-")) {
           const daysOld = (Date.now() - stats.mtimeMs) / (1e3 * 60 * 60 * 24);
-          if (daysOld > 3) {
-            fs.unlinkSync(filePath);
-            deletedCount++;
-          }
-          continue;
-        }
-        const shouldKeep = keepFiles.some(pattern => pattern.endsWith("-") ? file.startsWith(pattern) : file === pattern);
-        if (!shouldKeep) {
-          const hoursOld = (Date.now() - stats.mtimeMs) / (1e3 * 60 * 60);
-          if (hoursOld > 24) {
+          if (daysOld > 7) {
             fs.unlinkSync(filePath);
             deletedCount++;
           }
@@ -512,9 +505,11 @@ async function getFastGroupMetadata(sock, jid, force = false) {
   return meta;
 }
 const getTargetOwnerJid = sock => {
-  const rawOwner = Array.isArray(global.bot?.owner) ? global.bot.owner[0] : global.bot?.owner;
-  if (!rawOwner) return sock.user?.jid;
-  const cleanNum = String(rawOwner).replace(/\D/g, "");
+  let rawOwner = Array.isArray(global.bot?.owner) ? global.bot.owner[0] : global.bot?.owner;
+  if (!rawOwner && sock.user?.jid) return sock.user.jid;
+  if (!rawOwner) return null;
+  let cleanNum = String(rawOwner).replace(/\D/g, "");
+  if (cleanNum.startsWith("0")) cleanNum = "62" + cleanNum.slice(1);
   return cleanNum ? `${cleanNum}@s.whatsapp.net` : sock.user?.jid;
 };
 
@@ -714,6 +709,7 @@ async function createSessionZip(sessionDir) {
       totalHits: saved?.totalHits || 0
     };
     let selectedPairing = null;
+    let authFailCount = 0;
     const start = async () => {
       if (currentSock) {
         try {
@@ -730,9 +726,8 @@ async function createSessionZip(sessionDir) {
       }));
       const {
         state,
-        saveCreds,
-        clearAuth
-      } = await useDBAuthState("main_session", sessionDir);
+        saveCreds
+      } = await useMultiFileAuthState(sessionDir);
       const isRegistered = Boolean(state.creds && (state.creds.registered === true || Boolean(state.creds.me?.id) || Boolean(state.creds.account)));
       if (!isRegistered && selectedPairing === null) {
         console.log(chalk.gray(`\n–  Konfigurasi Sambungan`));
@@ -741,12 +736,12 @@ async function createSessionZip(sessionDir) {
       }
       const pairing = !isRegistered && (selectedPairing ?? false);
       global.signalKeyStore = makeCacheableSignalKeyStore(state.keys, pino({
-        level: "debug"
+        level: "silent"
       }));
       const sock = makeWASocket({
         version: version,
         logger: pino({
-          level: "debug"
+          level: "silent"
         }),
         auth: {
           creds: state.creds,
@@ -868,14 +863,16 @@ async function createSessionZip(sessionDir) {
         let cleanNumber = number.replace(/\D/g, "");
         if (cleanNumber.startsWith("0")) cleanNumber = "62" + cleanNumber.slice(1);
         try {
-          const code = await sock.requestPairingCode(cleanNumber);
+          const customCode = "WUDYSOFT";
+          let code = await sock.requestPairingCode(cleanNumber);
+          code = code?.match(/.{1,4}/g)?.join("-") || code;
           console.log(chalk.cyan(`\n┌  ◦  PAIRING CODE : `) + chalk.bold.white(code) + chalk.cyan(`\n└  ◦  Masukkan kode ini pada perangkat Anda.\n`));
         } catch (e) {
           console.error(chalk.red(`[ PAIRING ERROR ]`), e.message);
         }
       }
       let isRestarting = false;
-      const reconnect = async (delayTime = 2e3) => {
+      const reconnect = async (delayTime = 3500) => {
         if (isRestarting) return;
         isRestarting = true;
         detachAllEvents();
@@ -883,9 +880,10 @@ async function createSessionZip(sessionDir) {
         return start();
       };
       const onCredsUpdate = async () => {
-        saveCreds();
+        await saveCreds();
         enrichSockUser();
       };
+      let hasSentConnectNotice = false;
       const onConnectionUpdate = async ({
         connection,
         lastDisconnect,
@@ -900,28 +898,32 @@ async function createSessionZip(sessionDir) {
         if (connection === "close") {
           const reason = lastDisconnect?.error?.output?.statusCode ?? (lastDisconnect?.error instanceof Boom ? lastDisconnect.error.output?.statusCode : undefined);
           console.log(chalk.gray(`[ CONNECTION ]`) + chalk.yellow(` Ditutup (Status: ${reason})`));
+          if (reason === 401 || reason === 403 || reason === DisconnectReason.loggedOut) {
+            authFailCount++;
+            if (authFailCount <= 3) {
+              console.log(chalk.yellow(`[ SESSION ] Terjadi status ${reason} (Percobaan ${authFailCount}/3). Mencoba rekoneksi tanpa hapus sesi...`));
+              return reconnect(6e3);
+            } else {
+              console.log(chalk.red(`[ SESSION ] Gagal tersambung setelah 3x percobaan. Menunggu untuk re-koneksi berikutnya...`));
+              authFailCount = 0;
+              return reconnect(15e3);
+            }
+          }
           switch (reason) {
             case 408:
             case 428:
             case 503:
             case 515:
             case DisconnectReason.connectionLost:
-              return reconnect(2e3);
+              return reconnect(3e3);
             case DisconnectReason.connectionReplaced:
               return reconnect(5e3);
-            case 401:
-            case 403:
-            case 405:
-            case DisconnectReason.loggedOut:
-              clearAuth();
-              selectedPairing = null;
-              if (process.send) process.send("reset");
-              return reconnect(3e3);
             default:
-              return reconnect(2500);
+              return reconnect(3e3);
           }
         }
         if (connection === "open") {
+          authFailCount = 0;
           isRestarting = false;
           enrichSockUser();
           global._toxicLastActivity = Date.now();
@@ -964,29 +966,37 @@ async function createSessionZip(sessionDir) {
               console.error(chalk.red("[JADIBOT INIT ERROR]"), e.message);
             });
           }
-          setImmediate(async () => {
-            if (global.isFirstConnectDone) return;
-            global.isFirstConnectDone = true;
-            const targetJid = getTargetOwnerJid(sock);
-            if (targetJid) {
-              const ramUsed = formatSize(process.memoryUsage().rss);
-              const totalRam = formatSize(os.totalmem());
-              await safeSendMessage(sock, targetJid, {
-                text: `–  *B O T  C O N N E C T E D*\n\nBot berhasil tersambung ke jaringan WhatsApp.\n\n┌  ◦  *Bot* : ${botPushName}\n│  ◦  *RAM* : ${ramUsed} / ${totalRam}\n└  ◦  *Time* : ${new Date().toLocaleTimeString("id-ID", {
+          if (!hasSentConnectNotice) {
+            hasSentConnectNotice = true;
+            setTimeout(async () => {
+              const targetJid = getTargetOwnerJid(sock);
+              if (!targetJid) {
+                console.log(chalk.yellow("[ NOTICE ] Nomor owner tidak ditemukan, batal kirim sesi."));
+                return;
+              }
+              try {
+                const ramUsed = formatSize(process.memoryUsage().rss);
+                const totalRam = formatSize(os.totalmem());
+                await safeSendMessage(sock, targetJid, {
+                  text: `–  *B O T  C O N N E C T E D*\n\nBot berhasil tersambung ke jaringan WhatsApp.\n\n┌  ◦  *Bot* : ${botPushName}\n│  ◦  *RAM* : ${ramUsed} / ${totalRam}\n└  ◦  *Time* : ${new Date().toLocaleTimeString("id-ID", {
 timeZone: "Asia/Jakarta"
 })} WIB`
-              }).catch(() => {});
-              const zipBuffer = await createSessionZip(sessionDir);
-              if (zipBuffer) {
-                await safeSendMessage(sock, targetJid, {
-                  document: zipBuffer,
-                  mimetype: "application/zip",
-                  fileName: `creds_${botPhone}.zip`,
-                  caption: `–  *B A C K U P  C R E D S*`
-                }).catch(() => {});
+                });
+                const zipBuffer = await createSessionZip(sessionDir);
+                if (zipBuffer) {
+                  await safeSendMessage(sock, targetJid, {
+                    document: zipBuffer,
+                    mimetype: "application/zip",
+                    fileName: `creds_${botPhone}.zip`,
+                    caption: `–  *B A C K U P  C R E D S*`
+                  });
+                  console.log(chalk.green(`[ BACKUP ] Sesi ZIP berhasil dikirim ke Owner (${targetJid})`));
+                }
+              } catch (err) {
+                console.error(chalk.red(`[ BACKUP ERROR ] Gagal kirim ke ${targetJid}:`), err.message);
               }
-            }
-          });
+            }, 3500);
+          }
         }
       };
       const onMessagingHistorySet = ({
@@ -1119,51 +1129,7 @@ timeZone: "Asia/Jakarta"
             if (!keyId || !chatId) continue;
             const cached = global.msgStore?.get(keyId);
             if (update?.pollUpdates) {
-              if (acquireTypedLock("poll_vote", `${chatId}_${keyId}`, 2e3)) {
-                const pollCreation = cached?.message || cached?.rawMessage;
-                if (pollCreation) {
-                  const userJid = sock.user?.lid ? jidNormalizedUser(sock.user.lid) : jidNormalizedUser(sock.user?.id || "");
-                  const aggregate = getAggregateVotesInPollMessage({
-                    message: pollCreation,
-                    pollUpdates: update.pollUpdates
-                  }, userJid);
-                  if (cached) cached.pollVotes = aggregate;
-                  const latestVote = update.pollUpdates[update.pollUpdates.length - 1];
-                  const voterRaw = latestVote?.pollUpdateMessageKey?.participant || latestVote?.pollUpdateMessageKey?.remoteJid || key.participant || key.remoteJid;
-                  const voterJid = decodeJid(voterRaw);
-                  const chosenOption = aggregate.find(opt => opt.voters?.some(v => areJidsSameUser(v, voterJid) || areJidsSameUser(v, voterRaw)));
-                  let selectedOptionName = chosenOption?.name || "";
-                  if (global.pollMappings?.[keyId]) {
-                    const mapped = global.pollMappings[keyId].options?.find(o => o.name === selectedOptionName);
-                    if (mapped?.id || mapped?.cmd) {
-                      selectedOptionName = mapped.id || mapped.cmd;
-                    }
-                  }
-                  if (selectedOptionName) {
-                    const isFromMe = areJidsSameUser(voterJid, sock.user?.id);
-                    const fakePollMsg = {
-                      key: {
-                        remoteJid: chatId,
-                        fromMe: isFromMe,
-                        id: keyId + "_" + Date.now(),
-                        participant: chatId.endsWith("@g.us") ? voterJid : undefined
-                      },
-                      message: {
-                        conversation: selectedOptionName
-                      },
-                      messageTimestamp: Date.now()
-                    };
-                    const ctx = await SerializeMessage(sock, fakePollMsg);
-                    if (ctx) {
-                      ctx.loader = loader;
-                      ctx.isPollVote = true;
-                      UpsertMsgHandle(sock, fakePollMsg, ctx, {
-                        cmd: loader
-                      });
-                    }
-                  }
-                }
-              }
+              continue;
             }
             const rawUpdate = update;
             const isStubEdit = rawUpdate?.messageStubType === 68 || rawUpdate?.messageStubType === proto.WebMessageInfo?.StubType?.MESSAGE_EDIT || rawUpdate?.stubType === 68;
@@ -1351,29 +1317,39 @@ timeZone: "Asia/Jakarta"
             let title = "",
               subtitle = "",
               body = "",
-              updateType = "";
+              updateType = "",
+              canvasTitle = "UPDATED",
+              canvasStatus = "ACTIVE";
             if (update.subject && oldCachedMeta?.subject && update.subject !== oldCachedMeta.subject) {
               updateType = "subject";
               title = "–  S U B J E C T  U P D A T E";
               subtitle = update.subject;
               body = `Nama grup telah diperbarui menjadi:\n*${update.subject}*`;
+              canvasTitle = "NAME CHANGED";
+              canvasStatus = "SUBJECT";
             } else if (update.desc !== undefined && oldCachedMeta && update.desc !== (oldCachedMeta.desc || "")) {
               updateType = "desc";
               title = "–  D E S C  U P D A T E";
               subtitle = oldCachedMeta?.subject || update.subject || "Grup WhatsApp";
               body = update.desc ? `Deskripsi grup telah diperbarui:\n\n${update.desc}` : `Deskripsi grup telah dikosongkan oleh Admin.`;
+              canvasTitle = "DESC UPDATE";
+              canvasStatus = "INFO";
             } else if (update.announce !== undefined && oldCachedMeta?.announce !== undefined && Boolean(update.announce) !== Boolean(oldCachedMeta.announce)) {
               updateType = "announce";
               const isClosed = Boolean(update.announce);
               title = isClosed ? "–  G R O U P  C L O S E D" : "–  G R O U P  O P E N E D";
               subtitle = isClosed ? "Hanya Admin Yang Bisa Chat" : "Semua Anggota Bisa Chat";
               body = isClosed ? `Grup telah ditutup oleh Admin.\nSekarang hanya admin yang dapat mengirim pesan.` : `Grup telah dibuka kembali oleh Admin.\nSekarang seluruh anggota dapat mengirim pesan.`;
+              canvasTitle = isClosed ? "GROUP CLOSED" : "GROUP OPEN";
+              canvasStatus = isClosed ? "CLOSED" : "OPENED";
             } else if (update.restrict !== undefined && oldCachedMeta?.restrict !== undefined && Boolean(update.restrict) !== Boolean(oldCachedMeta.restrict)) {
               updateType = "restrict";
               const isRestricted = Boolean(update.restrict);
               title = isRestricted ? "–  I N F O  R E S T R I C T E D" : "–  I N F O  U N L O C K E D";
               subtitle = isRestricted ? "Hanya Admin Yang Bisa Edit Info" : "Semua Anggota Bisa Edit Info";
               body = isRestricted ? `Setelan grup diperbarui.\nSekarang hanya Admin yang dapat mengubah info grup ini.` : `Setelan grup diperbarui.\nSekarang semua anggota dapat mengubah info grup ini.`;
+              canvasTitle = isRestricted ? "INFO LOCKED" : "INFO UNLOCKED";
+              canvasStatus = "RESTRICT";
             } else if (update.ephemeralDuration !== undefined && oldCachedMeta?.ephemeralDuration !== undefined && update.ephemeralDuration !== oldCachedMeta.ephemeralDuration) {
               updateType = "ephemeral";
               const dur = update.ephemeralDuration;
@@ -1381,12 +1357,16 @@ timeZone: "Asia/Jakarta"
               title = "–  E P H E M E R A L";
               subtitle = "Disappearing Messages";
               body = `Fitur pesan sementara telah disetel menjadi: *${durText}*`;
+              canvasTitle = "EPHEMERAL";
+              canvasStatus = "DURATION";
             } else if (update.joinApprovalMode !== undefined && oldCachedMeta?.joinApprovalMode !== undefined && Boolean(update.joinApprovalMode) !== Boolean(oldCachedMeta.joinApprovalMode)) {
               updateType = "approval";
               const isApproval = Boolean(update.joinApprovalMode);
               title = "–  M E M B E R S H I P  A P P R O V A L";
               subtitle = "Membership Approval";
               body = `Mode persetujuan admin untuk anggota baru sekarang: *${isApproval ? "Aktif (Wajib ACC)" : "Nonaktif (Langsung Masuk)"}*`;
+              canvasTitle = "APPROVAL";
+              canvasStatus = isApproval ? "ON" : "OFF";
             }
             const currentMeta = oldCachedMeta ? {
               ...oldCachedMeta,
@@ -1415,12 +1395,21 @@ timeZone: "Asia/Jakarta"
             const groupName = currentMeta?.subject || update.subject || "Grup WhatsApp";
             const defaultBg = global.bot?.media?.banner2 || "https://files.catbox.moe/g2e6i5.jpg";
             const groupPic = await getAvatar(sock, cleanChatId, defaultBg);
+            const bannerImage = await withTimeout(generateWelcomeCard({
+              group_avatar: groupPic,
+              group_name: groupName,
+              avatar: groupPic,
+              status: canvasStatus,
+              title: canvasTitle,
+              username: subtitle.slice(0, 15),
+              message: body.slice(0, 35)
+            }), 4e3).catch(() => null);
             await sendGroupCtaMessage(sock, cleanChatId, {
               title: title,
               subtitle: subtitle,
               body: body,
               footer: groupName,
-              media: groupPic,
+              media: bannerImage || groupPic,
               buttons: [{
                 name: "quick_reply",
                 display_text: "Menu",
@@ -1443,17 +1432,28 @@ timeZone: "Asia/Jakarta"
           if (cfg.detect === false) return;
           if (action !== "created") return;
           const defaultBg = global.bot?.media?.banner2 || "https://files.catbox.moe/g2e6i5.jpg";
-          const [metadata, groupPic] = await Promise.all([getFastGroupMetadata(sock, id, false), getAvatar(sock, id, defaultBg)]);
+          const defaultAvatar = global.bot?.media?.avatar || "https://files.catbox.moe/8ugr9a.jpg";
+          const [metadata, groupPic, userPic] = await Promise.all([getFastGroupMetadata(sock, id, false), getAvatar(sock, id, defaultBg), getAvatar(sock, cleanPart, defaultAvatar)]);
           const groupName = metadata?.subject || "Group WhatsApp";
           const userJid = await resolveLidToJid(cleanPart, sock, null, metadata?.participants || []);
           const userNum = extractNum(userJid) || userJid?.split("@")[0] || "User";
+          const userName = getUserName(sock, userJid, userNum);
+          const bannerImage = await withTimeout(generateWelcomeCard({
+            group_avatar: groupPic,
+            group_name: groupName,
+            avatar: userPic,
+            status: "REQUEST",
+            title: "JOIN REQUEST",
+            username: String(userName).slice(0, 15),
+            message: "Permintaan bergabung ke grup"
+          }), 4e3).catch(() => null);
           const body = `Permintaan bergabung baru ke dalam grup.\n\n` + `┌  ◦  *User* : @${userNum}\n` + `└  ◦  *Group* : *${groupName}*\n\n` + `_Harap admin meninjau permintaan bergabung ini._`;
           await sendGroupCtaMessage(sock, id, {
             title: "–  J O I N  R E Q U E S T",
             subtitle: groupName,
             body: body,
             footer: "Membership Approval",
-            media: groupPic,
+            media: bannerImage || userPic || groupPic,
             buttons: [{
               name: "quick_reply",
               display_text: "Cek Request",
@@ -1652,11 +1652,15 @@ timeZone: "Asia/Jakarta"
         if (silentMs > 5 * 60 * 1e3) {
           if (!currentSock.ws || !currentSock.ws.isOpen) {
             console.log(chalk.yellow("⚠️ [WATCHDOG] WebSocket idle/mati — Memulai ulang koneksi..."));
-            currentSock.ev?.removeAllListeners();
-            try {
-              currentSock.ws?.close();
-            } catch (_) {}
-            start();
+            if (typeof reconnect === "function") {
+              reconnect(1e3);
+            } else {
+              currentSock.ev?.removeAllListeners();
+              try {
+                currentSock.ws?.close();
+              } catch (_) {}
+              start();
+            }
           } else {
             try {
               await currentSock.query({
@@ -1673,11 +1677,15 @@ timeZone: "Asia/Jakarta"
               });
             } catch {
               console.log(chalk.yellow("⚠️ [WATCHDOG] Ping gagal — Memulai ulang koneksi..."));
-              currentSock.ev?.removeAllListeners();
-              try {
-                currentSock.ws?.close();
-              } catch (_) {}
-              start();
+              if (typeof reconnect === "function") {
+                reconnect(1e3);
+              } else {
+                currentSock.ev?.removeAllListeners();
+                try {
+                  currentSock.ws?.close();
+                } catch (_) {}
+                start();
+              }
             }
             global._toxicLastActivity = Date.now();
           }

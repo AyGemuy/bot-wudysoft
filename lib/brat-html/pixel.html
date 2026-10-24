@@ -305,29 +305,26 @@
         s = document.getElementById("textLeft"),
         m = document.getElementById("textRight"),
         d = document.createElement("canvas").getContext("2d"),
-        u = '"Press Start 2P", monospace',
-        y = 60;
+        y = '"Press Start 2P", monospace',
+        u = 60; var h = [],
+        g = ["#00fff0", "#ff00ff", "#ffff00", "#00ff00", "#ff5500"];
 
-      function h() { var t = function(t) { var e = String(t).trim().split(/\s+/).filter(Boolean); if (!e.length) return ["", ""]; if (1 === e.length) { var n = e[0]; if (n.length < 2) return [n, n]; var i = Math.ceil(n.length / 2); return [n.slice(0, i), n.slice(i)] } if (2 === e.length) return [e[0], e[1]]; for (var a = 1, l = 1 / 0, o = 1; o < e.length; o++) { var r = e.slice(0, o).join("").length,
-              f = e.slice(o).join("").length,
-              c = Math.abs(r - f);
-            c < l && (l = c, a = o) } return [e.slice(0, a).join(" "), e.slice(a).join(" ")] }(e);
-        s.textContent = t[0], m.textContent = t[1]; var n = function(t, e) { if (!t && !e) return 90;
-          d.font = "400 100px " + u; var n = t ? d.measureText(t).width || 1 : 0,
-            i = e ? d.measureText(e).width || 1 : 0; return Math.min(38e3 / (n + i || 1), 90) }(t[0], t[1]);
-        y = n, o.style.fontSize = n + "px", r.style.fontSize = n + "px" } var g = [],
-        v = ["#00fff0", "#ff00ff", "#ffff00", "#00ff00", "#ff5500"];
-
-      function x() { o.style.opacity = "0", r.style.opacity = "0", o.style.animation = "none", r.style.animation = "none", g = function() { var t = document.createElement("canvas");
-          t.width = n, t.height = i; var e = t.getContext("2d");
-          e.font = "400 " + y + "px " + u, e.textBaseline = "middle", e.fillStyle = "#fff", e.textAlign = "right", e.fillText(s.textContent, 270, 256), e.textAlign = "left", e.fillText(m.textContent, 242, 256); for (var a = e.getImageData(0, 0, n, i).data, l = [], o = 0; o < i; o += 8)
-            for (var r = 0; r < n; r += 8) a[4 * (o * n + r) + 3] > 128 && l.push({ x: r, y: o, vx: 14 * (Math.random() - .5), vy: 8 * -Math.random() - 4, size: 8, color: v[Math.floor(Math.random() * v.length)], life: 1, decay: .008 + .01 * Math.random(), rot: 0, vr: .15 * (Math.random() - .5) }); return l }(), console.log("[pixel] captured " + g.length + " blocks") }
-
-      function p() { a.classList.remove("impact", "run"), g = [], o.style.opacity = "", r.style.opacity = "", o.style.animation = "", r.style.animation = "", l.clearRect(0, 0, n, i), [f, c].forEach(function(t) { t.style.animation = "none", t.offsetWidth, t.style.animation = "" }), requestAnimationFrame(function() { a.classList.add("run"); var t = function() { f.removeEventListener("animationend", t), a.classList.add("impact"), x(), setTimeout(p, 3200) };
+      function v() { a.classList.remove("impact", "run"), h = [], o.style.opacity = "", r.style.opacity = "", o.style.animation = "", r.style.animation = "", l.clearRect(0, 0, n, i), [f, c].forEach(function(t) { t.style.animation = "none", t.offsetWidth, t.style.animation = "" }), requestAnimationFrame(function() { a.classList.add("run"); var t = function() { f.removeEventListener("animationend", t), a.classList.add("impact"), o.style.opacity = "0", r.style.opacity = "0", o.style.animation = "none", r.style.animation = "none", h = function() { var t = document.createElement("canvas");
+              t.width = n, t.height = i; var e = t.getContext("2d");
+              e.font = "400 " + u + "px " + y, e.textBaseline = "middle", e.fillStyle = "#fff", e.textAlign = "right", e.fillText(s.textContent, 270, 256), e.textAlign = "left", e.fillText(m.textContent, 242, 256); for (var a = e.getImageData(0, 0, n, i).data, l = [], o = 0; o < i; o += 8)
+                for (var r = 0; r < n; r += 8) a[4 * (o * n + r) + 3] > 128 && l.push({ x: r, y: o, vx: 14 * (Math.random() - .5), vy: 8 * -Math.random() - 4, size: 8, color: g[Math.floor(Math.random() * g.length)], life: 1, decay: .008 + .01 * Math.random(), rot: 0, vr: .15 * (Math.random() - .5) }); return l }(), console.log("[pixel] captured " + h.length + " blocks"), setTimeout(v, 3200) };
           f.addEventListener("animationend", t, { once: !0 }) }) }
 
-      function S() { h(), p() }! function t() { l.clearRect(0, 0, n, i); for (var e = g.length - 1; e >= 0; e--) { var a = g[e];
-          a.x += a.vx, a.y += a.vy, a.vy += .55, a.vx *= .99, a.rot += a.vr, a.life -= a.decay, a.y > i - a.size && (a.y = i - a.size, a.vy *= -.55, a.vx *= .85), a.life <= 0 || a.y > 562 ? g.splice(e, 1) : (l.fillStyle = "rgba(0,0,0," + a.life + ")", l.fillRect(a.x - 2, a.y - 2, a.size + 4, a.size + 4), l.fillStyle = a.color, l.globalAlpha = a.life, l.fillRect(a.x, a.y, a.size, a.size), l.fillStyle = "rgba(255,255,255," + .5 * a.life + ")", l.fillRect(a.x + 2, a.y + 2, .3 * a.size, .3 * a.size)) } l.globalAlpha = 1, requestAnimationFrame(t) }(), document.fonts && document.fonts.load ? document.fonts.load('400 100px "Press Start 2P"').then(S).catch(S) : S() }()
+      function x() {
+        (function() { var t = function(t) { var e = String(t).trim().split(/\s+/).filter(Boolean); if (!e.length) return ["", ""]; if (1 === e.length) { var n = e[0]; if (n.length < 2) return [n, n]; var i = Math.ceil(n.length / 2); return [n.slice(0, i), n.slice(i)] } if (2 === e.length) return [e[0], e[1]]; for (var a = 1, l = 1 / 0, o = 1; o < e.length; o++) { var r = e.slice(0, o).join("").length,
+                f = e.slice(o).join("").length,
+                c = Math.abs(r - f);
+              c < l && (l = c, a = o) } return [e.slice(0, a).join(" "), e.slice(a).join(" ")] }(e);
+          s.textContent = t[0], m.textContent = t[1]; var n = function(t, e) { if (!t && !e) return 90;
+            d.font = "400 100px " + y; var n = t ? d.measureText(t).width || 1 : 0,
+              i = e ? d.measureText(e).width || 1 : 0; return Math.min(38e3 / (n + i || 1), 90) }(t[0], t[1]);
+          u = n, o.style.fontSize = n + "px", r.style.fontSize = n + "px" })(), v() }! function t() { l.clearRect(0, 0, n, i); for (var e = h.length - 1; e >= 0; e--) { var a = h[e];
+          a.x += a.vx, a.y += a.vy, a.vy += .55, a.vx *= .99, a.rot += a.vr, a.life -= a.decay, a.y > i - a.size && (a.y = i - a.size, a.vy *= -.55, a.vx *= .85), a.life <= 0 || a.y > 562 ? h.splice(e, 1) : (l.fillStyle = "rgba(0,0,0," + a.life + ")", l.fillRect(a.x - 2, a.y - 2, a.size + 4, a.size + 4), l.fillStyle = a.color, l.globalAlpha = a.life, l.fillRect(a.x, a.y, a.size, a.size), l.fillStyle = "rgba(255,255,255," + .5 * a.life + ")", l.fillRect(a.x + 2, a.y + 2, .3 * a.size, .3 * a.size)) } l.globalAlpha = 1, requestAnimationFrame(t) }(), document.fonts && document.fonts.load ? document.fonts.load('400 100px "Press Start 2P"').then(x).catch(x) : x() }()
   </script>
 </body>
 

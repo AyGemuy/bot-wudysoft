@@ -1,13 +1,17 @@
 import {
   normalizeMessageContent,
-  generateWAMessage,
-  areJidsSameUser,
+  proto,
   jidNormalizedUser,
-  proto
+  areJidsSameUser
 } from "@whiskeysockets/baileys";
 import {
-  decodeJid
+  decodeJid,
+  resolveLidToJid,
+  SerializeMessage
 } from "../../core/serialize.js";
+import {
+  UpsertMsgHandle
+} from "../../core/handler.js";
 import {
   createDecipheriv,
   createHmac
@@ -153,32 +157,45 @@ export default {
       const lockKey = `edit_cmd_lock:${targetId}_${newText}`;
       if (global.botEventLocks.has(lockKey)) return true;
       global.botEventLocks.add(lockKey);
-      setTimeout(() => global.botEventLocks.delete(lockKey), 2e3);
-      const senderNum = (candidates[0] || ctx.sender || "").split("@")[0] || "User";
-      console.log(chalk.gray(`[ EDIT CMD ] `) + chalk.cyan(`@${senderNum}`) + chalk.gray(` mengedit pesan menjadi: `) + chalk.yellowBright.bold(`"${newText}"`));
-      const activeSender = candidates[0] || ctx.sender;
-      const isFromMe = areJidsSameUser(activeSender, sock.user?.id);
-      const fakeMsg = await generateWAMessage(chatId, {
-        text: newText,
-        mentions: [activeSender]
-      }, {
-        userJid: sock.user.id,
-        quoted: m
-      });
-      fakeMsg.key.fromMe = isFromMe;
-      fakeMsg.key.id = targetId;
-      fakeMsg.pushName = ctx.pushName || m.pushName || "User";
-      if (ctx.isGroup) {
-        fakeMsg.key.participant = fakeMsg.participant = activeSender;
+      setTimeout(() => global.botEventLocks.delete(lockKey), 3e3);
+      let activeSender = candidates[0] || ctx.sender;
+      if (activeSender && activeSender.endsWith("@lid")) {
+        const resolved = await resolveLidToJid(activeSender, sock, null, ctx.participants || []).catch(() => null);
+        if (resolved && !resolved.endsWith("@lid")) activeSender = resolved;
       }
-      fakeMsg.isEdited = true;
-      if (sock.ev?.emit) {
-        sock.ev.emit("messages.upsert", {
-          messages: [proto.WebMessageInfo.create(fakeMsg)],
-          type: "notify"
+      const senderNum = (activeSender || "").split("@")[0] || "User";
+      console.log(chalk.gray(`[ EDIT CMD ] `) + chalk.cyan(`@${senderNum}`) + chalk.gray(` mengedit pesan menjadi: `) + chalk.yellowBright.bold(`"${newText}"`));
+      const isFromMe = areJidsSameUser(activeSender, sock.user?.id);
+      const fakeMsg = {
+        key: {
+          remoteJid: chatId,
+          fromMe: isFromMe,
+          id: `${targetId}_EDIT_${Date.now().toString(36)}`,
+          participant: chatId.endsWith("@g.us") ? activeSender : undefined
+        },
+        message: {
+          extendedTextMessage: {
+            text: newText
+          }
+        },
+        pushName: ctx.pushName || m.pushName || "User",
+        messageTimestamp: Math.floor(Date.now() / 1e3)
+      };
+      const fakeCtx = await SerializeMessage(sock, fakeMsg);
+      if (fakeCtx) {
+        fakeCtx.loader = cmd || global.loader;
+        fakeCtx.isEdited = true;
+        fakeCtx.text = newText;
+        fakeCtx.body = newText;
+        UpsertMsgHandle(sock, fakeMsg, fakeCtx, {
+          cmd: cmd || global.loader
+        }).catch(err => {
+          console.error(chalk.red("[EDIT EXEC ERROR]"), err.message);
         });
       }
       return true;
-    } catch (_) {}
+    } catch (e) {
+      console.error(chalk.red("[ONEDIT HANDLER ERROR]"), e);
+    }
   }
 };

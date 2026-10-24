@@ -222,6 +222,14 @@ let _lidMigrationStats = {
   deferred: 0
 };
 const _lidDeferredQueue = new Set();
+
+function _resolveLidInBackground(key, sock, alt, participants) {
+  setTimeout(async () => {
+    try {
+      await resolveLidFast(key, sock, alt, participants);
+    } catch (_) {}
+  }, 1e3);
+}
 export async function migrateLidToJid(dbData, sock = null) {
   if (!dbData?.user || isMigratingLid) return;
   if (!sock) {
@@ -578,26 +586,48 @@ export async function UpsertMsgHandle(sock, msg, ctx, {
     delete msg.key.remoteJidAlt;
   }
   let chatId = isGroup ? rawChatId : userPhoneJid && !userPhoneJid.endsWith("@lid") ? userPhoneJid : sender;
-  db.ensureUser(userPhoneJid, ctx.pushname || senderNumber);
-  let groupData = null;
-  if (isGroup && chatId) {
-    db.ensureGroup(chatId);
-    groupData = global.db?.group?.[chatId];
-  }
-  if (isGroup && chatId && !isBot) {
-    const uDb = global.db?.user?.[userPhoneJid];
-    if (uDb) {
-      if (!uDb.chatCount) uDb.chatCount = {};
-      uDb.chatCount[chatId] = (uDb.chatCount[chatId] || 0) + 1;
-      db.write(global.db).catch(() => {});
-    }
-  }
+  const msgId = String(keyId || msg.key?.id || ctx.key?.id || "");
+  const isBaileys = Boolean(ctx.isBaileys || msgId && (msgId.startsWith("BAE5") || msgId.startsWith("3EB0") || msgId.startsWith("B1E") || msgId.startsWith("XYZ0") || msgId.length === 16 && /^[0-9A-F]+$/i.test(msgId) || msgId.length === 18 && /^[0-9A-F]+$/i.test(msgId) || msgId.length === 22));
   const isFromMe = Boolean(msg.key?.fromMe || ctx.isFromMe);
   const botId = decodeJid(sock.user?.id || sock.user?.jid || "");
   const botLid = sock.user?.lid ? decodeJid(sock.user.lid) : null;
   const botJid = jidNormalizedUser(botId || "");
-  const isBot = isFromMe || areJidsSameUser(sender, botJid) || botLid && areJidsSameUser(sender, botLid) || senderAlt && areJidsSameUser(senderAlt, botJid) || senderAlt && botLid && areJidsSameUser(senderAlt, botLid) || Boolean(ctx.isBot) || Boolean(ctx.isBaileys);
-  if ((isFromMe || isBot) && !global.bot?.selfbot && isFromMe) return;
+  const isBotMyself = Boolean(isFromMe || areJidsSameUser(sender, botJid) || botLid && areJidsSameUser(sender, botLid) || senderAlt && areJidsSameUser(senderAlt, botJid) || senderAlt && botLid && areJidsSameUser(senderAlt, botLid));
+  const rawSenderName = String(ctx.pushname || ctx.pushName || "");
+  const isExternalBot = Boolean(isBaileys || ctx.isBot || global.botJidPool?.has(decodeJid(sender)) || global.botJidPool?.has(decodeJid(userPhoneJid)));
+  const isBot = isBotMyself || isExternalBot;
+  const autoEnsureUserDb = (jid, name) => {
+    if (!jid) return null;
+    const clean = decodeJid(jid);
+    db.ensureUser?.(clean, name);
+    if (!global.db) global.db = {};
+    if (!global.db.user) global.db.user = {};
+    if (!global.db.user[clean]) global.db.user[clean] = {};
+    const u = global.db.user[clean];
+    if (!u.chatCount || typeof u.chatCount !== "object") {
+      u.chatCount = {};
+    }
+    if (isBotMyself || clean === userPhoneJid && isExternalBot) {
+      u.isBot = true;
+      global.botJidPool?.add(clean);
+    }
+    return u;
+  };
+  let groupData = null;
+  if (isGroup && chatId) {
+    try {
+      db.ensureGroup?.(chatId);
+      groupData = global.db?.group?.[chatId] || null;
+      const targetChatJid = isBotMyself ? botJid : userPhoneJid;
+      const targetName = isBotMyself ? global.bot?.name || "Bot" : rawSenderName || senderNumber;
+      const uDb = autoEnsureUserDb(targetChatJid, targetName);
+      if (uDb) {
+        uDb.chatCount[chatId] = (uDb.chatCount[chatId] || 0) + 1;
+      }
+    } catch (_) {}
+  }
+  if (isBotMyself && !global.bot?.selfbot) return;
+  autoEnsureUserDb(userPhoneJid, rawSenderName || senderNumber);
   const rawOwners = [...Array.isArray(global.bot?.owner) ? global.bot.owner.flat(Infinity) : [global.bot?.owner], global.bot?.author?.number].filter(Boolean);
   const ownerNumbers = new Set();
   const ownerJids = new Set();
@@ -707,22 +737,22 @@ export async function UpsertMsgHandle(sock, msg, ctx, {
       if (ctx.isBotAdmin) {
         await ctx.delete().catch(() => {});
       }
-      const antiBotNotice = `Terdeteksi aktivitas bot lain terkirim di dalam grup.\n\n` + `┌  ◦  *User* : @${senderNumber}\n` + `└  ◦  *Status* : Bot Unauthorized\n\n` + `_Pilih tindakan di bawah untuk mengeluarkan bot ini._`;
+      const antiBotNotice = `Terdeteksi aktivitas bot lain di dalam grup.\n\n` + `┌  ◦  *User* : @${senderNumber}\n` + `│  ◦  *Aksi* : Pesan telah dihapus otomatis\n` + `└  ◦  *Status* : Bot Unauthorized\n\n` + `_Silakan admin klik tombol di bawah jika ingin mengeluarkan bot ini dari grup._`;
       const prefix = ctx.prefix || ".";
       const buttons = [{
         name: "quick_reply",
-        display_text: "Kick Bot",
-        id: `${prefix}kick ${senderNumber}`
+        display_text: "🚫 Kick Bot Ini",
+        id: `${prefix}kick @${senderNumber}`
       }, {
         name: "quick_reply",
-        display_text: "Abaikan",
+        display_text: "📜 Rules Grup",
         id: `${prefix}rules`
       }];
       await sendInteractiveViewOnce(sock, chatId, {
         title: "–  A N T I - B O T",
-        subtitle: "Anti-Bot Protection",
+        subtitle: "Aktivitas Bot Terdeteksi",
         body: antiBotNotice,
-        footer: global.bot?.name || "Neoxr Bot",
+        footer: global.bot?.name || "Wudysoft",
         buttons: buttons,
         mentions: [userPhoneJid]
       });
@@ -784,15 +814,6 @@ export async function UpsertMsgHandle(sock, msg, ctx, {
   if (userData?.banned === true && !isOwner) {
     return ctx.reply(`–  *B A N N E D*\n\n` + `Akses kamu telah ditangguhkan!\n\n` + `┌  ◦  *Reason* : ${userData?.banReason || "Melanggar terms of service bot."}\n` + `└  ◦  *Contact* : Hubungi owner untuk banding.`);
   }
-  const spamKey = `${userPhoneJid}_${chatId}_spam`;
-  const lastSpamTime = userSpamMap.get(spamKey) || 0;
-  const SPAM_WINDOW = 1500;
-  if (Date.now() - lastSpamTime < SPAM_WINDOW && !isOwner) {
-    const lastCmd = userSpamMap.get(`${spamKey}_cmd`);
-    if (lastCmd === ctx.cmd) return;
-  }
-  userSpamMap.set(spamKey, Date.now());
-  userSpamMap.set(`${spamKey}_cmd`, ctx.cmd);
   const beforeHandlers = cmd?.getBeforeHandlers?.() || [];
   if (beforeHandlers.length) {
     const results = await Promise.all(beforeHandlers.map(({
@@ -862,6 +883,15 @@ export async function UpsertMsgHandle(sock, msg, ctx, {
     }
   }
   if (!ctx.cmd || !command) return;
+  const spamKey = `${userPhoneJid}_${chatId}_spam`;
+  const lastSpamTime = userSpamMap.get(spamKey) || 0;
+  const SPAM_WINDOW = 1500;
+  if (Date.now() - lastSpamTime < SPAM_WINDOW && !isOwner) {
+    const lastCmd = userSpamMap.get(`${spamKey}_cmd`);
+    if (lastCmd === ctx.cmd) return;
+  }
+  userSpamMap.set(spamKey, Date.now());
+  userSpamMap.set(`${spamKey}_cmd`, ctx.cmd);
   const cdTime = (command.cooldown || global.bot?.cooldown || 3) * 1e3;
   const userCdKey = `${userPhoneJid}_${chatId}_${command.name || ctx.cmd}`;
   const now = Date.now();
@@ -993,8 +1023,18 @@ export async function UpsertMsgHandle(sock, msg, ctx, {
     };
     await execFn.call(command, sock, ctx, msg, extra);
     global.db.stats = global.db.stats || {};
-    global.db.stats[ctx.cmd] = (global.db.stats[ctx.cmd] || 0) + 1;
+    if (typeof global.db.stats[ctx.cmd] !== "object") {
+      const oldHits = Number(global.db.stats[ctx.cmd]) || 0;
+      global.db.stats[ctx.cmd] = {
+        success: oldHits,
+        error: 0,
+        lastHit: Date.now()
+      };
+    }
+    global.db.stats[ctx.cmd].success = (global.db.stats[ctx.cmd].success || 0) + 1;
+    global.db.stats[ctx.cmd].lastHit = Date.now();
     global.db.totalHits = (global.db.totalHits || 0) + 1;
+    global.db.totalSuccess = (global.db.totalSuccess || 0) + 1;
     if (userData) {
       const multiplier = isPremium ? 2 : 1;
       userData.exp = (userData.exp || 0) + (Math.floor(Math.random() * 15) + 5) * multiplier;
@@ -1003,10 +1043,26 @@ export async function UpsertMsgHandle(sock, msg, ctx, {
     }
   } catch (err) {
     console.error(chalk.redBright(`[COMMAND ERROR : ${ctx.cmd}]`), err);
-    const raw = String(err?.message || err || "Unknown").replace(/```/g, "'''");
+    global.db.stats = global.db.stats || {};
+    if (typeof global.db.stats[ctx.cmd] !== "object") {
+      const oldHits = Number(global.db.stats[ctx.cmd]) || 0;
+      global.db.stats[ctx.cmd] = {
+        success: oldHits,
+        error: 0,
+        lastHit: Date.now()
+      };
+    }
+    global.db.stats[ctx.cmd].error = (global.db.stats[ctx.cmd].error || 0) + 1;
+    global.db.stats[ctx.cmd].lastError = String(err?.message || err).slice(0, 150);
+    global.db.stats[ctx.cmd].lastErrorTime = Date.now();
+    global.db.totalHits = (global.db.totalHits || 0) + 1;
+    global.db.totalError = (global.db.totalError || 0) + 1;
+    db.write(global.db).catch(() => {});
+    const raw = String(err?.message || err || "Unknown").replace(new RegExp("```", "g"), "'''");
     const safeMsg = raw.length > 400 ? raw.slice(0, 400) + "..." : raw;
+    const fence = "```";
     try {
-      return await ctx.reply(`–  *E R R O R*\n\n\`\`\`${safeMsg}\`\`\``);
+      return await ctx.reply(`–  *E R R O R*\n\n${fence}${safeMsg}${fence}`);
     } catch (_) {
       return await safeSendMessage(sock, chatId, {
         text: `Error: ${safeMsg}`

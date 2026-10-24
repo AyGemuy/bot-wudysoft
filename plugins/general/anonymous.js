@@ -1,6 +1,9 @@
 import {
   simpleQuoted
 } from "../../lib/quoted.js";
+import {
+  copyNForward
+} from "../../core/serialize.js";
 import db from "../../data/db.js";
 
 function initDB() {
@@ -94,64 +97,28 @@ export default {
       const p = ctx?.prefix || ".";
       const cmdList = [p, "/", "!", "#"];
       if (cmdList.some(prefix => userText.startsWith(prefix))) return;
-      const senderName = ctx?.pushName || msg?.pushName || "Partner";
-      const maskedPhone = maskNumber(senderJid);
-      const headerText = `–  *A N O N Y M O U S*\n\n[ ${senderName} • ${maskedPhone} ]`;
-      const isMedia = Boolean(ctx?.isMedia || ctx?.quoted?.isMedia || msg?.message?.imageMessage || msg?.message?.videoMessage || msg?.message?.audioMessage || msg?.message?.stickerMessage || msg?.message?.documentMessage);
-      if (isMedia) {
-        const downloadFn = typeof ctx?.download === "function" ? ctx.download : ctx?.quoted?.download;
-        let mediaBuffer = null;
-        if (typeof downloadFn === "function") {
-          mediaBuffer = await downloadFn().catch(() => null);
+      let sent = false;
+      try {
+        if (typeof ctx?.copyNForward === "function") {
+          await ctx.copyNForward(partnerJid, msg, false);
+          sent = true;
+        } else if (typeof copyNForward === "function") {
+          await copyNForward(sock, partnerJid, msg, false);
+          sent = true;
+        } else if (typeof sock?.copyNForward === "function") {
+          await sock.copyNForward(partnerJid, msg, false);
+          sent = true;
         }
-        if (mediaBuffer && Buffer.isBuffer(mediaBuffer)) {
-          const m = msg.message;
-          const captionText = userText ? `${headerText}\n\n${userText}` : headerText;
-          if (m?.imageMessage) {
-            await sock.sendMessage(partnerJid, {
-              image: mediaBuffer,
-              caption: captionText
-            });
-          } else if (m?.videoMessage) {
-            await sock.sendMessage(partnerJid, {
-              video: mediaBuffer,
-              caption: captionText
-            });
-          } else if (m?.audioMessage) {
-            await sock.sendMessage(partnerJid, {
-              text: `${headerText}\n_Mengirimkan pesan suara:_`
-            });
-            await sock.sendMessage(partnerJid, {
-              audio: mediaBuffer,
-              mimetype: "audio/mp4",
-              ptt: Boolean(m.audioMessage.ptt)
-            });
-          } else if (m?.stickerMessage) {
-            await sock.sendMessage(partnerJid, {
-              text: `${headerText}\n_Mengirimkan stiker:_`
-            });
-            await sock.sendMessage(partnerJid, {
-              sticker: mediaBuffer
-            });
-          } else if (m?.documentMessage) {
-            await sock.sendMessage(partnerJid, {
-              document: mediaBuffer,
-              mimetype: m.documentMessage.mimetype || "application/octet-stream",
-              fileName: m.documentMessage.fileName || "file",
-              caption: captionText
-            });
-          }
-          ctx?.react?.("📨");
-          return true;
-        }
+      } catch (err) {
+        console.error("[copyNForward Error]:", err.message);
       }
-      if (userText) {
+      if (!sent && userText) {
         await sock.sendMessage(partnerJid, {
-          text: `${headerText}\n\n${userText}`
+          text: userText
         });
-        ctx?.react?.("📨");
-        return true;
       }
+      ctx?.react?.("📨");
+      return true;
     } catch (err) {
       console.error("[ANONYMOUS CHAT RELAY ERROR]:", err);
     }

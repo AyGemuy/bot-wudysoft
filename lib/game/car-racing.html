@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <style>
+    :root {
+      --bg-dark: #0a0e14;
+      --panel-bg: #141922;
+      --panel-border: #263040;
+      --accent-red: #ff334b;
+      --accent-green: #00e676;
+      --accent-blue: #00b0ff;
+      --accent-gold: #ffc107
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent
+    }
+
+    body {
+      background: var(--bg-dark);
+      color: #e6edf3;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 10px
+    }
+
+    .game-card {
+      width: 100%;
+      max-width: 480px;
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 20px;
+      padding: 14px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .6);
+      display: flex;
+      flex-direction: column;
+      gap: 12px
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .5px;
+      color: var(--accent-gold);
+      text-transform: uppercase
+    }
+
+    .viewport-container {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4/3;
+      max-height: 290px;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1.5px solid var(--panel-border);
+      box-shadow: inset 0 0 20px rgba(0, 0, 0, .8)
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block
+    }
+
+    .hud-stats {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      right: 8px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+      font-family: "Courier New", Courier, monospace;
+      font-size: 11px;
+      font-weight: 900;
+      z-index: 10;
+      pointer-events: none
+    }
+
+    .hud-pill {
+      background: rgba(0, 0, 0, .65);
+      backdrop-filter: blur(4px);
+      border: 1px solid rgba(255, 255, 255, .1);
+      padding: 4px 6px;
+      border-radius: 6px;
+      text-align: center;
+      white-space: nowrap;
+      text-shadow: 0 1px 2px #000
+    }
+
+    .speed-gauge {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, .7);
+      padding: 4px 8px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-weight: 900;
+      color: #fff;
+      font-size: 14px;
+      border-left: 3px solid var(--accent-green);
+      pointer-events: none
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(10, 14, 20, .9);
+      backdrop-filter: blur(6px);
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 20;
+      text-align: center;
+      padding: 20px
+    }
+
+    .overlay h2 {
+      font-size: 26px;
+      font-weight: 900;
+      margin-bottom: 6px
+    }
+
+    .overlay p {
+      font-size: 13px;
+      color: #8b949e;
+      margin-bottom: 18px
+    }
+
+    .btn-restart {
+      background: var(--accent-red);
+      color: #fff;
+      padding: 12px 28px;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(255, 51, 75, .4);
+      transition: transform .1s
+    }
+
+    .btn-restart:active {
+      transform: scale(.96)
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px
+    }
+
+    .btn-ctrl {
+      background: #1c2331;
+      border: 1px solid #2d384e;
+      color: #fff;
+      padding: 14px 0;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      touch-action: none;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 4px;
+      transition: all .1s ease
+    }
+
+    .btn-ctrl.active,
+    .btn-ctrl:active {
+      background: #2a364f;
+      border-color: #4a5c80;
+      transform: translateY(2px)
+    }
+
+    .btn-gas {
+      grid-column: span 3;
+      background: linear-gradient(180deg, #1f883d, #196c30);
+      border: 1px solid #2ea043;
+      font-size: 15px;
+      padding: 14px 0
+    }
+
+    .btn-gas.active,
+    .btn-gas:active {
+      background: #2ea043
+    }
+
+    .btn-upgrade {
+      grid-column: span 3;
+      background: linear-gradient(180deg, #7038d1, #5325a8);
+      border: 1px solid #8957e5;
+      padding: 12px 0;
+      border-radius: 10px;
+      font-weight: 800;
+      font-size: 13px
+    }
+
+    .footer-brand {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: #57606a;
+      font-weight: 700;
+      letter-spacing: .5px
+    }
+  </style>
+</head>
+
+<body>
+  <div class="game-card">
+    <div class="header"><span>🏎️ SPEED RIVAL 3D PRO</span> <span>⚡ V2.0 TURBO</span></div>
+    <div class="viewport-container" id="vpContainer">
+      <div class="hud-stats">
+        <div class="hud-pill" style="color:var(--accent-gold)">💰 $<span id="money">0</span></div>
+        <div class="hud-pill" style="color:var(--accent-blue)">🏁 <span id="dist">0</span>m</div>
+        <div class="hud-pill" style="color:var(--accent-red)">⏳ <span id="remain">2000</span>m</div>
+        <div class="hud-pill" style="color:var(--accent-green)">POS: <span id="pos">5/5</span></div>
+      </div>
+      <div class="speed-gauge"><span id="speedVal">0</span> KM/H</div>
+      <div id="gameOverlay" class="overlay">
+        <h2 id="overlayTitle">TABRAKAN!</h2>
+        <p id="overlaySub">Mobil kamu hancur berkeping-keping!</p><button class="btn-restart" id="btnRestart">MAIN LAGI 🔄</button>
+      </div><canvas id="raceCanvas"></canvas>
+    </div>
+    <div class="controls-grid"><button class="btn-ctrl" id="btnLeft">◀ KIRI</button> <button class="btn-ctrl" id="btnBrake">🛑 REM</button> <button class="btn-ctrl" id="btnRight">KANAN ▶</button> <button class="btn-ctrl btn-gas" id="btnGas">⚡ GAS POL (ACCEL)</button> <button class="btn-ctrl btn-upgrade" id="btnUpgrade">🛒 UPGRADE MOBIL ($150)</button></div>
+    <div class="footer-brand"><span>TOUCH OR ARROWS / WASD</span> <span>60 FPS ENGINE</span></div>
+  </div>
+  <script>
+    (() => { const e = document.getElementById("raceCanvas"),
+        t = e.getContext("2d"),
+        l = document.getElementById("vpContainer"),
+        a = document.getElementById("gameOverlay"),
+        n = document.getElementById("overlayTitle"),
+        o = document.getElementById("overlaySub"),
+        i = document.getElementById("money"),
+        r = document.getElementById("dist"),
+        c = document.getElementById("remain"),
+        d = document.getElementById("pos"),
+        f = document.getElementById("speedVal"),
+        s = document.getElementById("btnUpgrade"); let h = 400,
+        m = 300;
+
+      function p() { const a = l.getBoundingClientRect(),
+          n = Math.min(window.devicePixelRatio || 1, 2);
+        h = a.width, m = a.height, e.width = h * n, e.height = m * n, t.resetTransform(), t.scale(n, n) } window.addEventListener("resize", p), p(); const g = [{ name: "LVL 1 - Hatchback", maxSpeed: 160, accel: 1.2, handling: 2.2, color: "#e53935", cost: 0 }, { name: "LVL 2 - Tuner GT", maxSpeed: 210, accel: 1.6, handling: 2.6, color: "#00e5ff", cost: 150 }, { name: "LVL 3 - Supercar", maxSpeed: 260, accel: 2.1, handling: 3.1, color: "#ffea00", cost: 400 }, { name: "LVL 4 - Hypercar", maxSpeed: 320, accel: 2.8, handling: 3.6, color: "#d500f9", cost: 1e3 }]; let y = 0,
+        u = 1; const x = 2500; let M = !1,
+        b = !1,
+        S = 0,
+        w = 0,
+        E = 0,
+        v = 0,
+        L = 0,
+        C = 0,
+        R = 0,
+        I = 0,
+        B = [],
+        T = [];
+
+      function z() { T = [{ x: -.5, z: 250, speed: 120, color: "#4caf50" }, { x: .3, z: 500, speed: 140, color: "#ff9800" }, { x: -.2, z: 800, speed: 155, color: "#00bcd4" }, { x: .6, z: 1100, speed: 170, color: "#e91e63" }] } z(); const A = { gas: !1, brake: !1, left: !1, right: !1 };! function() { const e = (e, t) => { const l = document.getElementById(e),
+            a = e => { e.preventDefault(), A[t] = !1, l.classList.remove("active") };
+          l.addEventListener("pointerdown", e => { e.preventDefault(), A[t] = !0, l.classList.add("active") }), l.addEventListener("pointerup", a), l.addEventListener("pointercancel", a), l.addEventListener("pointerleave", a) };
+        e("btnGas", "gas"), e("btnBrake", "brake"), e("btnLeft", "left"), e("btnRight", "right"), window.addEventListener("keydown", e => {
+          ["ArrowUp", "KeyW"].includes(e.code) && (A.gas = !0), ["ArrowDown", "KeyS"].includes(e.code) && (A.brake = !0), ["ArrowLeft", "KeyA"].includes(e.code) && (A.left = !0), ["ArrowRight", "KeyD"].includes(e.code) && (A.right = !0) }), window.addEventListener("keyup", e => {
+          ["ArrowUp", "KeyW"].includes(e.code) && (A.gas = !1), ["ArrowDown", "KeyS"].includes(e.code) && (A.brake = !1), ["ArrowLeft", "KeyA"].includes(e.code) && (A.left = !1), ["ArrowRight", "KeyD"].includes(e.code) && (A.right = !1) }) }(), document.getElementById("btnRestart").addEventListener("click", function() { S = 0, w = 0, E = 0, v = 0, L = 0, M = !1, b = !1, a.style.display = "none", z() }), s.addEventListener("click", () => { if (u < g.length) { const e = g[u]; if (y >= e.cost) { y -= e.cost, u++; const t = g[u];
+            s.textContent = t ? `🛒 UPGRADE MOBIL ($${t.cost})` : "✅ LEVEL MAKSIMAL!", i.textContent = y } else alert("Uang belum cukup! Butuh $" + e.cost) } }); let k = performance.now();
+
+      function P(e) { if (M || b) return; const t = g[u - 1];
+        C -= e, C <= 0 && (L = 3.5 * (Math.random() - .5), C = 2.5 + 2.5 * Math.random()), v += 1.5 * e * (L - v); let l = Math.abs(S) > .85,
+          s = l ? .45 * t.maxSpeed : t.maxSpeed;
+        A.gas ? (w += t.accel * (60 * e), w > s && (w -= 40 * e)) : w = A.brake ? Math.max(0, w - 3.5 * t.accel * (60 * e)) : Math.max(0, w - 60 * e * .6), w = Math.min(t.maxSpeed, Math.max(0, w)); let h = w / t.maxSpeed,
+          p = 0;
+        A.left && (p -= 1), A.right && (p += 1), S += p * t.handling * h * e, S -= .35 * v * h * e, S = Math.max(-1.3, Math.min(1.3, S)), R += 8 * e * (12 * p - R), I = l && w > 30 ? (Math.random() - .5) * (w / 35) : 0; let z = 1e3 * w / 3600;
+        E += z * e, w > 80 && (y += 3 * e), w > 20 && (A.brake || l && w > 50 ? B.push({ x: S + .15 * (Math.random() - .5), y: m - 25, rad: 4 + 6 * Math.random(), alpha: .8, color: l ? "#8d6e63" : "#e0e0e0" }) : A.gas && Math.random() < .3 && B.push({ x: S + .08 * (Math.random() - .5), y: m - 22, rad: 3, alpha: .5, color: "#aaa" })); for (let t = B.length - 1; t >= 0; t--) { let l = B[t];
+          l.y -= e * (.4 * w + 20), l.rad += 10 * e, l.alpha -= 1.5 * e, l.alpha <= 0 && B.splice(t, 1) } let k = 1;
+        T.forEach(t => { let l = 1e3 * t.speed / 3600 - z;
+          t.z += l * e, t.z < -40 && (t.z += 900), t.z > 860 && (t.z -= 900), t.z > 0 && k++, t.z > -10 && t.z < 25 && Math.abs(S - t.x) < .28 && (M = !0, n.textContent = "💥 CRASHED!", n.style.color = "var(--accent-red)", o.textContent = "Kamu menabrak keras pembalap lain!", a.style.display = "flex") }), E >= x && !b && function(e) { b = !0; let t = Math.max(50, 120 * (6 - e));
+          y += t, n.textContent = "🏁 FINISH!", n.style.color = "var(--accent-green)", o.textContent = `Peringkat: ${e} | Hadiah: $${t}`, a.style.display = "flex" }(k), i.textContent = Math.floor(y), f.textContent = Math.round(w), r.textContent = Math.floor(E), c.textContent = Math.max(0, Math.floor(x - E)), d.textContent = k + "/5" }
+
+      function K(e, l, a, n, o, i = 0, r = !1) { let c = 62 * a,
+          d = 42 * a,
+          f = .42 * m,
+          s = (l - f) / (m - f),
+          p = Math.pow(Math.max(0, 1 - s), 2) * v * (.28 * h),
+          g = h / 2 + p + e * (.42 * h) * s;
+        t.save(), t.translate(g, l + I), t.rotate(i * Math.PI / 180), t.fillStyle = "rgba(0,0,0,0.45)", t.beginPath(), t.ellipse(0, .32 * d, .58 * c, .18 * d, 0, 0, 2 * Math.PI), t.fill(), t.fillStyle = "#111", t.fillRect(.52 * -c, .35 * -d, .14 * c, .3 * d), t.fillRect(.38 * c, .35 * -d, .14 * c, .3 * d), t.fillRect(.54 * -c, .1 * d, .16 * c, .34 * d), t.fillRect(.38 * c, .1 * d, .16 * c, .34 * d), t.fillStyle = n, t.beginPath(), t.roundRect(.46 * -c, .4 * -d, .92 * c, .8 * d, 8 * a), t.fill(); let y = t.createLinearGradient(0, .4 * -d, 0, .4 * d);
+        y.addColorStop(0, "rgba(255,255,255,0.25)"), y.addColorStop(.5, "transparent"), y.addColorStop(1, "rgba(0,0,0,0.4)"), t.fillStyle = y, t.fill(), t.fillStyle = "#0f172a", t.beginPath(), t.roundRect(.34 * -c, .18 * -d, .68 * c, .42 * d, 4 * a), t.fill(), o ? (t.fillStyle = r ? "#ff1744" : "#ff5252", t.shadowColor = r ? "#ff1744" : "transparent", t.shadowBlur = r ? 12 : 0, t.fillRect(.42 * -c, .34 * d, .2 * c, .08 * d), t.fillRect(.22 * c, .34 * d, .2 * c, .08 * d), t.shadowBlur = 0) : (t.fillStyle = "#ff1744", t.fillRect(.42 * -c, .34 * d, .2 * c, .08 * d), t.fillRect(.22 * c, .34 * d, .2 * c, .08 * d)), t.restore() }
+
+      function D(e) { let l = (e - k) / 1e3;
+        l > .1 && (l = .1), k = e, P(l),
+          function() { const e = .42 * m; let l = t.createLinearGradient(0, 0, 0, e);
+            l.addColorStop(0, "#0c1b33"), l.addColorStop(1, "#2c4b75"), t.fillStyle = l, t.fillRect(0, 0, h, e), t.fillStyle = "#172740", t.beginPath(), t.moveTo(0, e); let a = 30 * S + 20 * v; for (let l = 0; l <= h; l += 60) { let n = 18 * Math.sin(.02 * (l + a)) + 24;
+              t.lineTo(l, e - n) } t.lineTo(h, e), t.fill(), t.fillStyle = "#143819", t.fillRect(0, e, h, m - e) }(),
+          function() { const e = .42 * m,
+              l = .85 * h,
+              a = .08 * h; let n = (m - e) / 45,
+              o = 1.6 * E % 100; for (let i = 44; i >= 0; i--) { let r = e + i * n,
+                c = r + n,
+                d = i / 45,
+                f = (i + 1) / 45,
+                s = d * d,
+                m = f * f,
+                p = Math.pow(1 - d, 2) * v * (.28 * h),
+                g = Math.pow(1 - f, 2) * v * (.28 * h),
+                y = a + (l - a) * s,
+                u = a + (l - a) * m,
+                x = h / 2 + p,
+                M = h / 2 + g,
+                b = Math.floor(i + .3 * o) % 2 == 0;
+              t.fillStyle = b ? "#d32f2f" : "#ffffff"; let S = 1.15 * y,
+                w = 1.15 * u; if (t.beginPath(), t.moveTo(x - S / 2, r), t.lineTo(x + S / 2, r), t.lineTo(M + w / 2, c), t.lineTo(M - w / 2, c), t.fill(), t.fillStyle = b ? "#292b2f" : "#232528", t.beginPath(), t.moveTo(x - y / 2, r), t.lineTo(x + y / 2, r), t.lineTo(M + u / 2, c), t.lineTo(M - u / 2, c), t.fill(), b) { let e = Math.max(1.5, .035 * y),
+                  l = Math.max(1.5, .035 * u);
+                t.fillStyle = "#f0f0f0", t.beginPath(), t.moveTo(x - e / 2, r), t.lineTo(x + e / 2, r), t.lineTo(M + l / 2, c), t.lineTo(M - l / 2, c), t.fill() } } let i = x - E; if (i > 0 && i < 400) { let n = 1 - i / 400,
+                o = n * n,
+                r = e + (m - e) * o,
+                c = a + (l - a) * o,
+                d = h / 2 + Math.pow(1 - n, 2) * v * (.28 * h);
+              t.fillStyle = "#ffffff"; for (let e = 0; e < 12; e++) e % 2 == 0 && t.fillRect(d - c / 2 + e * c / 12, r - 3, c / 12, 6) } }(), B.forEach(e => { t.fillStyle = e.color, t.globalAlpha = Math.max(0, e.alpha), t.beginPath(); let l = .42 * m,
+              a = (e.y - l) / (m - l),
+              n = h / 2 + Math.pow(Math.max(0, 1 - a), 2) * v * (.28 * h) + e.x * (.42 * h) * a;
+            t.arc(n, e.y, e.rad, 0, 2 * Math.PI), t.fill() }), t.globalAlpha = 1; let a = .42 * m;
+        T.filter(e => e.z > 5 && e.z < 800).sort((e, t) => t.z - e.z).forEach(e => { let t = 1 / (1 + .007 * e.z),
+            l = Math.max(.18, Math.min(1, 1.3 * t)),
+            n = a + l * l * (m - a);
+          K(e.x, n, l, e.color, !1) });
+        K(S, m - 44, 1, g[u - 1].color, !0, R, A.brake), requestAnimationFrame(D) } requestAnimationFrame(e => { k = e, D(e) }) })()
+  </script>
+</body>
+
+</html>

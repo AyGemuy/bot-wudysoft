@@ -282,9 +282,8 @@
           a = []; for (; a.length < i;) { let e = Math.floor(8 * Math.random());
           a.includes(e) || a.push(e) } for (let e = 0; e < 8; e++) { let t = e / 8 * Math.PI * 2,
             i = (e + 1) / 8 * Math.PI * 2;
-          this.segments.push({ start: t, end: i, isBlack: a.includes(e), containsAngle: e => { let a = (e + cylinderAngle) % (2 * Math.PI); return a < 0 && (a += 2 * Math.PI), a >= t && a < i } }) } } draw() { if (this.broken) return;
-        ctx.save(); for (let e of this.segments) ctx.fillStyle = e.isBlack ? "#1f2937" : this.index % 2 == 0 ? "#f97316" : "#a855f7", ctx.beginPath(), ctx.ellipse(320, this.y, 140, 25, 0, e.start + cylinderAngle, e.end + cylinderAngle), ctx.lineTo(320, this.y + 10), ctx.ellipse(320, this.y + 10, 140, 25, 0, e.end + cylinderAngle, e.start + cylinderAngle, !0), ctx.fill(), ctx.strokeStyle = "#000", ctx.stroke();
-        ctx.restore() } }
+          this.segments.push({ start: t, end: i, isBlack: a.includes(e), containsAngle: e => { let a = (e + cylinderAngle) % (2 * Math.PI); return a < 0 && (a += 2 * Math.PI), a >= t && a < i } }) } } draw() { if (!this.broken) { ctx.save(); for (let e of this.segments) ctx.fillStyle = e.isBlack ? "#1f2937" : this.index % 2 == 0 ? "#f97316" : "#a855f7", ctx.beginPath(), ctx.ellipse(320, this.y, 140, 25, 0, e.start + cylinderAngle, e.end + cylinderAngle), ctx.lineTo(320, this.y + 10), ctx.ellipse(320, this.y + 10, 140, 25, 0, e.end + cylinderAngle, e.start + cylinderAngle, !0), ctx.fill(), ctx.strokeStyle = "#000", ctx.stroke();
+          ctx.restore() } } }
 
     function initGame() { score = 0, level = 1, gameOver = !1, gameWon = !1, isSuperCharged = !1, superChargeTimer = 0, cylinderAngle = 0, ballY = 40, stackSlices = []; for (let e = 0; e < totalSlices; e++) stackSlices.push(new StackSlice(80 + 12 * e, e));
       ball = new Ball, document.getElementById("overlay").classList.remove("show"), updateUI() }

@@ -2,10 +2,17 @@ import {
   normalizeMessageContent,
   decryptPollVote,
   jidNormalizedUser,
-  generateWAMessage,
   areJidsSameUser,
   proto
 } from "@whiskeysockets/baileys";
+import {
+  decodeJid,
+  resolveLidToJid,
+  SerializeMessage
+} from "../../core/serialize.js";
+import {
+  UpsertMsgHandle
+} from "../../core/handler.js";
 import {
   createHash
 } from "crypto";
@@ -19,14 +26,15 @@ export default {
   execute: async () => {},
   before: async (m, {
     sock,
-    ctx
+    ctx,
+    cmd
   }) => {
     try {
       const content = normalizeMessageContent(m.message || ctx.message);
       if (!content || !content.pollUpdateMessage) return;
       const creationMsgKey = content.pollUpdateMessage.pollCreationMessageKey;
       if (!creationMsgKey?.id) return;
-      const chatId = ctx.chat || ctx.id || m.key?.remoteJid;
+      const chatId = decodeJid(ctx.chat || ctx.id || m.key?.remoteJid);
       if (!chatId) return;
       let pollMsg = null;
       const cached = global.msgStore?.get(creationMsgKey.id);
@@ -88,17 +96,21 @@ export default {
       });
       if (!voteMsg) return;
       const selectedOptions = voteMsg.selectedOptions || [];
-      if (!selectedOptions.length) return;
       const optionsList = pollCreation.pollCreationMessage?.options || pollCreation.pollCreationMessageV2?.options || pollCreation.pollCreationMessageV3?.options || [];
-      if (cached) cached.voterHistory = cached.voterHistory || new Map();
-      const voterKey = [...voterSet][0] || ctx.sender;
-      const prevVotes = cached?.voterHistory?.get(voterKey) || [];
+      global._pollVoterHistory = global._pollVoterHistory || new Map();
+      const voterKey = [...voterSet].find(j => j.endsWith("@s.whatsapp.net")) || [...voterSet][0] || ctx.sender;
+      const historyKey = `${creationMsgKey.id}_${voterKey}`;
+      const prevVotes = global._pollVoterHistory.get(historyKey) || [];
       const currentVotes = selectedOptions.map(b => Buffer.from(b).toString("hex"));
-      if (cached) cached.voterHistory.set(voterKey, currentVotes);
-      const targetHash = currentVotes.find(h => !prevVotes.includes(h)) || currentVotes[currentVotes.length - 1];
+      global._pollVoterHistory.set(historyKey, currentVotes);
+      if (currentVotes.length <= prevVotes.length && !currentVotes.some(h => !prevVotes.includes(h))) {
+        return true;
+      }
+      const newlyAddedHash = currentVotes.find(h => !prevVotes.includes(h));
+      if (!newlyAddedHash) return true;
       const matchedOpt = optionsList.find(opt => {
         const hashHex = sha256(Buffer.from(opt.optionName || "")).toString("hex");
-        return hashHex === targetHash;
+        return hashHex === newlyAddedHash;
       });
       let responseText = matchedOpt?.optionName || "";
       if (global.pollMappings?.[creationMsgKey.id]) {
@@ -107,31 +119,48 @@ export default {
           responseText = mapped.id || mapped.cmd;
         }
       }
-      if (!responseText) return;
-      const voterNum = [...voterSet].find(j => j.endsWith("@s.whatsapp.net"))?.split("@")[0] || ctx.senderNumber || "User";
-      console.log(chalk.gray(`[ POLL ] `) + chalk.cyan(`@${voterNum}`) + chalk.gray(` memilih: `) + chalk.greenBright.bold(`"${responseText}"`));
-      const activeVoter = [...voterSet][0] || ctx.sender;
-      const isFromMe = areJidsSameUser(activeVoter, sock.user?.id);
-      const fakeMsg = await generateWAMessage(chatId, {
-        text: responseText,
-        mentions: [activeVoter]
-      }, {
-        userJid: sock.user.id,
-        quoted: m
-      });
-      fakeMsg.key.fromMe = isFromMe;
-      fakeMsg.key.id = `${creationMsgKey.id}_${Date.now()}`;
-      fakeMsg.pushName = ctx.pushName || m.pushName || "User";
-      if (ctx.isGroup) {
-        fakeMsg.key.participant = fakeMsg.participant = activeVoter;
+      if (!responseText) return true;
+      let activeVoter = voterKey;
+      if (activeVoter && activeVoter.endsWith("@lid")) {
+        const resolved = await resolveLidToJid(activeVoter, sock, null, ctx.participants || []).catch(() => null);
+        if (resolved && !resolved.endsWith("@lid")) activeVoter = resolved;
       }
-      if (sock.ev?.emit) {
-        sock.ev.emit("messages.upsert", {
-          messages: [proto.WebMessageInfo.create(fakeMsg)],
-          type: "notify"
+      global.botEventLocks = global.botEventLocks || new Set();
+      const lockKey = `poll_action:${creationMsgKey.id}_${activeVoter}_${newlyAddedHash}`;
+      if (global.botEventLocks.has(lockKey)) return true;
+      global.botEventLocks.add(lockKey);
+      setTimeout(() => global.botEventLocks.delete(lockKey), 3e3);
+      const voterNum = (activeVoter || "").split("@")[0] || ctx.senderNumber || "User";
+      console.log(chalk.gray(`[ POLL ] `) + chalk.cyan(`@${voterNum}`) + chalk.gray(` memilih: `) + chalk.greenBright.bold(`"${responseText}"`));
+      const isFromMe = areJidsSameUser(activeVoter, sock.user?.id);
+      const fakeMsg = {
+        key: {
+          remoteJid: chatId,
+          fromMe: isFromMe,
+          id: `${creationMsgKey.id}_POLL_${Date.now().toString(36)}`,
+          participant: chatId.endsWith("@g.us") ? activeVoter : undefined
+        },
+        message: {
+          conversation: responseText
+        },
+        pushName: ctx.pushName || m.pushName || "User",
+        messageTimestamp: Math.floor(Date.now() / 1e3)
+      };
+      const fakeCtx = await SerializeMessage(sock, fakeMsg);
+      if (fakeCtx) {
+        fakeCtx.loader = cmd || global.loader;
+        fakeCtx.isPollVote = true;
+        fakeCtx.text = responseText;
+        fakeCtx.body = responseText;
+        UpsertMsgHandle(sock, fakeMsg, fakeCtx, {
+          cmd: cmd || global.loader
+        }).catch(err => {
+          console.error(chalk.red("[POLL EXEC ERROR]"), err.message);
         });
       }
       return true;
-    } catch (_) {}
+    } catch (e) {
+      console.error(chalk.red("[POLL HANDLER ERROR]"), e);
+    }
   }
 };

@@ -3,89 +3,134 @@ import path from "path";
 import {
   simpleQuoted
 } from "../../lib/quoted.js";
-const formatSize = bytes => {
-  if (!bytes || bytes === 0) return "0 B";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+const CONFIG = {
+  FOLDERS_PER_PAGE: 3,
+  MAX_FILES_PER_FOLDER: 8
 };
 
-function getAllPlugins(dir, baseDir = dir) {
+function getAllPluginFiles(dir, baseDir = dir) {
   let results = [];
   if (!fs.existsSync(dir)) return results;
   const list = fs.readdirSync(dir);
   for (const file of list) {
     const fullPath = path.join(dir, file);
     const stat = fs.statSync(fullPath);
-    if (stat.isDirectory()) {
-      results = results.concat(getAllPlugins(fullPath, baseDir));
-    } else if (/\.(js|mjs|cjs)$/i.test(file)) {
-      const relativePath = path.relative(baseDir, fullPath).replace(/\\/g, "/");
-      const parts = relativePath.split("/");
-      const folder = parts.length > 1 ? parts.slice(0, -1).join("/") : "root";
-      results.push({
-        name: file.replace(/\.(js|mjs|cjs)$/i, ""),
-        filename: file,
-        relativePath: relativePath,
-        fullPath: fullPath,
-        folder: folder.toUpperCase(),
-        size: stat.size
-      });
+    if (stat && stat.isDirectory()) {
+      results = results.concat(getAllPluginFiles(fullPath, baseDir));
+    } else if (file.endsWith(".js")) {
+      const relPath = path.relative(baseDir, fullPath).replace(/\\/g, "/");
+      results.push(relPath);
     }
   }
-  return results;
+  return results.sort((a, b) => a.localeCompare(b, "id", {
+    sensitivity: "base"
+  }));
+}
+
+function groupFilesByFolder(fileList = []) {
+  const folders = {};
+  for (const file of fileList) {
+    const dir = path.dirname(file);
+    const folderKey = dir === "." ? "root" : dir;
+    if (!folders[folderKey]) folders[folderKey] = [];
+    folders[folderKey].push(file);
+  }
+  return folders;
+}
+
+function normalizeInputPath(rawInput = "") {
+  let clean = rawInput.trim().replace(/\\/g, "/");
+  if (clean.startsWith("plugins/")) {
+    clean = clean.slice("plugins/".length);
+  }
+  if (!clean.endsWith(".js")) {
+    clean += ".js";
+  }
+  return clean;
 }
 
 function parseFlags(input = "") {
   const flags = {};
-  const flagRegex = /(?:--|-)([a-zA-Z0-9_-]+)(?:[=\s]+("(?:\\"|[^"])*"|'(?:\\'|[^'])*'|[^\s]+))?/g;
+  const flagRegex = /(?:^|\s)(?:--|-)([a-zA-Z0-9_]+)(?:[=\s]+("(?:\\"|[^"])*"|'(?:\\'|[^'])*'|[^\s]+))?(?=\s|$)/g;
   let match;
   while ((match = flagRegex.exec(input)) !== null) {
     let key = match[1].toLowerCase();
     let rawVal = match[2];
     let val = true;
-    if (["get", "g", "file", "f"].includes(key)) key = "get";
-    if (["search", "s", "find", "q"].includes(key)) key = "search";
-    if (["list", "l", "all", "a", "menu"].includes(key)) key = "list";
-    if (["help", "h"].includes(key)) key = "help";
     if (rawVal !== undefined) {
       if (rawVal.startsWith('"') && rawVal.endsWith('"') || rawVal.startsWith("'") && rawVal.endsWith("'")) {
         rawVal = rawVal.slice(1, -1);
       }
-      if (rawVal === "true") val = true;
-      else if (rawVal === "false") val = false;
+      if (!isNaN(rawVal) && rawVal.trim() !== "") val = Number(rawVal);
       else val = rawVal;
+    }
+    const aliasMap = {
+      page: ["p", "pg"],
+      path: ["file", "f", "target"],
+      list: ["l", "all"],
+      textonly: ["t", "text"]
+    };
+    if (key === "p") {
+      if (typeof val === "number" || !isNaN(val) && val !== true) {
+        key = "page";
+        val = Number(val);
+      } else {
+        key = "path";
+      }
+    }
+    for (const [realKey, aliases] of Object.entries(aliasMap)) {
+      if (aliases.includes(key)) key = realKey;
     }
     flags[key] = val;
   }
-  const cleanPrompt = input.replace(flagRegex, "").trim();
+  const cleanPrompt = input.replace(flagRegex, " ").trim();
   return {
     flags: flags,
     cleanPrompt: cleanPrompt
   };
 }
+async function sendPluginFile(sock, targetJid, fullPath, relPath, quotedMsg, botFooter, textOnly = false) {
+  const fileContent = fs.readFileSync(fullPath, "utf8");
+  const fileName = path.basename(fullPath);
+  const fileSize = (Buffer.byteLength(fileContent, "utf8") / 1024).toFixed(2);
+  const captionText = `–  *G E T  P L U G I N*\n\n` + `┌  ◦  *File* : \`${fileName}\`\n` + `│  ◦  *Folder* : \`plugins/${path.dirname(relPath)}\`\n` + `│  ◦  *Path* : \`plugins/${relPath}\`\n` + `└  ◦  *Ukuran* : ${fileSize} KB\n\n` + `_${botFooter}_`;
+  if (textOnly) {
+    return await sock.sendMessage(targetJid, {
+      text: `${captionText}\n\n\`\`\`javascript\n${fileContent}\n\`\`\``
+    }, {
+      quoted: quotedMsg
+    });
+  }
+  return await sock.sendMessage(targetJid, {
+    document: fs.readFileSync(fullPath),
+    mimetype: "application/javascript",
+    fileName: fileName,
+    caption: captionText
+  }, {
+    quoted: quotedMsg
+  });
+}
 export default {
   name: "getplugin",
-  aliases: ["gp", "ambilplugin", "plugin", "sp"],
-  description: "Ambil file source code plugin dalam bentuk dokumen JS via CLI & CTA Sheet",
+  aliases: ["gfp", "gp", "catplugin", "viewplugin", "readplugin"],
+  description: "Ambil berkas atau lihat isi plugin via Multi-List Folder & File",
   category: "Owner",
   owner: true,
-  example: "getplugin -l atau getplugin toimg atau getplugin -g toimg.js atau getplugin -s sticker",
+  example: "gfp\ngfp tts/tts-rich\ngfp -p 2",
   execute: async (sock, ctx, msg) => {
     const prefix = ctx.prefix || ".";
     const botName = global.bot?.name || "WudysoftBot";
-    const footer = global.footer || global.bot?.footer || `_${botName}_`;
+    const botFooter = global.bot?.footer || `${botName} • Plugin Manager`;
+    const userName = ctx.pushname || ctx.sender?.split("@")[0] || "Owner";
+    const targetJid = ctx.chat || ctx.id;
     const quotedMsg = typeof simpleQuoted === "function" ? simpleQuoted(ctx) : msg;
+    const pluginsDir = path.join(process.cwd(), "plugins");
     try {
-      if (!ctx.isOwner) {
-        return ctx.reply(`– *E R R O R*\n\n` + `┌ ◦ *Status* : Akses Ditolak\n` + `└ ◦ *Info* : Perintah ini khusus untuk Owner bot.\n\n` + `${footer}`);
-      }
       let rawText = ctx.args?.join(" ")?.trim() || "";
       if (!rawText && ctx.text) {
         const raw = ctx.text.trim();
         const firstWord = raw.split(/\s+/)[0].toLowerCase();
-        if (["getplugin", "gp", "ambilplugin", "plugin", "sp"].some(alias => firstWord.endsWith(alias))) {
+        if (["getplugin", "gfp", "gp", "catplugin", "viewplugin", "readplugin"].some(a => firstWord.endsWith(a))) {
           rawText = raw.slice(firstWord.length).trim();
         }
       }
@@ -93,102 +138,163 @@ export default {
         flags,
         cleanPrompt
       } = parseFlags(rawText);
-      const hasAction = Boolean(flags.get || flags.search || flags.list || flags.all || cleanPrompt);
-      if (!hasAction || flags.help) {
-        const helpText = `– *G E T  P L U G I N*\n\n` + `┌ ◦ *Usage* : ${prefix}getplugin <nama/path>\n` + `│ ◦ *Search* : ${prefix}getplugin -s <query>\n` + `└ ◦ *List* : ${prefix}getplugin -l\n\n` + `– *E X A M P L E*\n\n` + `┌ ◦ *Direct* : ${prefix}getplugin toimg\n` + `│ ◦ *Path* : ${prefix}getplugin -g tools/toimg.js\n` + `└ ◦ *Search* : ${prefix}getplugin -s sticker\n\n` + `${footer}`;
-        return ctx.reply(helpText);
-      }
-      const pluginsDir = path.join(process.cwd(), "plugins");
-      if (!fs.existsSync(pluginsDir)) {
-        return ctx.reply(`– *E R R O R*\n\n` + `┌ ◦ *Status* : Direktori Tidak Ditemukan\n` + `└ ◦ *Info* : Folder 'plugins' tidak ada di root bot.\n\n` + `${footer}`);
-      }
-      const allPlugins = getAllPlugins(pluginsDir);
-      if (allPlugins.length === 0) {
-        return ctx.reply(`– *E R R O R*\n\n` + `┌ ◦ *Status* : Direktori Kosong\n` + `└ ◦ *Info* : Tidak ada file plugin (.js) yang ditemukan.\n\n` + `${footer}`);
-      }
-      let targetPlugin = null;
-      const queryGet = typeof flags.get === "string" ? flags.get : cleanPrompt;
-      if (queryGet && !flags.list && !flags.search) {
-        const q = queryGet.toLowerCase().replace(/\\/g, "/");
-        targetPlugin = allPlugins.find(p => p.relativePath.toLowerCase() === q || p.relativePath.toLowerCase() === `${q}.js` || p.filename.toLowerCase() === q || p.name.toLowerCase() === q);
-      }
-      if (targetPlugin) {
-        await ctx.react("⏳");
-        const fileBuffer = fs.readFileSync(targetPlugin.fullPath);
-        const caption = `– *P L U G I N*\n\n` + `┌ ◦ *Filename* : ${targetPlugin.filename}\n` + `│ ◦ *Path* : plugins/${targetPlugin.relativePath}\n` + `└ ◦ *Size* : ${formatSize(targetPlugin.size)}\n\n` + `${footer}`;
-        await sock.sendMessage(ctx.id, {
-          document: fileBuffer,
-          mimetype: "application/javascript",
-          fileName: targetPlugin.filename,
-          caption: caption
-        }, {
-          quoted: quotedMsg
-        });
-        await ctx.react("✅");
-        return;
-      }
-      await ctx.react("⏳");
-      const searchQuery = (typeof flags.search === "string" ? flags.search : cleanPrompt).trim();
-      const isSearch = Boolean(searchQuery && !flags.list);
-      let filteredList = allPlugins;
-      if (isSearch) {
-        const q = searchQuery.toLowerCase();
-        filteredList = allPlugins.filter(p => p.name.toLowerCase().includes(q) || p.relativePath.toLowerCase().includes(q));
-      }
-      if (filteredList.length === 0) {
-        await ctx.react("❌");
-        return ctx.reply(`– *E R R O R*\n\n` + `┌ ◦ *Status* : Plugin tidak ditemukan\n` + `└ ◦ *Query* : "${searchQuery}"\n\n` + `${footer}`);
-      }
-      const folders = [...new Set(filteredList.map(p => p.folder))].sort();
-      const listSections = folders.map(folder => {
-        const folderPlugins = filteredList.filter(p => p.folder === folder);
-        return {
-          title: `FOLDER: ${folder} (${folderPlugins.length})`,
-          rows: folderPlugins.map(p => ({
-            title: p.filename.slice(0, 24),
-            id: `${prefix}getplugin -g ${p.relativePath}`,
-            description: `Path: plugins/${p.relativePath} • (${formatSize(p.size)})`
-          }))
-        };
-      });
-      const buttons = [{
-        name: "single_select",
-        buttonParamsJson: JSON.stringify({
-          title: `PILIH PLUGIN (${filteredList.length})`,
-          sections: listSections
-        })
-      }];
-      const bannerImage = global.bot?.media?.banner1 || "https://files.catbox.moe/g2e6i5.jpg";
-      const bodyText = `– *G E T  P L U G I N  -  ${isSearch ? "S E A R C H" : "L I S T"}*\n\n` + (isSearch ? `┌ ◦ *Query* : "${searchQuery}"\n` : "┌ ◦ *Manager* : Plugin Source Code\n") + `│ ◦ *Total Files* : ${filteredList.length} File\n` + `└ ◦ *Folders* : ${folders.length} Folder\n\n` + `_Pilih berkas plugin pada menu di bawah untuk mengunduh:_\n\n` + `${footer}`;
-      const options = {
-        image: bannerImage,
-        params: {
-          bottom_sheet: {
-            in_thread_buttons_limit: 1,
-            divider_indices: [1],
-            list_title: `${botName} • Plugin Manager`,
-            button_title: "Buka Daftar Plugin"
-          }
-        },
-        quoted: quotedMsg
-      };
-      if (typeof ctx.sendCta === "function") {
-        await ctx.sendCta(bodyText, `${botName} • Plugin Manager`, buttons, options);
-      } else {
-        let listText = bodyText + "\n\n";
-        filteredList.slice(0, 30).forEach((p, idx) => {
-          listText += `${idx + 1}. \`${prefix}getplugin -g ${p.relativePath}\`\n`;
-        });
-        if (filteredList.length > 30) {
-          listText += `\n_...dan ${filteredList.length - 30} plugin lainnya._`;
+      const allFiles = getAllPluginFiles(pluginsDir);
+      let targetPathInput = flags.path || cleanPrompt || "";
+      if (!targetPathInput || flags.list) {
+        if (!allFiles.length) {
+          await ctx.react("❌");
+          return ctx.reply("❌ Tidak ada file plugin yang ditemukan.");
         }
-        await ctx.reply(listText);
+        await ctx.react("📁");
+        const folderGroups = groupFilesByFolder(allFiles);
+        const folderKeys = Object.keys(folderGroups).sort();
+        const perPage = CONFIG.FOLDERS_PER_PAGE;
+        const totalPages = Math.ceil(folderKeys.length / perPage) || 1;
+        let page = Number(flags.page) || 1;
+        if (page < 1) page = 1;
+        if (page > totalPages) page = totalPages;
+        const startIdx = (page - 1) * perPage;
+        const currentFolders = folderKeys.slice(startIdx, startIdx + perPage);
+        const multiSections = currentFolders.map(fld => {
+          const files = folderGroups[fld] || [];
+          const sectionTitle = fld === "root" ? "📁 ROOT DIRECTORY (/)" : `📁 ${fld.toUpperCase()}`;
+          const fileRows = files.slice(0, CONFIG.MAX_FILES_PER_FOLDER).map(filePath => {
+            const fileName = path.basename(filePath);
+            return {
+              title: fileName.slice(0, 24),
+              id: `${prefix}getplugin ${filePath}`,
+              description: `Path: plugins/${filePath}`.slice(0, 60)
+            };
+          });
+          return {
+            title: `${sectionTitle} (${files.length} File)`.slice(0, 24),
+            rows: fileRows
+          };
+        });
+        const bodyText = `Hi ${userName}!
+Silakan pilih file plugin yang ingin diunduh (Hal ${page}/${totalPages}).
+
+–  *G E T  P L U G I N*
+
+┌  ◦  *Total File* : ${allFiles.length} Plugin
+│  ◦  *Total Folder* : ${folderKeys.length} Kategori
+└  ◦  *Halaman* : ${page} / ${totalPages}
+
+Klik tombol *Pilih File* di bawah untuk melihat file per folder:`;
+        const buttons = [{
+          name: "single_select",
+          buttonParamsJson: JSON.stringify({
+            title: "📂 Buka Daftar File",
+            sections: multiSections
+          })
+        }];
+        let baseCmd = `${prefix}getplugin`;
+        if (page > 1) {
+          buttons.push({
+            name: "quick_reply",
+            buttonParamsJson: JSON.stringify({
+              display_text: `⬅️ Hal ${page - 1}`,
+              id: `${baseCmd} -p ${page - 1}`
+            })
+          });
+        }
+        if (page < totalPages) {
+          buttons.push({
+            name: "quick_reply",
+            buttonParamsJson: JSON.stringify({
+              display_text: `➡️ Hal ${page + 1}`,
+              id: `${baseCmd} -p ${page + 1}`
+            })
+          });
+        }
+        const options = {
+          params: {
+            bottom_sheet: {
+              list_title: `${botName} • Plugin Explorer`,
+              button_title: "Pilih File"
+            }
+          },
+          contextInfo: {
+            forwardingScore: 999,
+            isForwarded: true
+          },
+          quoted: quotedMsg
+        };
+        if (typeof ctx.sendCta === "function") {
+          return await ctx.sendCta(bodyText, botFooter, buttons, options);
+        } else {
+          return ctx.reply(bodyText);
+        }
       }
-      await ctx.react("✅");
-    } catch (error) {
-      console.error("[GetPlugin Error]:", error?.message || error);
+      const normalizedInput = normalizeInputPath(targetPathInput);
+      const exactMatch = allFiles.find(f => f.toLowerCase() === normalizedInput.toLowerCase());
+      if (exactMatch) {
+        const fullTargetPath = path.join(pluginsDir, exactMatch);
+        await ctx.react("📥");
+        return await sendPluginFile(sock, targetJid, fullTargetPath, exactMatch, quotedMsg, botFooter, Boolean(flags.textonly));
+      }
+      const isSpecificPath = normalizedInput.includes("/");
+      let matchedFiles = [];
+      if (!isSpecificPath) {
+        const inputFilename = path.basename(normalizedInput).toLowerCase();
+        matchedFiles = allFiles.filter(f => {
+          const base = path.basename(f).toLowerCase();
+          return base === inputFilename || f.toLowerCase().includes(inputFilename.replace(".js", ""));
+        });
+      }
+      if (matchedFiles.length > 1) {
+        await ctx.react("🔍");
+        const matchedGroups = groupFilesByFolder(matchedFiles);
+        const searchSections = Object.keys(matchedGroups).map(fld => ({
+          title: `📁 ${fld.toUpperCase()}`.slice(0, 24),
+          rows: matchedGroups[fld].map(filePath => ({
+            title: path.basename(filePath).slice(0, 24),
+            id: `${prefix}getplugin ${filePath}`,
+            description: `Path: plugins/${filePath}`.slice(0, 60)
+          }))
+        }));
+        const bodyText = `Hi ${userName}!
+Ditemukan *${matchedFiles.length}* file yang cocok dengan kata kunci *"${targetPathInput}"*.
+
+Pilih file yang ingin Anda unduh di bawah ini:`;
+        const buttons = [{
+          name: "single_select",
+          buttonParamsJson: JSON.stringify({
+            title: "📥 PILIH FILE TARGET",
+            sections: searchSections
+          })
+        }];
+        const options = {
+          params: {
+            bottom_sheet: {
+              list_title: `${botName} • Multiple Matches`,
+              button_title: "Pilih File Target"
+            }
+          },
+          contextInfo: {
+            forwardingScore: 999,
+            isForwarded: true
+          },
+          quoted: quotedMsg
+        };
+        if (typeof ctx.sendCta === "function") {
+          return await ctx.sendCta(bodyText, botFooter, buttons, options);
+        } else {
+          return ctx.reply(bodyText);
+        }
+      }
+      if (matchedFiles.length === 1) {
+        const targetFile = matchedFiles[0];
+        const fullTargetPath = path.join(pluginsDir, targetFile);
+        await ctx.react("📥");
+        return await sendPluginFile(sock, targetJid, fullTargetPath, targetFile, quotedMsg, botFooter, Boolean(flags.textonly));
+      }
       await ctx.react("❌");
-      ctx.reply(`– *E R R O R*\n\n` + `┌ ◦ *Info* : ${error?.message || error}\n` + `└ ◦ *Command* : ${ctx.command || "getplugin"}\n\n` + `${footer}`);
+      return ctx.reply(`❌ Plugin *"${targetPathInput}"* tidak ditemukan.`);
+    } catch (err) {
+      console.error("[GetPlugin Error]:", err);
+      await ctx.react("❌");
+      return ctx.reply(`❌ Terjadi kesalahan: ${err?.message || err}`);
     }
   }
 };
