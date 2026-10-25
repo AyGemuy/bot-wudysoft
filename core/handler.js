@@ -3,11 +3,6 @@ import axios from "axios";
 import {
   jidNormalizedUser,
   areJidsSameUser,
-  proto,
-  generateWAMessageFromContent,
-  generateMessageID,
-  prepareWAMessageMedia,
-  extractMessageContent,
   getAggregateVotesInPollMessage
 } from "@whiskeysockets/baileys";
 import {
@@ -25,21 +20,16 @@ import {
   extractMessageText,
   getBody,
   resolveLidToJid,
-  resolveLidProactively,
   decodeJid,
   extractNum,
   safeSendMessage,
-  unwrapMessage,
-  resizeImage,
   applyButtonsToBuilder,
   Button,
   ButtonV2,
   Carousel,
   AIRich,
-  Poll,
-  Toolkit
+  Poll
 } from "./serialize.js";
-const WA_DEFAULT_EPHEMERAL = 7 * 24 * 60 * 60;
 const cooldowns = new Map();
 global.avatarCache = global.avatarCache || new Map();
 const AVATAR_CACHE_TTL = 30 * 60 * 1e3;
@@ -208,140 +198,6 @@ async function sendInteractiveViewOnce(sock, jid, {
         quoted: safeQuoted
       }).catch(() => {});
     }
-  }
-}
-const LID_MIGRATE_CONCURRENCY = 10;
-const LID_MIGRATE_BATCH_DELAY_MS = 50;
-const LID_MIGRATE_MAX_WAIT_MS = 1200;
-const LID_MIGRATE_PERSIST_EVERY = 100;
-let _lidMigrationStats = {
-  total: 0,
-  ok: 0,
-  failed: 0,
-  skipped: 0,
-  deferred: 0
-};
-const _lidDeferredQueue = new Set();
-
-function _resolveLidInBackground(key, sock, alt, participants) {
-  setTimeout(async () => {
-    try {
-      await resolveLidFast(key, sock, alt, participants);
-    } catch (_) {}
-  }, 1e3);
-}
-export async function migrateLidToJid(dbData, sock = null) {
-  if (!dbData?.user || isMigratingLid) return;
-  if (!sock) {
-    console.log(chalk.yellow("[TURSO MIGRATE] Skip: socket belum siap."));
-    return;
-  }
-  isMigratingLid = true;
-  _lidMigrationStats = {
-    total: 0,
-    ok: 0,
-    failed: 0,
-    skipped: 0,
-    deferred: 0
-  };
-  try {
-    const users = dbData.user;
-    const lidKeys = Object.keys(users).filter(k => k.endsWith("@lid"));
-    _lidMigrationStats.total = lidKeys.length;
-    if (!lidKeys.length) {
-      console.log(chalk.gray("[TURSO MIGRATE] Tidak ada user LID yang perlu dimigrasi."));
-      return;
-    }
-    console.log(chalk.cyan(`[TURSO MIGRATE] Memulai migrasi ${lidKeys.length} user LID (batch=${LID_MIGRATE_CONCURRENCY})...`));
-    let changed = false;
-    let pendingWrite = 0;
-    for (let i = 0; i < lidKeys.length; i += LID_MIGRATE_CONCURRENCY) {
-      const batch = lidKeys.slice(i, i + LID_MIGRATE_CONCURRENCY);
-      await Promise.all(batch.map(async key => {
-        try {
-          const realJid = await Promise.race([resolveLidFast(key, sock, null, []), new Promise(r => setTimeout(() => r(key), LID_MIGRATE_MAX_WAIT_MS))]);
-          if (!realJid || realJid.endsWith("@lid")) {
-            _lidMigrationStats.deferred++;
-            _lidDeferredQueue.add(key);
-            _resolveLidInBackground(key, sock, null, []);
-            return;
-          }
-          const oldData = users[key];
-          const existingData = users[realJid];
-          users[realJid] = existingData ? {
-            ...oldData,
-            ...existingData
-          } : oldData;
-          delete users[key];
-          changed = true;
-          _lidMigrationStats.ok++;
-          pendingWrite++;
-          if (pendingWrite >= LID_MIGRATE_PERSIST_EVERY) {
-            pendingWrite = 0;
-            try {
-              await db.write(dbData);
-            } catch (_) {}
-          }
-        } catch (e) {
-          _lidMigrationStats.failed++;
-          console.error(chalk.red(`[MIGRATE ERROR] ${key}: ${e.message}`));
-        }
-      }));
-      if (i + LID_MIGRATE_CONCURRENCY < lidKeys.length) {
-        await new Promise(r => setTimeout(r, LID_MIGRATE_BATCH_DELAY_MS));
-      }
-      const processed = Math.min(i + LID_MIGRATE_CONCURRENCY, lidKeys.length);
-      if (processed % Math.max(1, Math.floor(lidKeys.length / 10)) === 0 || processed === lidKeys.length) {
-        console.log(chalk.gray(`[TURSO MIGRATE] Progress ${processed}/${lidKeys.length} → ok=${_lidMigrationStats.ok} deferred=${_lidMigrationStats.deferred} failed=${_lidMigrationStats.failed}`));
-      }
-    }
-    if (changed) {
-      try {
-        await db.write(dbData);
-      } catch (_) {}
-    }
-    console.log(chalk.green(`[TURSO MIGRATE] Selesai → ok=${_lidMigrationStats.ok}, deferred=${_lidMigrationStats.deferred}, failed=${_lidMigrationStats.failed}`));
-    if (_lidDeferredQueue.size > 0) {
-      setTimeout(() => _retryDeferredMigrations(dbData, sock), 3e4);
-    }
-  } catch (e) {
-    console.error(chalk.red("[MIGRATE FATAL]:"), e.message);
-  } finally {
-    isMigratingLid = false;
-  }
-}
-async function _retryDeferredMigrations(dbData, sock) {
-  if (!dbData?.user || _lidDeferredQueue.size === 0) return;
-  const users = dbData.user;
-  let changed = false;
-  let recovered = 0;
-  for (const key of [..._lidDeferredQueue]) {
-    if (!users[key]) {
-      _lidDeferredQueue.delete(key);
-      continue;
-    }
-    const lidKey = decodeJid(key).split("@")[0].split(":")[0];
-    const cachedNum = global.lidPhoneCache?.get(lidKey);
-    if (cachedNum) {
-      const realJid = `${cachedNum}@s.whatsapp.net`;
-      users[realJid] = users[realJid] ? {
-        ...users[key],
-        ...users[realJid]
-      } : users[key];
-      delete users[key];
-      _lidDeferredQueue.delete(key);
-      changed = true;
-      recovered++;
-    }
-  }
-  if (changed) {
-    try {
-      await db.write(dbData);
-    } catch (_) {}
-    console.log(chalk.green(`[TURSO MIGRATE] Retry deferred → ${recovered} berhasil dari cache. Sisa: ${_lidDeferredQueue.size}`));
-  }
-  if (_lidDeferredQueue.size > 0) {
-    setTimeout(() => _retryDeferredMigrations(dbData, sock), 6e4);
   }
 }
 async function normalizeLidCtx(ctx, sock = null) {

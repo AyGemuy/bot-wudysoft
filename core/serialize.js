@@ -1,7 +1,4 @@
 import * as Baileys from "@whiskeysockets/baileys";
-import {
-  Boom
-} from "@hapi/boom";
 import crypto from "crypto";
 import axios from "axios";
 import chalk from "chalk";
@@ -27,15 +24,13 @@ try {
   Jimp = require("jimp");
 } catch {}
 const {
-  prepareWAMessageMedia,
   generateWAMessage,
   generateWAMessageFromContent,
   generateForwardMessageContent,
   generateMessageID,
+  generateMessageIDV2,
   downloadContentFromMessage,
   proto,
-  normalizeMessageContent,
-  getContentType,
   areJidsSameUser,
   jidDecode,
   isJidGroup,
@@ -134,7 +129,7 @@ export class CustomCarousel extends BuilderCarousel {
   }
   async send(jid, options = {}) {
     const msg = await this.build(jid, options);
-    await this.#client.relayMessage(msg.key.remoteJid, msg.message, {
+    return await safeRelayInteractive(this.#client, msg.key.remoteJid, msg.message, {
       messageId: msg.key.id,
       additionalNodes: [{
         tag: "biz",
@@ -156,7 +151,6 @@ export class CustomCarousel extends BuilderCarousel {
       }],
       ...options
     });
-    return msg;
   }
   async run(jid, sockOrQuoted = null, options = {}) {
     const actualOptions = typeof sockOrQuoted === "object" && !sockOrQuoted?.relayMessage ? sockOrQuoted : options;
@@ -545,10 +539,44 @@ export async function safeRelayInteractive(sock, jid, message, options = {}, ret
       injectDuration(message);
     }
     const messageId = options.messageId || (typeof generateMessageID === "function" ? generateMessageID() : undefined);
-    return await sock.relayMessage(targetJid, message, {
+    const relayOpts = {
       messageId: messageId,
+      useCachedGroupMetadata: options.useCachedGroupMetadata,
+      statusJidList: options.statusJidList,
+      additionalNodes: options.additionalNodes,
       ...options
-    });
+    };
+    const result = await sock.relayMessage(targetJid, message, relayOpts);
+    const hasRich = !!message?.botForwardedMessage?.message?.richResponseMessage || !!message?.interactiveMessage?.bloksWidget;
+    if (options.bypassDownload !== false && (options.forceRichEdit || hasRich)) {
+      try {
+        const editContent = proto.Message.fromObject({
+          botForwardedMessage: {
+            message: {
+              protocolMessage: {
+                key: {
+                  remoteJid: targetJid,
+                  fromMe: true,
+                  id: messageId
+                },
+                type: proto.Message.ProtocolMessage.Type.MESSAGE_EDIT,
+                editedMessage: message
+              }
+            }
+          }
+        });
+        const editMessageId = typeof generateMessageIDV2 === "function" ? generateMessageIDV2(sock.user?.id || targetJid) : typeof generateMessageID === "function" ? generateMessageID() : undefined;
+        const editMsg = generateWAMessageFromContent(targetJid, editContent, {
+          userJid: sock.user?.id,
+          messageId: editMessageId
+        });
+        await sock.relayMessage(targetJid, editMsg.message, {
+          ...relayOpts,
+          messageId: editMsg.key.id
+        });
+      } catch (err) {}
+    }
+    return result;
   } catch (err) {
     const errorMsg = String(err?.message || "").toLowerCase();
     const statusCode = err?.output?.statusCode || err?.status;
@@ -621,12 +649,77 @@ export async function autoFixGroupSession(sock, groupJid) {
   } catch (_) {}
 }
 const NON_CONTENT_KEYS = new Set(["delete", "react", "edit", "pin", "poll", "pollUpdate", "protocolMessage", "senderKeyDistributionMessage", "forward", "groupStatus", "statusMentionMessage", "pollResult"]);
+
+function buildMusicAnnotation(music = {}) {
+  const title = String(music.title || "Original Audio");
+  const author = String(music.author || music.artist || global.bot?.name || "Meta AI");
+  const songId = String(music.songId || music.id || Math.floor(1e5 + Math.random() * 9e5));
+  return {
+    polygonVertices: [{
+      x: 0,
+      y: 0
+    }, {
+      x: 1e3,
+      y: 0
+    }, {
+      x: 1e3,
+      y: 1e3
+    }, {
+      x: 0,
+      y: 1e3
+    }],
+    embeddedMusic: {
+      musicContentMediaId: String(music.mediaId || songId),
+      songId: songId,
+      author: author,
+      title: title,
+      artistAttribution: author,
+      isExplicit: Boolean(music.isExplicit || false),
+      artworkDirectPath: music.artworkDirectPath || undefined
+    }
+  };
+}
+
+function resolveMusicSidecar(sidecarInput) {
+  if (Buffer.isBuffer(sidecarInput)) return sidecarInput;
+  if (typeof sidecarInput === "string") {
+    try {
+      return Buffer.from(sidecarInput, "base64");
+    } catch {}
+  }
+  return crypto.randomBytes(32);
+}
 export async function safeSendMessage(sock, jid, content, options = {}, retries = 2) {
   const targetJid = decodeJid(jid);
   try {
     if (typeof content === "string") content = {
       text: content
     };
+    if (content && typeof content === "object") {
+      const isImage = Boolean(content.image || content.imageMessage);
+      const isVideo = Boolean(content.video || content.videoMessage);
+      if (isImage || isVideo) {
+        const musicData = content.music || options.music || content.musicSidecar || options.musicSidecar || null;
+        const musicAnnotation = buildMusicAnnotation(typeof musicData === "object" ? musicData : {});
+        const targetAnnotations = content.annotations || options.annotations || [musicAnnotation];
+        content.annotations = targetAnnotations;
+        options.annotations = targetAnnotations;
+        if (content.imageMessage) content.imageMessage.annotations = targetAnnotations;
+        if (content.videoMessage) content.videoMessage.annotations = targetAnnotations;
+        const rawSidecar = content.musicSidecar || options.musicSidecar || musicData?.sidecar || musicData?.audio;
+        const sidecarBuffer = resolveMusicSidecar(rawSidecar);
+        content.musicSidecar = sidecarBuffer;
+        options.musicSidecar = sidecarBuffer;
+        if (content.imageMessage) content.imageMessage.musicSidecar = sidecarBuffer;
+        if (content.videoMessage) content.videoMessage.musicSidecar = sidecarBuffer;
+      }
+      const isSticker = Boolean(content.sticker || content.stickerMessage);
+      if (isSticker) {
+        content.isAiSticker = true;
+        options.isAiSticker = true;
+        if (content.stickerMessage) content.stickerMessage.isAiSticker = true;
+      }
+    }
     if (content && typeof content === "object") await processThumbnails(content);
     if (options && typeof options === "object") await processThumbnails(options);
     const rawText = String(content?.text || content?.caption || content?.conversation || content?.image?.caption || content?.video?.caption || content?.document?.caption || content?.extendedTextMessage?.text || "");
@@ -1163,9 +1256,6 @@ export const detectBaileys = (id = "") => {
   const baileysPrefixes = ["BAE", "B1E", "3EB0", "WA"];
   const baileysLengths = [12, 16, 20, 22, 40];
   return baileysPrefixes.some(pfx => id.startsWith(pfx)) || baileysLengths.includes(id.length);
-};
-export const safeTokenizeCode = (code, language = "javascript") => {
-  return AIRich.tokenizer(code, language).codeBlock;
 };
 export const extractIE = Toolkit.extractIE;
 export async function appendTextMessage(sock, message, text, chatUpdate = {}) {

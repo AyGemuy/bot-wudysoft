@@ -1,6 +1,8 @@
 import {
   generateWAMessageFromContent,
-  prepareWAMessageMedia
+  prepareWAMessageMedia,
+  proto,
+  generateMessageIDV2
 } from "@whiskeysockets/baileys";
 import crypto from "crypto";
 import {
@@ -240,6 +242,46 @@ async function waitAllPromises(input) {
   };
   return deep(await input);
 }
+const relayRichMessage = async (sock, jid, fullMsg, options = {}) => {
+  const relayOpts = {
+    messageId: fullMsg.key.id,
+    useCachedGroupMetadata: options.useCachedGroupMetadata,
+    statusJidList: options.statusJidList,
+    additionalNodes: options.additionalNodes,
+    ...options.relayOptions || {}
+  };
+  await sock.relayMessage(jid, fullMsg.message, relayOpts);
+  const hasRich = !!fullMsg.message?.botForwardedMessage?.message?.richResponseMessage || !!fullMsg.message?.interactiveMessage?.bloksWidget;
+  if (options.bypassDownload !== false && (options.forceRichEdit || hasRich)) {
+    try {
+      const editContent = proto.Message.fromObject({
+        botForwardedMessage: {
+          message: {
+            protocolMessage: {
+              key: {
+                remoteJid: jid,
+                fromMe: true,
+                id: fullMsg.key.id
+              },
+              type: proto.Message.ProtocolMessage.Type.MESSAGE_EDIT,
+              editedMessage: fullMsg.message
+            }
+          }
+        }
+      });
+      const editMessageId = typeof generateMessageIDV2 === "function" ? generateMessageIDV2(sock.user?.id || jid) : crypto.randomBytes(16).toString("hex").toUpperCase();
+      const editMsg = generateWAMessageFromContent(jid, editContent, {
+        userJid: sock.user?.id,
+        messageId: editMessageId
+      });
+      await sock.relayMessage(jid, editMsg.message, {
+        ...relayOpts,
+        messageId: editMsg.key.id
+      });
+    } catch (err) {}
+  }
+  return fullMsg;
+};
 class Toolkit {
   constructor() {}
   static extractIE(text, {
@@ -1208,6 +1250,9 @@ class Button extends BaseBuilder {
       ...this._extraPayload,
       interactiveMessage: {
         ...message,
+        ...this._bloksWidget ? {
+          bloksWidget: this._bloksWidget
+        } : {},
         contextInfo: contextInfo
       }
     }, {
@@ -1218,8 +1263,7 @@ class Button extends BaseBuilder {
     ...options
   } = {}) {
     const msg = await this.build(jid, options);
-    await this.#client.relayMessage(msg.key.remoteJid, msg.message, {
-      messageId: msg.key.id,
+    const relayOpts = {
       additionalNodes: [{
         tag: "biz",
         attrs: {},
@@ -1239,8 +1283,8 @@ class Button extends BaseBuilder {
         }]
       }],
       ...options
-    });
-    return msg;
+    };
+    return await relayRichMessage(this.#client, msg.key.remoteJid, msg, relayOpts);
   }
   setButton(name, params) {
     return this.addButton(name, params);
@@ -2173,16 +2217,18 @@ class AIRich extends BaseBuilder {
     includesSubmessages,
     ...options
   } = {}) {
-    const msg = await this.build({
+    const content = await this.build({
       forwarded: forwarded,
       notification: notification,
       includesUnifiedResponse: includesUnifiedResponse,
       includesSubmessages: includesSubmessages,
       ...options
     });
-    return await this.#client.relayMessage(jid, msg, {
+    const fullMsg = generateWAMessageFromContent(jid, content, {
+      userJid: this.#client.user?.id,
       ...options
     });
+    return await relayRichMessage(this.#client, jid, fullMsg, options);
   }
   async run(jid, sock, options = {}) {
     return this.send(jid, options);

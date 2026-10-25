@@ -5,34 +5,20 @@ import axios from "axios";
 import fs from "fs";
 import path from "path";
 import os from "os";
-import v8 from "v8";
 import JSZip from "jszip";
-import {
-  fileURLToPath
-} from "url";
-import {
-  dirname
-} from "path";
 import {
   makeWASocket,
   makeCacheableSignalKeyStore,
   fetchLatestBaileysVersion,
   Browsers,
   DisconnectReason,
-  prepareWAMessageMedia,
-  generateWAMessageFromContent,
-  generateMessageID,
   proto,
   initAuthCreds,
   BufferJSON,
-  getAggregateVotesInPollMessage,
   jidNormalizedUser,
   extractMessageContent,
-  downloadContentFromMessage,
   isJidBroadcast,
-  S_WHATSAPP_NET,
-  useMultiFileAuthState,
-  areJidsSameUser
+  useMultiFileAuthState
 } from "@whiskeysockets/baileys";
 import {
   Boom
@@ -42,8 +28,6 @@ import chalk from "chalk";
 import "./core/config.js";
 import {
   SerializeMessage,
-  getMessagePayload,
-  downloadMediaNode,
   decodeJid,
   extractNum,
   resolveLidToJid,
@@ -51,14 +35,8 @@ import {
   copyNForward,
   unwrapMessage,
   safeSendMessage,
-  safeRelayInteractive,
-  resizeImage,
   applyButtonsToBuilder,
-  Button,
-  ButtonV2,
-  Carousel,
-  AIRich,
-  Toolkit
+  Button
 } from "./core/serialize.js";
 import {
   CommandLoader
@@ -71,8 +49,6 @@ import {
   flushJadibotGroupCache
 } from "./core/jadibot.js";
 import db from "./data/db.js";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 const _SUPPRESS_LOG_PREFIXES = ["Closing session", "Closing open session in favor of incoming prekey bundle", "Failed to decrypt message with any known session", "Session error:", "Bad MAC", "[LID] ", "Decrypted message with closed session"];
 const _matchesSuppress = s => _SUPPRESS_LOG_PREFIXES.some(p => s.startsWith(p));
 const _nativeLog = console.log;
@@ -90,7 +66,6 @@ console.error = (...a) => {
   if (typeof a[0] === "string" && _matchesSuppress(a[0])) return;
   _nativeError(...a);
 };
-const WA_DEFAULT_EPHEMERAL = 7 * 24 * 60 * 60;
 const GROUP_NOTIF_MAX = 5;
 global.msgStore = global.msgStore || new Map();
 global.avatarCache = global.avatarCache || new Map();
@@ -150,7 +125,6 @@ function flushGroupCacheToDisk() {
   } catch (_) {}
 }
 global._presenceMap = global._presenceMap || new Map();
-global.lastConnectNotice = global.lastConnectNotice || 0;
 global.botStartTime = Date.now();
 global.botJidPool = global.botJidPool || new Set();
 global.botEventLocks = global.botEventLocks || new Set();
@@ -164,168 +138,31 @@ const withTimeout = (promise, ms = 2500) => {
   });
   return Promise.race([promise.catch(() => null), timeout]).finally(() => clearTimeout(timer));
 };
-export const useDBAuthState = async (sessionKey = "main_session", sessionDir = path.join(process.cwd(), "session")) => {
-  if (!global.db) global.db = {};
-  if (!global.db.auth) global.db.auth = {};
-  let creds = null;
-  global.authKeysStore[sessionKey] = global.authKeysStore[sessionKey] || {};
-  let keysStore = global.authKeysStore[sessionKey];
-  if (global.db.auth[sessionKey]?.creds) {
-    try {
-      creds = JSON.parse(JSON.stringify(global.db.auth[sessionKey].creds), BufferJSON.reviver);
-    } catch (_) {}
-  }
-  const credsPath = path.join(sessionDir, "creds.json");
-  if ((!creds || !creds.registered && !creds.me?.id) && fs.existsSync(credsPath)) {
-    try {
-      creds = JSON.parse(fs.readFileSync(credsPath, "utf-8"), BufferJSON.reviver);
-      console.log(chalk.gray(`[ AUTH ]`) + chalk.green(` Sesi ${sessionKey} dimuat dari creds.json`));
-    } catch (e) {
-      console.error(chalk.red(`[ AUTH ERROR ]`), e.message);
-    }
-  }
-  if (!creds) creds = initAuthCreds();
-  if (!creds.myAppStateKeyId) creds.myAppStateKeyId = "AAAAAIDq";
-  global.db.auth[sessionKey] = {
-    creds: JSON.parse(JSON.stringify(creds, BufferJSON.replacer))
-  };
-  if (fs.existsSync(sessionDir)) {
-    try {
-      const keyFiles = fs.readdirSync(sessionDir).filter(f => f.endsWith(".json") && f !== "creds.json" && !f.startsWith("sender-key-"));
-      for (const f of keyFiles) {
-        const keyName = f.replace(/\.json$/, "");
-        if (keysStore[keyName]) continue;
-        try {
-          const parsed = JSON.parse(fs.readFileSync(path.join(sessionDir, f), "utf-8"), BufferJSON.reviver);
-          if (parsed) keysStore[keyName] = parsed;
-        } catch (_) {
-          try {
-            fs.unlinkSync(path.join(sessionDir, f));
-          } catch (_) {}
-        }
-      }
-      console.log(chalk.gray(`[ AUTH ]`) + chalk.cyan(` Pre-loaded ${Object.keys(keysStore).length} core keys untuk ${sessionKey}`));
-    } catch (_) {}
-  }
-  const saveCreds = () => {
-    global.db.auth[sessionKey].creds = JSON.parse(JSON.stringify(creds, BufferJSON.replacer));
-    if (typeof db?.write === "function") db.write(global.db);
-    try {
-      if (!fs.existsSync(sessionDir)) fs.mkdirSync(sessionDir, {
-        recursive: true
-      });
-      fs.writeFileSync(credsPath, JSON.stringify(creds, BufferJSON.replacer, 2));
-    } catch (_) {}
-  };
-  return {
-    state: {
-      creds: creds,
-      keys: {
-        get: async (type, ids) => {
-          const data = {};
-          for (const id of ids) {
-            const key = `${type}-${id}`;
-            let val = keysStore[key];
-            if (!val) {
-              const filePath = path.join(sessionDir, `${key}.json`);
-              if (fs.existsSync(filePath)) {
-                try {
-                  val = JSON.parse(fs.readFileSync(filePath, "utf-8"), BufferJSON.reviver);
-                  if (val) keysStore[key] = val;
-                } catch (_) {
-                  try {
-                    fs.unlinkSync(filePath);
-                  } catch (_) {}
-                  delete keysStore[key];
-                  val = null;
-                }
-              }
-            }
-            if (val) {
-              if (type === "app-state-sync-key") {
-                try {
-                  data[id] = proto.Message.AppStateSyncKeyData.fromObject(val);
-                } catch (_) {
-                  data[id] = null;
-                }
-              } else {
-                data[id] = val;
-              }
-            } else {
-              data[id] = null;
-            }
-          }
-          return data;
-        },
-        set: async data => {
-          for (const type in data) {
-            for (const id in data[type]) {
-              const key = `${type}-${id}`;
-              const val = data[type][id];
-              if (val) {
-                keysStore[key] = val;
-                fs.writeFile(path.join(sessionDir, `${key}.json`), JSON.stringify(val, BufferJSON.replacer), () => {});
-              } else {
-                delete keysStore[key];
-                try {
-                  fs.unlinkSync(path.join(sessionDir, `${key}.json`));
-                } catch (_) {}
-              }
-            }
-          }
-        }
-      }
-    },
-    saveCreds: saveCreds,
-    clearAuth: () => {
-      delete global.db.auth[sessionKey];
-      delete global.authKeysStore[sessionKey];
-      if (typeof db?.write === "function") db.write(global.db);
-      try {
-        if (fs.existsSync(sessionDir)) fs.rmSync(sessionDir, {
-          recursive: true,
-          force: true
-        });
-      } catch (_) {}
-    }
-  };
-};
 
 function cleanupSessionFiles(sessionDir = path.join(process.cwd(), "session")) {
   try {
     if (!fs.existsSync(sessionDir)) return {
-      deleted: 0,
-      total: 0
+      deleted: 0
     };
     const files = fs.readdirSync(sessionDir);
     let deletedCount = 0;
     for (const file of files) {
-      if (file === "creds.json") continue;
+      if (file === "creds.json" || file.startsWith("app-state") || file.startsWith("pre-key")) continue;
       const filePath = path.join(sessionDir, file);
       try {
         const stats = fs.statSync(filePath);
         if (stats.size === 0) {
           fs.unlinkSync(filePath);
           deletedCount++;
-          continue;
-        }
-        if (file.startsWith("sender-key-")) {
-          const daysOld = (Date.now() - stats.mtimeMs) / (1e3 * 60 * 60 * 24);
-          if (daysOld > 7) {
-            fs.unlinkSync(filePath);
-            deletedCount++;
-          }
         }
       } catch (_) {}
     }
     return {
-      deleted: deletedCount,
-      total: files.length
+      deleted: deletedCount
     };
-  } catch (error) {
+  } catch {
     return {
-      deleted: 0,
-      total: 0
+      deleted: 0
     };
   }
 }
@@ -520,6 +357,8 @@ function buildGroupNotif(action, userNum, groupName, totalMember, actorTag = "Ad
       subtitle: `Member Baru di ${groupName}`,
       canvasTitle: "WELCOME",
       cardStatus: "ACTIVE",
+      canvasMessage: "Selamat datang & semoga betah!",
+      usertype: "Member",
       bodyText: `Halo @${userNum}, selamat datang di *${groupName}*.\n\n┌  ◦  *User* : @${userNum}\n│  ◦  *Members* : ${totalMember} Anggota\n└  ◦  *Group* : ${groupName}\n\n“ Patuhi tata tertib yang berlaku dan semoga betah di grup ini. ”`,
       buttons: [{
         name: "quick_reply",
@@ -538,6 +377,8 @@ function buildGroupNotif(action, userNum, groupName, totalMember, actorTag = "Ad
       subtitle: "Pemberitahuan Keluar",
       canvasTitle: "GOODBYE",
       cardStatus: "LEFT",
+      canvasMessage: "Sampai jumpa & terima kasih!",
+      usertype: "Ex-Member",
       bodyText: `Selamat tinggal @${userNum}, telah keluar dari *${groupName}*.\n\n┌  ◦  *User* : @${userNum}\n└  ◦  *Sisa Member* : ${totalMember} Anggota\n\n“ Terima kasih telah menjadi bagian dari grup ini. ”`,
       buttons: [{
         name: "quick_reply",
@@ -552,6 +393,8 @@ function buildGroupNotif(action, userNum, groupName, totalMember, actorTag = "Ad
       subtitle: `Promosi Admin di ${groupName}`,
       canvasTitle: "PROMOTED",
       cardStatus: "ADMIN",
+      canvasMessage: "Selamat atas jabatan barunya!",
+      usertype: "Admin",
       bodyText: `Selamat kepada @${userNum}, sekarang resmi menjadi admin di grup *${groupName}*.\n\n┌  ◦  *User* : @${userNum}\n│  ◦  *Action By* : ${actorTag}\n└  ◦  *Group* : ${groupName}`,
       buttons: [{
         name: "quick_reply",
@@ -566,6 +409,8 @@ function buildGroupNotif(action, userNum, groupName, totalMember, actorTag = "Ad
       subtitle: `Pencabutan Jabatan Admin`,
       canvasTitle: "DEMOTED",
       cardStatus: "MEMBER",
+      canvasMessage: "Pencabutan wewenang admin grup.",
+      usertype: "Member",
       bodyText: `Pemberitahuan untuk @${userNum}, status admin kamu telah dicabut di grup *${groupName}*.\n\n┌  ◦  *User* : @${userNum}\n│  ◦  *Action By* : ${actorTag}\n└  ◦  *Group* : ${groupName}`,
       buttons: [{
         name: "quick_reply",
@@ -748,12 +593,14 @@ async function createSessionZip(sessionDir) {
           keys: global.signalKeyStore
         },
         shouldIgnoreJid: jid => isJidBroadcast(jid) || jid?.endsWith("@newsletter"),
-        browser: Browsers.ubuntu("Chrome"),
-        generateHighQualityLinkPreview: true,
+        browser: ["Ubuntu", "Chrome", "20.0.04"],
+        generateHighQualityLinkPreview: false,
         syncFullHistory: false,
-        markOnlineOnConnect: true,
+        markOnlineOnConnect: false,
         keepAliveIntervalMs: 25e3,
         connectTimeoutMs: 6e4,
+        defaultQueryTimeoutMs: 0,
+        retryRequestDelayMs: 500,
         getMessage: async key => {
           if (!key?.id) return undefined;
           const cached = global.msgStore?.get(key.id);
@@ -764,31 +611,13 @@ async function createSessionZip(sessionDir) {
           return undefined;
         }
       });
-      sock.ws?.on("CB:ack,class:message,type:error", async node => {
+      sock.ws?.on("CB:ack,class:message,type:error", node => {
         try {
           const errorAttr = node?.attrs;
           if (errorAttr?.error === "479" || errorAttr?.code === "479") {
             const fromGroup = errorAttr.from;
             if (fromGroup && fromGroup.endsWith("@g.us")) {
-              console.log(chalk.yellow(`[AUTO-REPAIR 479] Membersihkan sender-key basi untuk grup: ${fromGroup}`));
               global.groupCache?.delete(decodeJid(fromGroup));
-              const cleanNum = fromGroup.split("@")[0].replace(/\D/g, "");
-              if (global.authKeysStore) {
-                for (const sess in global.authKeysStore) {
-                  const keys = global.authKeysStore[sess];
-                  if (keys && typeof keys === "object") {
-                    for (const k in keys) {
-                      if (k.includes(cleanNum)) delete keys[k];
-                    }
-                  }
-                }
-              }
-              const files = fs.readdirSync(sessionDir).filter(f => f.includes(cleanNum));
-              for (const f of files) {
-                try {
-                  fs.unlinkSync(path.join(sessionDir, f));
-                } catch (_) {}
-              }
             }
           }
         } catch (_) {}
@@ -872,13 +701,24 @@ async function createSessionZip(sessionDir) {
         }
       }
       let isRestarting = false;
-      const reconnect = async (delayTime = 3500) => {
+      let reconnectAttempts = 0;
+      let globalReconnect = null;
+      const reconnect = async (customDelay = null) => {
         if (isRestarting) return;
         isRestarting = true;
-        detachAllEvents();
+        reconnectAttempts++;
+        const delayTime = customDelay || Math.min(3e3 * Math.pow(1.5, reconnectAttempts - 1), 3e4);
+        console.log(chalk.gray(`[ RECONNECT ]`) + chalk.yellow(` Menghubungkan ulang dalam ${(delayTime / 1e3).toFixed(1)} detik...`));
+        try {
+          detachAllEvents();
+          if (currentSock?.ws) currentSock.ws.close();
+          currentSock?.end?.(undefined);
+        } catch (_) {}
         await sleep(delayTime);
+        isRestarting = false;
         return start();
       };
+      globalReconnect = reconnect;
       const onCredsUpdate = async () => {
         await saveCreds();
         enrichSockUser();
@@ -898,82 +738,74 @@ async function createSessionZip(sessionDir) {
         if (connection === "close") {
           const reason = lastDisconnect?.error?.output?.statusCode ?? (lastDisconnect?.error instanceof Boom ? lastDisconnect.error.output?.statusCode : undefined);
           console.log(chalk.gray(`[ CONNECTION ]`) + chalk.yellow(` Ditutup (Status: ${reason})`));
-          if (reason === 401 || reason === 403 || reason === DisconnectReason.loggedOut) {
-            authFailCount++;
-            if (authFailCount <= 3) {
-              console.log(chalk.yellow(`[ SESSION ] Terjadi status ${reason} (Percobaan ${authFailCount}/3). Mencoba rekoneksi tanpa hapus sesi...`));
-              return reconnect(6e3);
-            } else {
-              console.log(chalk.red(`[ SESSION ] Gagal tersambung setelah 3x percobaan. Menunggu untuk re-koneksi berikutnya...`));
-              authFailCount = 0;
-              return reconnect(15e3);
+          if (reason === DisconnectReason.loggedOut || reason === 401) {
+            console.log(chalk.red(`[ SESSION ] Sesi tidak valid / Dikeluarkan. Menghapus sesi...`));
+            try {
+              fs.rmSync(sessionDir, {
+                recursive: true,
+                force: true
+              });
+              console.log(chalk.green(`[ SESSION ] Direktori sesi berhasil dihapus.`));
+            } catch (e) {
+              console.error(chalk.red(`[ SESSION ] Gagal menghapus direktori sesi:`), e.message);
             }
+            process.exit(1);
           }
-          switch (reason) {
-            case 408:
-            case 428:
-            case 503:
-            case 515:
-            case DisconnectReason.connectionLost:
-              return reconnect(3e3);
-            case DisconnectReason.connectionReplaced:
-              return reconnect(5e3);
-            default:
-              return reconnect(3e3);
+          if (reason === DisconnectReason.restartRequired || reason === 515) {
+            console.log(chalk.gray(`[ CONNECTION ] Pairing berhasil, menyimpan kredensial...`));
+            try {
+              await saveCreds();
+              console.log(chalk.green(`[ CONNECTION ] Kredensial tersimpan. Melakukan restart...`));
+            } catch (e) {
+              console.error(chalk.red(`[ CREDS ERROR ] Gagal menyimpan kredensial:`), e.message);
+            }
+            return reconnect(1e3);
           }
+          if (reason === DisconnectReason.connectionLost || reason === DisconnectReason.connectionClosed || reason === 408 || reason === 428 || reason === 503) {
+            return reconnect(3e3);
+          }
+          return reconnect(5e3);
         }
         if (connection === "open") {
           authFailCount = 0;
+          reconnectAttempts = 0;
           isRestarting = false;
           enrichSockUser();
           global._toxicLastActivity = Date.now();
-          setTimeout(async () => {
-            try {
-              await sock.query({
-                tag: "iq",
-                attrs: {
-                  to: "s.whatsapp.net",
-                  xmlns: "passive",
-                  type: "set"
-                },
-                content: [{
-                  tag: "active",
-                  attrs: {}
-                }]
-              });
-            } catch (_) {}
-          }, 500);
-          setTimeout(() => {
-            sock.resyncAppState(["regular", "regular_high", "regular_low"], true).catch(() => {});
-          }, 2e3);
-          sock.sendPresenceUpdate("available").catch(() => {});
           const botPhone = sock.user?.number || sock.user?.jid?.split("@")[0] || "Unknown";
           const botPushName = sock.user?.name || global.bot?.name || "Bot";
           console.log(chalk.green(`\n[ CONNECTED ] `) + chalk.white(`${botPushName} (+${botPhone}) siap digunakan.`));
-          sock.groupFetchAllParticipating().then(allGroups => {
-            for (const [jid, meta] of Object.entries(allGroups || {})) {
-              const clean = decodeJid(jid);
-              global.groupCache.set(clean, {
-                data: meta,
-                time: Date.now()
-              });
-            }
-            saveGroupCacheToDisk();
-            console.log(chalk.gray(`[ SYNC ] `) + chalk.cyan(`${Object.keys(allGroups || {}).length} grup tersinkronisasi.`));
-          }).catch(() => {});
+          setTimeout(() => {
+            sock.sendPresenceUpdate("available").catch(() => {});
+          }, 1500);
+          setTimeout(() => {
+            sock.resyncAppState(["regular_high", "regular_low"], false).catch(() => {});
+          }, 3500);
+          setTimeout(async () => {
+            try {
+              const allGroups = await sock.groupFetchAllParticipating();
+              for (const [jid, meta] of Object.entries(allGroups || {})) {
+                global.groupCache.set(decodeJid(jid), {
+                  data: meta,
+                  time: Date.now()
+                });
+              }
+              saveGroupCacheToDisk();
+              console.log(chalk.gray(`[ SYNC ] `) + chalk.cyan(`${Object.keys(allGroups || {}).length} grup tersinkronisasi.`));
+            } catch (_) {}
+          }, 5e3);
           if (typeof initAllJadiBots === "function") {
-            initAllJadiBots(sock).catch(e => {
-              console.error(chalk.red("[JADIBOT INIT ERROR]"), e.message);
-            });
+            setTimeout(() => {
+              initAllJadiBots(sock).catch(e => {
+                console.error(chalk.red("[JADIBOT INIT ERROR]"), e.message);
+              });
+            }, 6e3);
           }
           if (!hasSentConnectNotice) {
             hasSentConnectNotice = true;
             setTimeout(async () => {
               const targetJid = getTargetOwnerJid(sock);
-              if (!targetJid) {
-                console.log(chalk.yellow("[ NOTICE ] Nomor owner tidak ditemukan, batal kirim sesi."));
-                return;
-              }
+              if (!targetJid) return;
               try {
                 const ramUsed = formatSize(process.memoryUsage().rss);
                 const totalRam = formatSize(os.totalmem());
@@ -990,12 +822,12 @@ timeZone: "Asia/Jakarta"
                     fileName: `creds_${botPhone}.zip`,
                     caption: `–  *B A C K U P  C R E D S*`
                   });
-                  console.log(chalk.green(`[ BACKUP ] Sesi ZIP berhasil dikirim ke Owner (${targetJid})`));
+                  console.log(chalk.green(`[ BACKUP ] Sesi ZIP berhasil dikirim ke Owner.`));
                 }
               } catch (err) {
                 console.error(chalk.red(`[ BACKUP ERROR ] Gagal kirim ke ${targetJid}:`), err.message);
               }
-            }, 3500);
+            }, 8e3);
           }
         }
       };
@@ -1035,18 +867,12 @@ timeZone: "Asia/Jakarta"
             const msgId = msg.key?.id;
             if (!jid || !msgId) continue;
             if (jid === "status@broadcast" || jid.endsWith("@newsletter")) continue;
-            if (msg.key.fromMe && msg.message) {
-              global.msgStore.set(msgId, {
-                rawMessage: msg.message,
-                message: msg.message,
-                sender: sock.user?.id || jid,
-                timestamp: Date.now()
-              });
-            }
             const extracted = extractMessageContent(msg.message) || msg.message;
             if (!extracted) continue;
             if (global.bot?.autoRead && !msg.key.fromMe) {
-              sock.readMessages([msg.key]).catch(() => {});
+              setTimeout(() => {
+                sock.readMessages([msg.key]).catch(() => {});
+              }, Math.floor(Math.random() * 400) + 300);
             }
             const senderRaw = msg.key?.participant || msg.participant || jid;
             const senderClean = decodeJid(senderRaw);
@@ -1060,7 +886,7 @@ timeZone: "Asia/Jakarta"
                 rawMessage: rawM,
                 message: rawM,
                 msg: msg,
-                sender: msg.key.participant || jid,
+                sender: senderRaw,
                 timestamp: Date.now()
               });
             }
@@ -1074,9 +900,8 @@ timeZone: "Asia/Jakarta"
             }
             let ctx = null;
             try {
-              ctx = await Promise.race([SerializeMessage(sock, msg), new Promise((_, rej) => setTimeout(() => rej(new Error("serialize_timeout")), 8e3))]);
+              ctx = await Promise.race([SerializeMessage(sock, msg), new Promise((_, rej) => setTimeout(() => rej(new Error("serialize_timeout")), 6e3))]);
             } catch (serErr) {
-              console.error(chalk.yellow(`[ SERIALIZE SKIP ] ${serErr.message} → ${jid}`));
               continue;
             }
             if (!ctx) continue;
@@ -1086,33 +911,20 @@ timeZone: "Asia/Jakarta"
             const _hasPrefix = _text && _prefixes.some(p => _text.startsWith(p));
             const _firstWord = _text.split(/\s+/)[0]?.toLowerCase() || "";
             const _isNoprefix = Boolean(global.bot?.noprefix && loader?.getCommand?.(_firstWord));
-            const _looksLikeCommand = Boolean(_text) && (_hasPrefix || _isNoprefix);
-            if (_looksLikeCommand && global.bot?.autoTyping && !msg.key.fromMe) {
+            if ((_hasPrefix || _isNoprefix) && global.bot?.autoTyping && !msg.key.fromMe) {
               sock.sendPresenceUpdate("composing", jid).catch(() => {});
               _presenceActive = true;
             }
-            const _t0 = Date.now();
-            ctx._dbgStep = s => {
-              if (global.bot?.debug) {
-                console.log(chalk.gray(`[STEP ${Date.now() - _t0}ms] ${ctx.cmd || "?"} → ${s}`));
-              }
-            };
-            ctx._dbgStep("start");
             try {
               await UpsertMsgHandle(sock, msg, ctx, {
                 cmd: loader
               });
-              ctx._dbgStep("done");
             } catch (e) {
               console.error(chalk.red("[HANDLER ERROR]"), e.stack || e.message);
-              await safeSendMessage(sock, ctx.chat || ctx.id, {
-                text: `–  *S Y S T E M  E R R O R*\n\nPerintah gagal diproses.`
-              }).catch(() => {});
             } finally {
               _pausePresence();
             }
           } catch (e) {
-            console.error(chalk.redBright("[ MSG ERROR ]"), e.message);
             _pausePresence();
           }
         }
@@ -1288,8 +1100,10 @@ timeZone: "Asia/Jakarta"
               avatar: p.userPic,
               status: p.notif.cardStatus,
               title: p.notif.canvasTitle,
-              username: String(p.userName).slice(0, 15)
-            }), 3e3).catch(() => null);
+              username: String(p.userName).slice(0, 15),
+              message: p.notif.canvasMessage || p.notif.subtitle,
+              usertype: p.notif.usertype || "Member"
+            }), 4e3).catch(() => null);
             await sendGroupCtaMessage(sock, cleanChatId, {
               title: p.notif.title,
               subtitle: p.notif.subtitle,
@@ -1402,7 +1216,8 @@ timeZone: "Asia/Jakarta"
               status: canvasStatus,
               title: canvasTitle,
               username: subtitle.slice(0, 15),
-              message: body.slice(0, 35)
+              message: String(body || "").replace(/[\n*_\x60~]/g, " ").replace(/\s+/g, " ").trim().slice(0, 35),
+              usertype: "Notification"
             }), 4e3).catch(() => null);
             await sendGroupCtaMessage(sock, cleanChatId, {
               title: title,
@@ -1617,25 +1432,9 @@ timeZone: "Asia/Jakarta"
       sock.ev.on("call", onCall);
 
       function detachAllEvents() {
-        sock.ev.off("creds.update", onCredsUpdate);
-        sock.ev.off("connection.update", onConnectionUpdate);
-        sock.ev.off("messaging-history.set", onMessagingHistorySet);
-        sock.ev.off("chats.set", onChatsSet);
-        sock.ev.off("chats.update", onChatsUpdate);
-        sock.ev.off("messages.upsert", onMessagesUpsert);
-        sock.ev.off("messages.update", onMessagesUpdate);
-        sock.ev.off("messages.reaction", onMessagesReaction);
-        sock.ev.off("message-receipt.update", onMessageReceiptUpdate);
-        sock.ev.off("group-participants.update", onGroupParticipantsUpdate);
-        sock.ev.off("groups.update", onGroupsUpdate);
-        sock.ev.off("group.join-request", onGroupJoinRequest);
-        sock.ev.off("presence.update", onPresenceUpdate);
-        sock.ev.off("chats.delete", onChatsDelete);
-        sock.ev.off("contacts.upsert", onContactsUpsert);
-        sock.ev.off("contacts.update", onContactsUpdate);
-        sock.ev.off("blocklist.set", onBlocklistSet);
-        sock.ev.off("blocklist.update", onBlocklistUpdate);
-        sock.ev.off("call", onCall);
+        try {
+          sock.ev.removeAllListeners();
+        } catch (_) {}
       }
     };
     loadGroupCacheFromDisk();
@@ -1645,69 +1444,18 @@ timeZone: "Asia/Jakarta"
         cleanupSessionFiles(sessionDir);
       } catch (_) {}
     }, 24 * 60 * 60 * 1e3);
-    setInterval(async () => {
+    setInterval(() => {
       try {
-        if (!currentSock || !currentSock.user) return;
-        const silentMs = Date.now() - global._toxicLastActivity;
-        if (silentMs > 5 * 60 * 1e3) {
-          if (!currentSock.ws || !currentSock.ws.isOpen) {
-            console.log(chalk.yellow("⚠️ [WATCHDOG] WebSocket idle/mati — Memulai ulang koneksi..."));
-            if (typeof reconnect === "function") {
-              reconnect(1e3);
-            } else {
-              currentSock.ev?.removeAllListeners();
-              try {
-                currentSock.ws?.close();
-              } catch (_) {}
-              start();
-            }
-          } else {
-            try {
-              await currentSock.query({
-                tag: "iq",
-                attrs: {
-                  to: "s.whatsapp.net",
-                  xmlns: "passive",
-                  type: "set"
-                },
-                content: [{
-                  tag: "active",
-                  attrs: {}
-                }]
-              });
-            } catch {
-              console.log(chalk.yellow("⚠️ [WATCHDOG] Ping gagal — Memulai ulang koneksi..."));
-              if (typeof reconnect === "function") {
-                reconnect(1e3);
-              } else {
-                currentSock.ev?.removeAllListeners();
-                try {
-                  currentSock.ws?.close();
-                } catch (_) {}
-                start();
-              }
-            }
-            global._toxicLastActivity = Date.now();
+        if (!currentSock) return;
+        const isSocketDead = !currentSock.ws || currentSock.ws.readyState !== 1;
+        if (isSocketDead && !isRestarting) {
+          console.log(chalk.yellow("⚠️ [WATCHDOG] Socket mati/terputus di background. Memulihkan..."));
+          if (typeof globalReconnect === "function") {
+            globalReconnect(3e3);
           }
         }
       } catch (_) {}
-    }, 45 * 1e3);
-    setInterval(() => {
-      try {
-        const usedMB = Math.round(process.memoryUsage().rss / 1024 / 1024);
-        if (usedMB > 450) {
-          console.log(chalk.yellow(`⚠️ [MEMORY] Penggunaan RAM tinggi: ${usedMB}MB — Membersihkan memori...`));
-          if (global.gc) global.gc();
-        }
-      } catch (_) {}
-    }, 5 * 60 * 1e3);
-    setInterval(() => {
-      try {
-        if (currentSock?.ws?.isOpen && currentSock.user) {
-          currentSock.sendPresenceUpdate("available").catch(() => {});
-        }
-      } catch (_) {}
-    }, 5 * 60 * 1e3);
+    }, 30 * 1e3);
     setInterval(async () => {
       try {
         if (global.db && typeof db?.write === "function") {
@@ -1717,26 +1465,23 @@ timeZone: "Asia/Jakarta"
     }, 3e4);
     setInterval(() => {
       try {
-        if (global.msgStore && global.msgStore.size > 2500) {
-          const threshold = Date.now() - 24 * 60 * 60 * 1e3;
+        if (global.msgStore && global.msgStore.size > 2e3) {
+          const threshold = Date.now() - 12 * 60 * 60 * 1e3;
           for (const [k, v] of global.msgStore.entries()) {
             if (v.timestamp && v.timestamp < threshold) global.msgStore.delete(k);
           }
         }
-        if (global.groupCache && global.groupCache.size > 500) {
-          const threshold = Date.now() - 10 * 60 * 1e3;
+        if (global.groupCache && global.groupCache.size > 300) {
+          const threshold = Date.now() - 15 * 60 * 1e3;
           for (const [k, v] of global.groupCache.entries()) {
             if (v.time && v.time < threshold) global.groupCache.delete(k);
           }
         }
-        if (global._presenceMap && global._presenceMap.size > 1e3) {
-          const threshold = Date.now() - 30 * 60 * 1e3;
-          for (const [k, v] of global._presenceMap.entries()) {
-            if (v.timestamp && v.timestamp < threshold) global._presenceMap.delete(k);
-          }
+        if (process.memoryUsage().rss > 450 * 1024 * 1024 && global.gc) {
+          global.gc();
         }
       } catch (_) {}
-    }, 30 * 60 * 1e3);
+    }, 15 * 60 * 1e3);
     setInterval(() => {
       try {
         if (typeof db.checkPremiumExpiry === "function") db.checkPremiumExpiry();

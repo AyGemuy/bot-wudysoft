@@ -17,7 +17,7 @@ import {
 } from "../../lib/quoted.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TEMPLATE_DIR = path.resolve(__dirname, "../../lib/brat-html");
-const API_URL = "https://wudysoft.nekohost.id/api/tools/html2vid";
+const API_URL = `${global.bot?.api?.wudysoft}/api/tools/html2vid/v1`;
 const DEFAULT_TPL = "fire";
 const OUT_SIZE = 512;
 const TEXT_PLACEHOLDER = "{{TEXT}}";

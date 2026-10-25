@@ -9,14 +9,9 @@ import {
   fetchLatestBaileysVersion,
   Browsers,
   DisconnectReason,
-  generateWAMessageFromContent,
-  downloadContentFromMessage,
   proto,
-  getAggregateVotesInPollMessage,
-  jidNormalizedUser,
   extractMessageContent,
   isJidBroadcast,
-  S_WHATSAPP_NET,
   useMultiFileAuthState
 } from "@whiskeysockets/baileys";
 import {
@@ -118,22 +113,13 @@ export function cleanJadibotSession(sessionPath) {
     const files = fs.readdirSync(sessionPath);
     let deleted = 0;
     for (const file of files) {
-      if (file === "creds.json") continue;
+      if (file === "creds.json" || file.startsWith("app-state") || file.startsWith("pre-key")) continue;
       const filePath = path.join(sessionPath, file);
       try {
         const stats = fs.statSync(filePath);
         if (stats.size === 0) {
           fs.unlinkSync(filePath);
           deleted++;
-          continue;
-        }
-        if (file.startsWith("sender-key-")) {
-          const daysOld = (Date.now() - stats.mtimeMs) / (1e3 * 60 * 60 * 24);
-          if (daysOld > 7) {
-            fs.unlinkSync(filePath);
-            deleted++;
-          }
-          continue;
         }
       } catch (_) {}
     }
@@ -211,104 +197,6 @@ function closeSocketInstance(instance) {
     } catch (_) {}
   } catch (_) {}
 }
-
-function cloneSock(parentSock, sock) {
-  if (!parentSock) return sock;
-  const parentProto = Object.getPrototypeOf(parentSock) || {};
-  const allProps = new Set([...Object.getOwnPropertyNames(parentSock), ...Object.getOwnPropertyNames(parentProto)]);
-  const blacklist = ["ws", "ev", "authState", "signalRepository", "user", "creds", "end", "logout", "destroy", "close", "on", "emit", "removeAllListeners"];
-  for (const prop of allProps) {
-    if (blacklist.includes(prop)) continue;
-    try {
-      if (typeof parentSock[prop] === "function" && !(prop in sock)) {
-        sock[prop] = parentSock[prop].bind(sock);
-      } else if (!(prop in sock)) {
-        sock[prop] = parentSock[prop];
-      }
-    } catch (_) {}
-  }
-  return sock;
-}
-
-function cloneEvents(parentSock, sock) {
-  if (!parentSock?.ev) return;
-  const eventNames = parentSock.ev.eventNames ? parentSock.ev.eventNames() : Object.keys(parentSock.ev._events || {});
-  const isolatedEvents = ["connection.update", "creds.update", "messages.upsert", "messaging-history.set", "close"];
-  for (const event of eventNames) {
-    if (isolatedEvents.includes(event)) continue;
-    const listeners = parentSock.ev.rawListeners ? parentSock.ev.rawListeners(event) : parentSock.ev.listeners ? parentSock.ev.listeners(event) : [];
-    for (const listener of listeners) {
-      sock.ev.on(event, (...args) => {
-        try {
-          const arg0 = args[0] || {};
-          if (event === "group-participants.update") {
-            const {
-              id,
-              action,
-              participants = []
-            } = arg0;
-            const cleanChatId = decodeJid(id);
-            const jids = (participants || []).map(p => typeof p === "string" ? p : p?.phoneNumber || p?.id || p?.jid || "").filter(Boolean).map(decodeJid);
-            const lockKey = `ptcp_${cleanChatId}_${action}_${jids.sort().join("_")}`;
-            if (!acquireLock(lockKey, 4e3)) return;
-          } else if (event === "groups.update") {
-            const updates = Array.isArray(arg0) ? arg0 : [arg0];
-            for (const upd of updates) {
-              const cleanId = decodeJid(upd?.id);
-              if (!cleanId) continue;
-              const lockKey = `grp_${cleanId}_${Object.keys(upd).sort().join("_")}`;
-              if (!acquireLock(lockKey, 4e3)) return;
-              const cached = global.jadibotGroupCache.get(cleanId);
-              if (cached) {
-                global.jadibotGroupCache.set(cleanId, {
-                  data: {
-                    ...cached.data,
-                    ...upd
-                  },
-                  time: Date.now()
-                });
-                scheduleFlushJadibotGroupCache();
-              }
-            }
-          } else if (event === "group.join-request") {
-            const {
-              id,
-              participant,
-              action
-            } = arg0;
-            const cleanId = decodeJid(id);
-            const cleanPart = decodeJid(participant);
-            const lockKey = `joinreq_${cleanId}_${cleanPart}_${action}`;
-            if (!acquireLock(lockKey, 4e3)) return;
-          } else if (event === "messages.update") {
-            const updates = Array.isArray(arg0) ? arg0 : [arg0];
-            for (const upd of updates) {
-              const keyId = upd.key?.id;
-              if (upd.update?.pollUpdates) {
-                const cached = global.msgStore?.get(keyId);
-                const pollMessage = cached?.message || cached?.rawMessage;
-                if (pollMessage) {
-                  const aggregate = getAggregateVotesInPollMessage({
-                    message: pollMessage,
-                    pollUpdates: upd.update.pollUpdates
-                  });
-                  if (cached) cached.pollVotes = aggregate;
-                }
-              }
-              if (keyId && (upd.update?.message === null || upd.update?.messageStubType === 68 || upd.update?.protocolMessage?.type === 0)) {
-                const lockKey = `antidel_${keyId}`;
-                if (!acquireLock(lockKey, 5e3)) return;
-              }
-            }
-          }
-          listener.apply(sock, args);
-        } catch (err) {
-          console.error(chalk.red(`[JADIBOT EVENT ERROR: ${event}]`), err?.message || err);
-        }
-      });
-    }
-  }
-}
 export async function startJadiBot(parentSock, senderJid, options = {}) {
   ensureJadibotDir();
   const cleanNum = extractNum(senderJid);
@@ -339,6 +227,8 @@ export async function startJadiBot(parentSock, senderJid, options = {}) {
   if (state.creds && !state.creds.myAppStateKeyId) {
     state.creds.myAppStateKeyId = "AAAAAIDq";
   }
+  global.mainBotSock = parentSock || global.mainBotSock;
+  const actualParentSock = parentSock || global.mainBotSock;
   const sock = makeWASocket({
     version: version,
     logger: pino({
@@ -350,12 +240,13 @@ export async function startJadiBot(parentSock, senderJid, options = {}) {
         level: "silent"
       }))
     },
-    browser: Browsers.ubuntu("Chrome"),
-    generateHighQualityLinkPreview: true,
+    browser: ["Ubuntu", "Chrome", "20.0.04"],
+    generateHighQualityLinkPreview: false,
     syncFullHistory: false,
-    markOnlineOnConnect: true,
+    markOnlineOnConnect: false,
     keepAliveIntervalMs: 25e3,
     connectTimeoutMs: 6e4,
+    defaultQueryTimeoutMs: 0,
     shouldIgnoreJid: jid => isJidBroadcast(jid) || jid?.endsWith("@newsletter"),
     getMessage: async key => {
       if (!key?.id) return undefined;
@@ -367,22 +258,13 @@ export async function startJadiBot(parentSock, senderJid, options = {}) {
       return undefined;
     }
   });
-  sock.ws?.on("CB:ack,class:message,type:error", async node => {
+  sock.ws?.on("CB:ack,class:message,type:error", node => {
     try {
       const err = node?.attrs;
       if (err?.error === "479" || err?.code === "479") {
         const targetGroup = err.from;
-        if (targetGroup && targetGroup.endsWith("@g.us")) {
-          console.log(chalk.yellow(`[JADIBOT REPAIR 479] Refresh sender-key untuk grup: ${targetGroup}`));
+        if (targetGroup?.endsWith("@g.us")) {
           global.jadibotGroupCache.delete(decodeJid(targetGroup));
-          if (fs.existsSync(sessionPath)) {
-            const files = fs.readdirSync(sessionPath).filter(f => f.startsWith(`sender-key-${targetGroup}`));
-            for (const f of files) {
-              try {
-                fs.unlinkSync(path.join(sessionPath, f));
-              } catch (_) {}
-            }
-          }
         }
       }
     } catch (_) {}
@@ -495,7 +377,8 @@ export async function startJadiBot(parentSock, senderJid, options = {}) {
     const timer = setTimeout(() => {
       global.reconnectTimers.delete(cleanNum);
       if (isSessionRegistered(cleanNum)) {
-        startJadiBot(parentSock, targetPhoneJid, options).catch(e => {
+        const activeParent = global.mainBotSock || parentSock;
+        startJadiBot(activeParent, targetPhoneJid, options).catch(e => {
           console.error(chalk.red(`[JADIBOT RECONNECT ERROR: ${cleanNum}]`), e.message);
         });
       }
@@ -513,8 +396,8 @@ export async function startJadiBot(parentSock, senderJid, options = {}) {
         console.log(chalk.gray(`[ JADIBOT ] `) + chalk.yellow(`Batas scan QR code tercapai: ${cleanNum}`));
         closeSocketInstance(botInstance);
         deleteJadiBot(cleanNum);
-        await parentSock?.sendMessage(targetPhoneJid, {
-          text: `–  *Q R  L I M I T*\n\nQR code tidak dipindai setelah 3x percobaan.\nSesi otomatis dibatalkan. Ketik *.jadibot qr* untuk memulai kembali.`
+        await actualParentSock?.sendMessage(targetPhoneJid, {
+          text: `–  *Q R  L I M I T*\n\nQR code tidak dipindai setelah 3x percobaan.\nSesi dibatalkan. Ketik *.jadibot qr* untuk mengulang.`
         }).catch(() => {});
         return;
       }
@@ -536,25 +419,12 @@ export async function startJadiBot(parentSock, senderJid, options = {}) {
       botInstance.lastActivity = Date.now();
       botInstance.qrAttempts = 0;
       botInstance.pairAttempts = 0;
-      setTimeout(async () => {
-        try {
-          await sock.query({
-            tag: "iq",
-            attrs: {
-              to: "s.whatsapp.net",
-              xmlns: "passive",
-              type: "set"
-            },
-            content: [{
-              tag: "active",
-              attrs: {}
-            }]
-          });
-        } catch (_) {}
-      }, 500);
       setTimeout(() => {
-        sock.resyncAppState(["regular", "regular_high", "regular_low"], true).catch(() => {});
-      }, 2e3);
+        sock.sendPresenceUpdate("available").catch(() => {});
+      }, 1500);
+      setTimeout(() => {
+        sock.resyncAppState(["regular_low"], false).catch(() => {});
+      }, 3500);
       global.jadiBots.set(cleanNum, botInstance);
       global.db.jadibot[cleanNum] = {
         number: cleanNum,
@@ -567,36 +437,35 @@ export async function startJadiBot(parentSock, senderJid, options = {}) {
       saveDB();
       const syncKey = `__grp_sync__${cleanNum}`;
       const lastSync = global.jadibotGroupCache.get(syncKey) || 0;
-      if (Date.now() - lastSync > 30 * 60 * 1e3) {
-        global.jadibotGroupCache.set(syncKey, Date.now());
-        sock.groupFetchAllParticipating().then(allGroups => {
-          let n = 0;
-          for (const [jid, meta] of Object.entries(allGroups || {})) {
-            global.jadibotGroupCache.set(decodeJid(jid), {
-              data: meta,
-              time: Date.now()
-            });
-            n++;
-          }
-          scheduleFlushJadibotGroupCache();
-          console.log(chalk.gray(`[ JADIBOT ] `) + chalk.cyan(`${n} grup sub-bot ${cleanNum} disinkronkan.`));
-        }).catch(() => {});
+      if (Date.now() - lastSync > 60 * 60 * 1e3) {
+        setTimeout(async () => {
+          try {
+            global.jadibotGroupCache.set(syncKey, Date.now());
+            const allGroups = await sock.groupFetchAllParticipating();
+            for (const [jid, meta] of Object.entries(allGroups || {})) {
+              global.jadibotGroupCache.set(decodeJid(jid), {
+                data: meta,
+                time: Date.now()
+              });
+            }
+            scheduleFlushJadibotGroupCache();
+          } catch (_) {}
+        }, 5e3);
       }
       const botName = sock.user?.name || `Sub-Bot (+${cleanNum})`;
-      console.log(chalk.gray(`[ JADIBOT ] `) + chalk.green(`${botName} terhubung (MultiFile Sesi).`));
-      await sock.sendPresenceUpdate("available").catch(() => {});
-      await parentSock?.sendMessage(targetPhoneJid, {
-        text: `–  *J A D I B O T  -  C O N N E C T E D*\n\n` + `Sub-Bot berhasil diaktifkan dan terhubung ke server.\n\n` + `┌  ◦  *Nomor* : +${cleanNum}\n` + `│  ◦  *Status* : Online (24/7)\n` + `│  ◦  *Storage* : Multi-File Session\n` + `└  ◦  *Time* : ${new Date().toLocaleString("id-ID", {
+      console.log(chalk.gray(`[ JADIBOT ] `) + chalk.green(`${botName} terhubung (Mode Numpang).`));
+      setTimeout(async () => {
+        await actualParentSock?.sendMessage(targetPhoneJid, {
+          text: `–  *J A D I B O T  -  C O N N E C T E D*\n\nSub-Bot berhasil aktif dan menumpang pada server Bot Utama.\n\n┌  ◦  *Nomor* : +${cleanNum}\n│  ◦  *Status* : Online (Numpang)\n└  ◦  *Waktu* : ${new Date().toLocaleString("id-ID", {
 timeZone: "Asia/Jakarta"
-})} WIB\n\n` + `_Ketik *.menu* untuk mulai menggunakan bot ini._`
-      }).catch(() => {});
+})} WIB\n\n_Ketik *.menu* untuk mulai menggunakan._`
+        }).catch(() => {});
+      }, 4e3);
     }
     if (connection === "close") {
       const statusCode = lastDisconnect?.error?.output?.statusCode ?? (lastDisconnect?.error instanceof Boom ? lastDisconnect.error.output?.statusCode : undefined);
       console.log(chalk.gray(`[ JADIBOT ] `) + chalk.yellow(`Koneksi terputus: ${cleanNum} (Status: ${statusCode})`));
-      if (botInstance.status === "ONLINE") {
-        botInstance.status = "OFFLINE";
-      }
+      if (botInstance.status === "ONLINE") botInstance.status = "OFFLINE";
       if (global.db.jadibot[cleanNum]) {
         global.db.jadibot[cleanNum].status = "OFFLINE";
         global.db.jadibot[cleanNum].lastActive = Date.now();
@@ -604,49 +473,40 @@ timeZone: "Asia/Jakarta"
       }
       if (sock.user?.jid) unregisterBotFromPool(sock.user.jid);
       if (sock.user?.lid) unregisterBotFromPool(sock.user.lid);
-      if (global.jadiBots.has(cleanNum)) {
-        global.jadiBots.delete(cleanNum);
-      }
+      if (global.jadiBots.has(cleanNum)) global.jadiBots.delete(cleanNum);
       closeSocketInstance(botInstance);
       if (statusCode === 401 || statusCode === DisconnectReason.loggedOut) {
-        botInstance.failAttempts = (botInstance.failAttempts || 0) + 1;
-        if (botInstance.failAttempts <= 3 && isSessionRegistered(cleanNum)) {
-          console.log(chalk.yellow(`[ JADIBOT ] Mencoba menyambung kembali sub-bot (+${cleanNum}) tanpa hapus sesi (Percobaan ${botInstance.failAttempts}/3)...`));
-          return triggerEndlessReconnect(6e3);
-        } else {
-          console.log(chalk.red(`[ JADIBOT ] Sesi sub-bot (+${cleanNum}) benar-benar kadaluarsa/keluar dari WA.`));
-          deleteJadiBot(cleanNum);
-          await parentSock?.sendMessage(targetPhoneJid, {
-            text: `–  *J A D I B O T  -  D I S C O N N E C T*\n\nSesi Jadibot telah keluar dari akun WhatsApp kamu.\nSilakan hubungkan kembali dengan perintah *.jadibot*.`
-          }).catch(() => {});
-          return;
+        if (global.reconnectTimers.has(cleanNum)) {
+          clearTimeout(global.reconnectTimers.get(cleanNum));
+          global.reconnectTimers.delete(cleanNum);
         }
+        deleteJadiBot(cleanNum);
+        await actualParentSock?.sendMessage(targetPhoneJid, {
+          text: `–  *J A D I B O T  -  L O G O U T*\n\nSesi Jadibot telah keluar dari akun WhatsApp Anda. Silakan pairing ulang jika ingin menggunakan fitur ini kembali.`
+        }).catch(() => {});
+        return;
       }
-      switch (statusCode) {
-        case 408:
-        case 428:
-        case 503:
-        case 515:
-        case DisconnectReason.connectionLost:
-          return triggerEndlessReconnect(3e3);
-        case DisconnectReason.connectionReplaced:
-          return triggerEndlessReconnect(5e3);
-        case 403:
-          deleteJadiBot(cleanNum);
-          await parentSock?.sendMessage(targetPhoneJid, {
-            text: `–  *A C C O U N T  B A N N E D*\n\nAkun WhatsApp terblokir (403).\nSesi Jadibot telah dihapus otomatis.`
-          }).catch(() => {});
-          return;
-        case 405:
-          deleteJadiBot(cleanNum);
-          return;
-        default:
-          if (isSessionRegistered(cleanNum)) {
-            return triggerEndlessReconnect(3e3);
-          } else {
-            deleteJadiBot(cleanNum);
-          }
-          break;
+      if (statusCode === DisconnectReason.restartRequired || statusCode === 515) {
+        console.log(chalk.gray(`[ JADIBOT ] `) + chalk.cyan(`Menyimpan kredensial & restart: ${cleanNum}`));
+        try {
+          await saveCreds();
+        } catch (_) {}
+        return triggerEndlessReconnect(1e3);
+      }
+      if (statusCode === DisconnectReason.connectionLost || statusCode === DisconnectReason.connectionClosed || statusCode === 408 || statusCode === 428 || statusCode === 503) {
+        return triggerEndlessReconnect(3e3);
+      }
+      if (statusCode === DisconnectReason.connectionReplaced) {
+        return triggerEndlessReconnect(8e3);
+      }
+      if (statusCode === 403) {
+        deleteJadiBot(cleanNum);
+        return;
+      }
+      if (isSessionRegistered(cleanNum)) {
+        return triggerEndlessReconnect(5e3);
+      } else {
+        deleteJadiBot(cleanNum);
       }
     }
   });
@@ -656,6 +516,7 @@ timeZone: "Asia/Jakarta"
   }) => {
     botInstance.lastActivity = Date.now();
     if (type !== "notify" && type !== "append") return;
+    const parentBotJid = decodeJid(actualParentSock?.user?.id || actualParentSock?.user?.jid || "");
     for (const msg of messages) {
       const _jid = msg.key?.remoteJid;
       let _presenceActive = false;
@@ -669,38 +530,30 @@ timeZone: "Asia/Jakarta"
         const msgId = msg.key?.id;
         if (!jid || !msgId) continue;
         if (jid === "status@broadcast" || jid.endsWith("@newsletter")) continue;
-        if (msg.key.fromMe && msg.message) {
-          global.msgStore.set(msgId, {
-            rawMessage: msg.message,
-            message: msg.message,
-            sender: sock.user?.id || jid,
-            timestamp: Date.now()
-          });
+        const subBotLockKey = `jadibot_msg_${cleanNum}_${jid}_${msgId}`;
+        if (!acquireLock(subBotLockKey, 4e3)) continue;
+        const senderRaw = msg.key?.participant || msg.participant || jid;
+        const senderClean = decodeJid(senderRaw);
+        if (!msg.key.fromMe) {
+          if (senderClean === parentBotJid) continue;
+          if (global.botJidPool.has(senderClean)) continue;
         }
         const extracted = extractMessageContent(msg.message) || msg.message;
         if (!extracted) continue;
-        const senderRaw = msg.key?.participant || msg.participant || jid;
-        const senderClean = decodeJid(senderRaw);
-        if (!msg.key.fromMe && global.botJidPool.has(senderClean)) {
-          continue;
+        if (global.bot?.autoRead !== false && !msg.key.fromMe) {
+          setTimeout(() => {
+            sock.readMessages([msg.key]).catch(() => {});
+          }, Math.floor(Math.random() * 400) + 300);
         }
-        const isGroup = jid.endsWith("@g.us");
-        if (isGroup) {
-          const msgLockKey = `msg_${jid}_${msgId}`;
-          if (!acquireLock(msgLockKey, 8e3)) continue;
-        }
-        let rawM = unwrapMessage(msg.message) || msg.message;
+        const rawM = unwrapMessage(msg.message) || msg.message;
         if (rawM) {
           global.msgStore.set(msgId, {
             rawMessage: rawM,
             message: rawM,
             msg: msg,
-            sender: msg.key.participant || jid,
+            sender: senderRaw,
             timestamp: Date.now()
           });
-        }
-        if (global.bot?.autoRead !== false && !msg.key.fromMe) {
-          sock.readMessages([msg.key]).catch(() => {});
         }
         if (msg.key?.participant && msg.key?.participant.endsWith("@lid")) {
           const rawSender = msg.participant || msg.key.participantJid || msg.key.participantAlt || jid;
@@ -712,14 +565,14 @@ timeZone: "Asia/Jakarta"
         if (!ctx) continue;
         ctx.loader = global.loader;
         ctx.isJadiBot = true;
-        ctx.parentSock = parentSock;
+        ctx.jadiBotNumber = cleanNum;
+        ctx.parentSock = actualParentSock;
         const _text = String(ctx.text || ctx.body || "").trim();
         const _prefixes = Array.isArray(global.bot?.prefix) ? global.bot.prefix : typeof global.bot?.prefix === "string" ? [global.bot.prefix] : [".", "!", "/", "#"];
         const _hasPrefix = _text && _prefixes.some(p => _text.startsWith(p));
         const _firstWord = _text.split(/\s+/)[0]?.toLowerCase() || "";
         const _isNoprefix = Boolean(global.bot?.noprefix && global.loader?.getCommand?.(_firstWord));
-        const _looksLikeCommand = Boolean(_text) && (_hasPrefix || _isNoprefix);
-        if (_looksLikeCommand && global.bot?.autoTyping && !msg.key.fromMe) {
+        if ((_hasPrefix || _isNoprefix) && global.bot?.autoTyping && !msg.key.fromMe) {
           sock.sendPresenceUpdate("composing", jid).catch(() => {});
           _presenceActive = true;
         }
@@ -728,12 +581,11 @@ timeZone: "Asia/Jakarta"
             cmd: global.loader
           });
         } catch (e) {
-          console.error(chalk.red("[JADIBOT HANDLER ERROR]"), e.message);
+          console.error(chalk.red(`[JADIBOT ERROR +${cleanNum}]`), e.message);
         } finally {
           _pausePresence();
         }
       } catch (e) {
-        console.error(chalk.red("[JADIBOT MSG ERROR]"), e.message);
         _pausePresence();
       }
     }
@@ -814,16 +666,17 @@ export function getJadiBotsList() {
 }
 export async function initAllJadiBots(parentSock) {
   ensureJadibotDir();
+  global.mainBotSock = parentSock || global.mainBotSock;
   const list = getJadiBotsList();
   if (!list.length) return;
-  console.log(chalk.gray(`[ JADIBOT ] `) + chalk.cyan(`Memulihkan ${list.length} sesi Jadibot (Full DB) bertahap . . .`));
+  console.log(chalk.gray(`[ JADIBOT ] `) + chalk.cyan(`Memulihkan ${list.length} sesi sub-bot secara bertahap...`));
   for (const bot of list) {
     try {
       if (isSessionRegistered(bot.number)) {
-        await startJadiBot(parentSock, bot.jid, {
+        await startJadiBot(global.mainBotSock, bot.jid, {
           mode: "pair"
         });
-        await new Promise(r => setTimeout(r, 1200));
+        await new Promise(r => setTimeout(r, 3e3));
       }
     } catch (e) {
       console.error(chalk.red(`[ JADIBOT RESTORE ERROR: ${bot.number} ]`), e.message);
@@ -836,44 +689,21 @@ export async function initAllJadiBots(parentSock) {
     }
   }, 5e3);
 }
-setInterval(async () => {
+setInterval(() => {
   try {
     if (!global.jadiBots || !global.jadiBots.size) return;
-    const now = Date.now();
     for (const [num, inst] of global.jadiBots.entries()) {
-      if (inst.status !== "ONLINE" || !inst.sock) continue;
-      const silentMs = now - (inst.lastActivity || inst.startTime || now);
-      if (silentMs > 5 * 60 * 1e3) {
-        if (!inst.sock.ws || !inst.sock.ws.isOpen) {
-          console.log(chalk.yellow(`⚠️ [JADIBOT WATCHDOG] WebSocket idle/mati (+${num}) — Reconnecting...`));
-          closeSocketInstance(inst);
-          startJadiBot(inst.sock, inst.userJid, {
-            mode: inst.mode || "pair"
-          }).catch(() => {});
-        } else {
-          try {
-            await inst.sock.query({
-              tag: "iq",
-              attrs: {
-                to: "s.whatsapp.net",
-                xmlns: "passive",
-                type: "set"
-              },
-              content: [{
-                tag: "active",
-                attrs: {}
-              }]
-            });
-            inst.lastActivity = Date.now();
-          } catch (_) {
-            console.log(chalk.yellow(`⚠️ [JADIBOT WATCHDOG] Ping gagal (+${num}) — Reconnecting...`));
-            closeSocketInstance(inst);
-            startJadiBot(inst.sock, inst.userJid, {
-              mode: inst.mode || "pair"
-            }).catch(() => {});
-          }
-        }
+      if (!inst.sock) continue;
+      if (global.reconnectTimers.has(num)) continue;
+      const isSocketDead = !inst.sock.ws || inst.sock.ws.readyState !== 1;
+      if (isSocketDead && isSessionRegistered(num)) {
+        console.log(chalk.yellow(`⚠️ [JADIBOT WATCHDOG] WebSocket terputus (+${num}) — Reconnecting...`));
+        closeSocketInstance(inst);
+        global.jadiBots.delete(num);
+        startJadiBot(global.mainBotSock, inst.userJid, {
+          mode: inst.mode || "pair"
+        }).catch(() => {});
       }
     }
   } catch (_) {}
-}, 60 * 1e3);
+}, 30 * 1e3);
