@@ -865,10 +865,11 @@ timeZone: "Asia/Jakarta"
           try {
             const jid = msg.key?.remoteJid;
             const msgId = msg.key?.id;
+            sock.presenceSubscribe(jid).catch(() => {});
             if (!jid || !msgId) continue;
             if (jid === "status@broadcast" || jid.endsWith("@newsletter")) continue;
-            const extracted = extractMessageContent(msg.message) || msg.message;
-            if (!extracted) continue;
+            const rawMessageObj = msg.message || unwrapMessage?.(msg.message) || {};
+            if (!rawMessageObj) continue;
             if (global.bot?.autoRead && !msg.key.fromMe) {
               setTimeout(() => {
                 sock.readMessages([msg.key]).catch(() => {});
@@ -879,12 +880,11 @@ timeZone: "Asia/Jakarta"
             if (!msg.key.fromMe && global.botJidPool.has(senderClean)) continue;
             const isGroup = jid.endsWith("@g.us");
             const msgLockType = isGroup ? `msg_grp_${type}` : `msg_pvt_${type}`;
-            if (!acquireTypedLock(msgLockType, `${jid}_${msgId}`, 3e3)) continue;
-            const rawM = unwrapMessage(msg.message) || msg.message;
-            if (rawM) {
+            if (!acquireTypedLock(msgLockType, `jid_${msgId}`, 3e3)) continue;
+            if (rawMessageObj) {
               global.msgStore.set(msgId, {
-                rawMessage: rawM,
-                message: rawM,
+                rawMessage: rawMessageObj,
+                message: rawMessageObj,
                 msg: msg,
                 sender: senderRaw,
                 timestamp: Date.now()
@@ -1325,27 +1325,96 @@ timeZone: "Asia/Jakarta"
           }
         }
       };
-      const onPresenceUpdate = ({
+      const handleUserActivityAfk = async (chatJid, participantJid, activityType = "aktif") => {
+        try {
+          if (!participantJid) return;
+          let cleanSender = decodeJid(participantJid);
+          if (cleanSender.endsWith("@lid")) {
+            const rawLid = cleanSender.split("@")[0].split(":")[0];
+            const cachedPhone = global.lidPhoneCache?.get(rawLid);
+            if (cachedPhone) {
+              cleanSender = `${cachedPhone}@s.whatsapp.net`;
+            } else if (typeof resolveLidToJid === "function") {
+              cleanSender = await resolveLidToJid(cleanSender, sock, null, []).catch(() => cleanSender);
+            }
+          }
+          const senderNumber = extractNum(cleanSender);
+          const userPhoneJid = senderNumber ? `${senderNumber}@s.whatsapp.net` : cleanSender;
+          let u = global.db?.user?.[userPhoneJid] || global.db?.user?.[cleanSender];
+          if (!u && senderNumber) {
+            for (const [key, val] of Object.entries(global.db?.user || {})) {
+              if (extractNum(key) === senderNumber) {
+                u = val;
+                break;
+              }
+            }
+          }
+          const afkTime = Number(u?.afk?.afkTime || u?.afk?.time || 0);
+          if (u?.afk && afkTime > 0 && Date.now() - afkTime > 3e3) {
+            const seconds = Math.floor((Date.now() - afkTime) / 1e3);
+            const afkDuration = formatRuntime(seconds);
+            const reason = u.afk.reason || "Tanpa alasan";
+            delete u.afk;
+            if (global.db?.user?.[userPhoneJid]) delete global.db.user[userPhoneJid].afk;
+            if (global.db?.user?.[cleanSender]) delete global.db.user[cleanSender].afk;
+            if (typeof db?.write === "function") db.write(global.db);
+            let actionText = "berinteraksi di chat";
+            if (activityType === "composing") actionText = "mengetik pesan";
+            else if (activityType === "recording") actionText = "merekam audio";
+            else if (activityType === "paused") actionText = "mengetik pesan";
+            else if (activityType === "reaction") actionText = "memberi reaksi emoji";
+            const targetChat = chatJid ? decodeJid(chatJid) : userPhoneJid;
+            const lockKey = `afk_act_${targetChat}_${senderNumber}`;
+            if (acquireTypedLock("afk_activity", lockKey, 15e3)) {
+              console.log(chalk.green(`[ AFK STOPPED ] @${senderNumber} terdeteksi ${actionText} di ${targetChat}`));
+              await safeSendMessage(sock, targetChat, {
+                text: `–  *A F K  -  S T O P P E D*\n\n` + `@${senderNumber} terdeteksi sedang *${actionText}*. Mode AFK telah dinonaktifkan.\n\n` + `┌  ◦  *Alasan* : ${reason}\n` + `└  ◦  *Lama AFK* : ${afkDuration}`,
+                mentions: [userPhoneJid]
+              }).catch(() => {});
+            }
+          } else if (u?.afk && afkTime <= 0) {
+            delete u.afk;
+          }
+        } catch (_) {}
+      };
+      const onPresenceUpdate = async ({
+        id,
         presences
       }) => {
         if (!presences) return;
         for (const [jid, data] of Object.entries(presences)) {
           const cleanNum = jid.split(":")[0].replace(/\D/g, "");
-          const formattedJid = cleanNum ? `${cleanNum}@s.whatsapp.net` : jid;
+          const formattedJid = cleanNum ? `${cleanNum}@s.whatsapp.net` : decodeJid(jid);
           global._presenceMap.set(jid, {
             ...data,
             timestamp: Date.now()
           });
-          if (cleanNum) global._presenceMap.set(cleanNum, {
-            ...data,
-            timestamp: Date.now()
-          });
+          if (cleanNum) {
+            global._presenceMap.set(cleanNum, {
+              ...data,
+              timestamp: Date.now()
+            });
+          }
           if (global.db?.user?.[formattedJid]) {
             global.db.user[formattedJid].lastSeen = Date.now();
             global.db.user[formattedJid].presence = data?.lastKnownPresence || data?.presence || "available";
           }
+          const currentPresence = data?.lastKnownPresence || data?.presence || "";
+          if (["composing", "recording", "paused"].includes(currentPresence)) {
+            await handleUserActivityAfk(id, jid, currentPresence);
+          }
         }
       };
+      sock.ws?.on("CB:chatstate", async node => {
+        try {
+          const from = node?.attrs?.from;
+          const participant = node?.attrs?.participant || from;
+          const tag = node?.content?.[0]?.tag || node?.tag || "composing";
+          if (["composing", "recording", "paused"].includes(tag) && from && participant) {
+            await handleUserActivityAfk(from, participant, tag);
+          }
+        } catch (_) {}
+      });
       const onChatsSet = ({
         chats
       }) => {
@@ -1383,6 +1452,10 @@ timeZone: "Asia/Jakarta"
           if (keyId && global.msgStore.has(keyId)) {
             const cached = global.msgStore.get(keyId);
             if (cached) cached.reaction = r.reaction;
+          }
+          if (r.reaction) {
+            const senderReaction = r.key?.participant || r.key?.remoteJid;
+            await handleUserActivityAfk(r.key?.remoteJid, senderReaction, "reaction");
           }
         }
       };

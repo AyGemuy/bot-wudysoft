@@ -182,7 +182,7 @@ export default {
       const finalUrl = uploadResult?.url || null;
       const buttons = [{
         name: "cta_copy",
-        display_text: "📄 Salin Prompt",
+        display_text: "Salin Prompt",
         copy_code: queryParams.prompt || activeMode
       }];
       let sentMsg;
@@ -402,7 +402,7 @@ Solusi Ultra HD Photo Enhancement, Colorize, Face-Swap, dan AI Edit.
       const finalUrl = uploadResult?.url || null;
       const buttons = [{
         name: "cta_copy",
-        display_text: "📄 Salin Mode",
+        display_text: "Salin Mode",
         copy_code: chosenMode
       }];
       let sentMsg;

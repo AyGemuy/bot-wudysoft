@@ -142,7 +142,7 @@ export default {
       const bodyText = answerText;
       const buttons = [{
         name: "cta_copy",
-        display_text: "📄 Salin Jawaban",
+        display_text: "Salin Jawaban",
         copy_code: answerText
       }];
       let sentMsg;
@@ -236,7 +236,7 @@ Layanan asisten obrolan cerdas untuk menjawab berbagai pertanyaan dan analisis t
       const bodyText = answerText;
       const buttons = [{
         name: "cta_copy",
-        display_text: "📄 Salin Jawaban",
+        display_text: "Salin Jawaban",
         copy_code: answerText
       }];
       let sentMsg;

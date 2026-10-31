@@ -171,7 +171,7 @@ export default {
       const bodyText = answerText;
       const buttons = [{
         name: "cta_copy",
-        display_text: "📄 Salin Jawaban",
+        display_text: "Salin Jawaban",
         copy_code: answerText
       }];
       let sentMsg;
@@ -401,7 +401,7 @@ Asisten percakapan cerdas multimodal berbasis ChatGPT-5, Gemini 2.5 & Claude.
       const bodyText = answerText;
       const buttons = [{
         name: "cta_copy",
-        display_text: "📄 Salin Jawaban",
+        display_text: "Salin Jawaban",
         copy_code: answerText
       }];
       let sentMsg;

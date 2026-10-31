@@ -4,6 +4,301 @@ import {
   simpleQuoted
 } from "../../lib/quoted.js";
 const API_URL = `${global.bot?.api?.wudysoft}/api/game/tebak-lagu/v2`;
+async function renderHtmlToImage(htmlContent) {
+  const rawApi = global.bot?.api?.wudysoft || "";
+  const cleanApi = rawApi.replace(/^https?:\/\//i, "").replace(/\/+$/, "");
+  const baseUrl = `https://${cleanApi}/api/tools/html2img/`;
+  const headers = {
+    "Content-Type": "application/json",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+  };
+  const payload = {
+    html: htmlContent,
+    fullPage: true,
+    quality: 100
+  };
+  const versions = ["v5", "v1", "v2", "v3", "v4", "v6", "v7", "v8", "v9", "v10"];
+  for (const ver of versions) {
+    try {
+      const res = await axios.post(`${baseUrl}${ver}`, payload, {
+        headers: headers,
+        timeout: 15e3
+      });
+      const imgUrl = res.data?.url || res.data?.result || (typeof res.data === "string" ? res.data : null);
+      if (imgUrl && /^https?:\/\//i.test(imgUrl)) {
+        let buffer = null;
+        try {
+          const imgRes = await axios.get(imgUrl, {
+            responseType: "arraybuffer",
+            timeout: 12e3
+          });
+          if (imgRes.data) buffer = Buffer.from(imgRes.data);
+        } catch {}
+        return {
+          url: imgUrl,
+          buffer: buffer
+        };
+      }
+    } catch {
+      continue;
+    }
+  }
+  return {
+    url: null,
+    buffer: null
+  };
+}
+
+function buildTebakLaguCanvasHtml(options = {}, clue = "", status = "NOW PLAYING", answerTitle = "") {
+  const botName = global.bot?.name || "WudysoftBot";
+  const isCorrect = status === "CORRECT";
+  const isTimeout = status === "TIMEOUT" || status === "REVEALED";
+  const statusColor = isCorrect ? "#10b981" : isTimeout ? "#ef4444" : "#ec4899";
+  const statusLabel = isCorrect ? "TEBAKAN TEPAT" : isTimeout ? "TERBONGKAR" : "TEBAK JUDUL LAGU";
+  const optKeys = ["A", "B", "C", "D"];
+  const optionsHtml = optKeys.map(k => {
+    const text = options[k] || "-";
+    const isAns = answerTitle && text.toLowerCase().includes(answerTitle.toLowerCase());
+    return `
+      <div class="opt-tile ${isAns ? "solved-tile" : ""}">
+        <div class="opt-badge">${k}</div>
+        <div class="opt-name">${text}</div>
+      </div>
+    `;
+  }).join("");
+  return `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="utf-8">
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800;900&family=Rajdhani:wght@700&display=swap');
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        width: 750px;
+        height: 480px;
+        background: #06070d;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+      }
+      .music-card {
+        width: 710px;
+        height: 440px;
+        background: radial-gradient(circle at 25% 40%, rgba(236, 72, 153, 0.2) 0%, rgba(10, 11, 20, 0.98) 85%);
+        border: 2px solid #232238;
+        border-radius: 20px;
+        box-shadow: 0 25px 60px rgba(0,0,0,0.85);
+        padding: 22px 26px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .top-nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .brand-icon {
+        background: #ec4899;
+        color: #fff;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+      }
+      .brand-title {
+        color: #f8fafc;
+        font-size: 18px;
+        font-weight: 900;
+        letter-spacing: 0.5px;
+      }
+      .status-pill {
+        border: 1px solid ${statusColor};
+        color: ${statusColor};
+        background: rgba(15, 23, 42, 0.8);
+        padding: 5px 14px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+      .stage-body {
+        display: flex;
+        gap: 26px;
+        align-items: center;
+        padding: 6px 0;
+      }
+      .vinyl-bay {
+        width: 220px;
+        height: 220px;
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .vinyl-disc {
+        width: 200px;
+        height: 200px;
+        background: radial-gradient(circle, #2d3139 0%, #111317 70%, #000 100%);
+        border-radius: 50%;
+        border: 4px solid #3c424f;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,0,0,0.9);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+      }
+      .vinyl-disc::before {
+        content: "";
+        position: absolute;
+        width: 140px;
+        height: 140px;
+        border: 1px dashed rgba(255,255,255,0.15);
+        border-radius: 50%;
+      }
+      .disc-center {
+        width: 70px;
+        height: 70px;
+        background: #ec4899;
+        border-radius: 50%;
+        border: 3px solid #fff;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 26px;
+        box-shadow: 0 0 15px rgba(236, 72, 153, 0.6);
+      }
+      .track-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .clue-panel {
+        background: #10121d;
+        border: 1px solid #202438;
+        border-radius: 12px;
+        padding: 12px 16px;
+      }
+      .clue-tag {
+        font-size: 11px;
+        color: #ec4899;
+        font-weight: 800;
+        letter-spacing: 1.5px;
+      }
+      .clue-text {
+        font-size: 15px;
+        font-weight: 800;
+        color: #f1f5f9;
+        letter-spacing: 1px;
+        margin-top: 4px;
+      }
+      .options-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px 12px;
+      }
+      .opt-tile {
+        height: 48px;
+        background: #111320;
+        border: 1px solid #22263d;
+        border-radius: 10px;
+        padding: 0 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .opt-tile.solved-tile {
+        border-color: #10b981;
+        background: rgba(16, 185, 129, 0.15);
+      }
+      .opt-badge {
+        width: 26px;
+        height: 26px;
+        background: #232842;
+        color: #ec4899;
+        border-radius: 6px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-weight: 900;
+        font-size: 13px;
+      }
+      .opt-tile.solved-tile .opt-badge {
+        background: #10b981;
+        color: #042214;
+      }
+      .opt-name {
+        flex: 1;
+        color: #e2e8f0;
+        font-size: 13px;
+        font-weight: 800;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .footer-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid #1a1c2e;
+        padding-top: 12px;
+        color: #94a3b8;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .footer-meta b {
+        color: #ec4899;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="music-card">
+      <div class="top-nav">
+        <div class="brand">
+          <div class="brand-icon">🎵</div>
+          <div class="brand-text">TEBAK <span>LAGU</span></div>
+        </div>
+        <div class="status-pill">${statusLabel}</div>
+      </div>
+      <div class="stage-body">
+        <div class="vinyl-bay">
+          <div class="vinyl-disc">
+            <div class="disc-center">🎧</div>
+          </div>
+        </div>
+        <div class="track-content">
+          <div class="clue-panel">
+            <div class="clue-tag">PETUNJUK HURUF</div>
+            <div class="clue-text">${clue || "Dengarkan audio terlampir"}</div>
+          </div>
+          <div class="options-grid">
+            ${optionsHtml}
+          </div>
+        </div>
+      </div>
+      <div class="footer-meta">
+        <div>REWARD : <b>+300 EXP</b></div>
+        <div>AUDIO : <b>VOICE NOTE (PTT)</b></div>
+        <div>BOT : <b>${botName}</b></div>
+      </div>
+    </div>
+  </body>
+  </html>
+  `;
+}
 
 function initDB(jid = null, name = "") {
   if (!global.db) global.db = {};
@@ -46,7 +341,7 @@ async function fetchAudioBuffer(url) {
 export default {
   name: "tebaklagu",
   aliases: ["tebak-lagu", "kuislagu", "guessthesong"],
-  description: "Game kuis tebak judul lagu dari potongan audio dengan pilihan ganda (Full DB)",
+  description: "Game kuis tebak judul lagu dari potongan audio dengan visual canvas realistis bertema Neoxr",
   category: "Game",
   limit: true,
   example: "tebaklagu",
@@ -69,9 +364,7 @@ export default {
       }
       const quotedStanzaId = ctx?.quoted?.id || msg?.message?.extendedTextMessage?.contextInfo?.stanzaId;
       const isReplyingToQuiz = quotedStanzaId && (quotedStanzaId === session.questionMsgId || quotedStanzaId === session.audioMsgId);
-      if (!isReplyingToQuiz) {
-        return;
-      }
+      if (!isReplyingToQuiz) return;
       const userText = (ctx?.text || ctx?.query || msg?.message?.conversation || msg?.message?.extendedTextMessage?.text || "").trim();
       const prefixList = [".", "#", "!", "/", ctx?.prefix].filter(Boolean);
       if (prefixList.some(p => userText.startsWith(p))) return;
@@ -81,7 +374,7 @@ export default {
       const isCorrect = cleanUser === correctKey || cleanUser === `opsi ${correctKey}` || cleanUser === `pilihan ${correctKey}` || cleanUser === correctAnswer || cleanUser.includes(correctAnswer) || correctAnswer.includes(cleanUser) && cleanUser.length >= 4;
       if (isCorrect) {
         const duration = ((Date.now() - session.startTime) / 1e3).toFixed(1);
-        const senderName = ctx?.pushname || "Pemain";
+        const senderName = ctx?.pushname || ctx?.pushName || "Pemain Cerdas";
         const senderJid = ctx?.sender;
         delete global.db.tebakLagu[chatId];
         if (senderJid) {
@@ -89,26 +382,46 @@ export default {
           global.db.user[senderJid].exp = (global.db.user[senderJid].exp || 0) + 300;
         }
         saveDB();
-        const winMessage = `–  *C O N G R A T U L A T I O N S*
+        if (typeof ctx?.react === "function") await ctx.react("🎉");
+        const winCanvasHtml = buildTebakLaguCanvasHtml(session.options, session.answer, "CORRECT", session.answer);
+        const {
+          buffer,
+          url
+        } = await renderHtmlToImage(winCanvasHtml);
+        const winMessage = `Hi ${senderName}!
+Tebakan judul lagumu tepat sekali!
 
-Tebakan Anda tepat sekali!
+–  *C O N G R A T U L A T I O N S*
 
 ┌  ◦  *Player* : ${senderName}
-│  ◦  *Song* : ${session.answer} (Opsi ${session.key})
-│  ◦  *Duration* : ${duration}s
-└  ◦  *Reward* : +300 EXP`;
-        await sock.sendMessage(chatId, {
-          text: winMessage
-        }, {
-          quoted: msg
-        });
-        if (typeof ctx?.react === "function") await ctx.react("🎉");
+│  ◦  *Judul Lagu* : ${session.answer} (Opsi ${session.key})
+│  ◦  *Durasi Menjawab* : ${duration}s
+└  ◦  *Reward* : +300 EXP
+
+_Ketik \`${ctx?.prefix || "."}tebaklagu\` untuk memainkan musik lainnya!_`;
+        if (buffer || url) {
+          await sock.sendMessage(chatId, {
+            image: buffer || {
+              url: url
+            },
+            caption: winMessage,
+            mentions: senderJid ? [senderJid] : []
+          }, {
+            quoted: msg
+          });
+        } else {
+          await sock.sendMessage(chatId, {
+            text: winMessage,
+            mentions: senderJid ? [senderJid] : []
+          }, {
+            quoted: msg
+          });
+        }
         return true;
       } else {
         if (typeof ctx?.react === "function") await ctx.react("❌");
-        const wrongMessage = `–  *W R O N G*
-
-Jawaban *"${userText}"* salah. Silakan dengarkan kembali dan coba tebak lagi.`;
+        const wrongMessage = `Hi ${ctx?.pushname || "Pemain"}!
+Pilihan "${userText}" kurang tepat. Dengarkan kembali audio voice note dan coba lagi!`;
         await sock.sendMessage(chatId, {
           text: wrongMessage
         }, {
@@ -127,7 +440,8 @@ Jawaban *"${userText}"* salah. Silakan dengarkan kembali dan coba tebak lagi.`;
       const quotedMsg = typeof simpleQuoted === "function" ? simpleQuoted(ctx) : msg;
       const chatId = ctx.id;
       const botName = global.bot?.name || "WudysoftBot";
-      const botFooter = global.bot?.footer || `${botName} • Mini Games`;
+      const botFooter = `${global.bot?.footer || botName}`;
+      const userName = ctx.pushname || ctx.pushName || ctx.sender.split("@")[0];
       initDB();
       if (global.db.tebakLagu[chatId]) {
         const session = global.db.tebakLagu[chatId];
@@ -139,12 +453,17 @@ Jawaban *"${userText}"* salah. Silakan dengarkan kembali dan coba tebak lagi.`;
               id: `${prefix}tebaklagu --nyerah`
             })
           }];
-          const hintBody = `–  *H I N T*
+          const hintBody = `Hi ${userName}!
+Berikut petunjuk untuk lagu yang sedang diputar.
 
-┌  ◦  *Clue* : ${session.clue}
-└  ◦  *Desc* : Dengarkan potongan audio yang dikirim untuk mencocokkan lirik atau nadanya.`;
+–  *H I N T  C L U E*
+
+┌  ◦  *Petunjuk Huruf* : ${session.clue}
+└  ◦  *Tips* : Dengarkan potongan vokal atau melodi pada audio terlampir
+
+_Balas pesan soal/audio ini langsung dengan pilihan opsi (A / B / C / D)!_`;
           return await ctx.sendCta(hintBody, botFooter, hintButtons, {
-            title: `✦ Tebak Lagu • Hint ✦`,
+            title: `✦ ${botName} • Hint Tebak Lagu ✦`,
             quoted: quotedMsg
           });
         }
@@ -153,26 +472,45 @@ Jawaban *"${userText}"* salah. Silakan dengarkan kembali dan coba tebak lagi.`;
           const key = session.key;
           delete global.db.tebakLagu[chatId];
           saveDB();
-          const surrenderText = `–  *S U R R E N D E R*
-
+          const revealCanvasHtml = buildTebakLaguCanvasHtml(session.options, answer, "REVEALED", answer);
+          const {
+            buffer,
+            url
+          } = await renderHtmlToImage(revealCanvasHtml);
+          const surrenderText = `Hi ${userName}!
 Permainan Tebak Lagu telah dihentikan.
 
-┌  ◦  *Answer* : ${answer}
-└  ◦  *Option* : Opsi ${key}`;
+–  *S U R R E N D E R*
+
+┌  ◦  *Judul Lagu Asli* : ${answer}
+└  ◦  *Opsi Tepat* : Opsi [ ${key} ]
+
+_Gunakan perintah \`${prefix}tebaklagu\` untuk mencoba lagu baru._`;
+          if (buffer || url) {
+            return await sock.sendMessage(chatId, {
+              image: buffer || {
+                url: url
+              },
+              caption: surrenderText
+            }, {
+              quoted: quotedMsg
+            });
+          }
           return await sock.sendMessage(chatId, {
             text: surrenderText
           }, {
             quoted: quotedMsg
           });
         }
-        const activeWarningBody = `–  *A C T I V E  G A M E*
+        const activeWarningBody = `Hi ${userName}!
+Masih ada kuis Tebak Lagu yang sedang berjalan di chat ini.
 
-Masih ada permainan Tebak Lagu yang sedang berlangsung.
+–  *A C T I V E  G A M E*
 
 ┌  ◦  *Clue* : ${session.clue}
-└  ◦  *Action* : Reply pesan soal atau audio dengan opsi A/B/C/D
+└  ◦  *Cara Jawab* : Balas pesan soal/audio dengan huruf A / B / C / D
 
-Gunakan tombol di bawah jika butuh petunjuk atau ingin menyerah.`;
+_Gunakan tombol di bawah jika kamu memerlukan bantuan petunjuk atau ingin menyerah._`;
         const activeButtons = [{
           name: "quick_reply",
           buttonParamsJson: JSON.stringify({
@@ -187,7 +525,7 @@ Gunakan tombol di bawah jika butuh petunjuk atau ingin menyerah.`;
           })
         }];
         return await ctx.sendCta(activeWarningBody, botFooter, activeButtons, {
-          title: `✦ Tebak Lagu ✦`,
+          title: `✦ ${botName} • Tebak Lagu ✦`,
           quoted: quotedMsg
         });
       }
@@ -215,24 +553,28 @@ Gunakan tombol di bawah jika butuh petunjuk atau ingin menyerah.`;
         id: `${optKey}`,
         description: `Pilih opsi [${optKey}] ${options[optKey]}`.slice(0, 60)
       }));
-      const bodyText = `–  *T E B A K  L A G U*
+      const canvasHtml = buildTebakLaguCanvasHtml(options, underlineClue, "NOW PLAYING");
+      const {
+        buffer: cardBuffer,
+        url: cardUrl
+      } = await renderHtmlToImage(canvasHtml);
+      const bodyText = `Hi Survivors!
+Dengarkan cuplikan audio musik yang dikirim dan tebak judulnya!
 
-Dengarkan potongan audio yang dikirim dan tentukan judul lagu yang tepat.
+–  *T E B A K  L A G U*
 
-–  *O P T I O N S*
+┌  ◦  *Timeout* : ${TIMEOUT_SECONDS} Detik
+│  ◦  *Petunjuk Huruf* : ${underlineClue}
+└  ◦  *Reward* : +300 EXP
+
+–  *P I L I H A N  J A W A B A N*
 
 ┌  ◦  *A.* ${options.A || "-"}
 │  ◦  *B.* ${options.B || "-"}
 │  ◦  *C.* ${options.C || "-"}
 └  ◦  *D.* ${options.D || "-"}
 
-–  *I N F O*
-
-┌  ◦  *Clue* : ${underlineClue}
-│  ◦  *Timeout* : ${TIMEOUT_SECONDS}s
-└  ◦  *Reward* : +300 EXP
-
-Balas (reply) pesan soal atau audio ini dengan huruf A, B, C, atau D.`;
+_Balas (reply) pesan soal atau audio VN ini dengan huruf A, B, C, atau D!_`;
       const buttons = [{
         name: "single_select",
         buttonParamsJson: JSON.stringify({
@@ -255,11 +597,43 @@ Balas (reply) pesan soal atau audio ini dengan huruf A, B, C, atau D.`;
           id: `${prefix}tebaklagu --nyerah`
         })
       }];
-      const sentMsg = await ctx.sendCta(bodyText, botFooter, buttons, {
+      const ctaOptions = {
+        image: cardBuffer || (cardUrl ? {
+          url: cardUrl
+        } : null),
         title: `✦ ${botName} • Tebak Lagu ✦`,
-        subtitle: `Timeout: ${TIMEOUT_SECONDS}s`,
+        params: {
+          bottom_sheet: {
+            in_thread_buttons_limit: 3,
+            divider_indices: [1],
+            list_title: `${botName} • Opsi Lagu`,
+            button_title: "🎯 Pilih Judul Lagu"
+          }
+        },
+        contextInfo: {
+          mentionedJid: [ctx?.sender].filter(Boolean),
+          forwardingScore: 999,
+          isForwarded: true
+        },
         quoted: quotedMsg
-      });
+      };
+      let sentMsg = null;
+      if (typeof ctx.sendCta === "function") {
+        sentMsg = await ctx.sendCta(bodyText, botFooter, buttons, ctaOptions);
+      } else if (cardBuffer || cardUrl) {
+        sentMsg = await sock.sendMessage(chatId, {
+          image: cardBuffer || {
+            url: cardUrl
+          },
+          caption: `${bodyText}\n\n_${botFooter}_`
+        }, {
+          quoted: quotedMsg
+        });
+      } else {
+        sentMsg = await ctx.reply(bodyText, {
+          quoted: quotedMsg
+        });
+      }
       const questionMsgId = sentMsg?.key?.id;
       const audioBuffer = await fetchAudioBuffer(rawAudioUrl);
       let sentAudioMsg = null;
@@ -269,7 +643,7 @@ Balas (reply) pesan soal atau audio ini dengan huruf A, B, C, atau D.`;
           mimetype: "audio/mp4",
           ptt: true
         }, {
-          quoted: sentMsg
+          quoted: sentMsg || quotedMsg
         });
       }
       global.db.tebakLagu[chatId] = {
@@ -278,6 +652,7 @@ Balas (reply) pesan soal atau audio ini dengan huruf A, B, C, atau D.`;
         answer: answer.trim(),
         key: correctKey.trim(),
         clue: underlineClue,
+        options: options,
         startTime: Date.now(),
         expireTime: Date.now() + TIMEOUT_SECONDS * 1e3
       };
@@ -288,15 +663,32 @@ Balas (reply) pesan soal atau audio ini dengan huruf A, B, C, atau D.`;
           const current = global.db.tebakLagu[chatId];
           delete global.db.tebakLagu[chatId];
           saveDB();
-          const timeoutMsg = `–  *T I M E  O U T*
+          const timeoutCanvasHtml = buildTebakLaguCanvasHtml(current.options, current.answer, "TIMEOUT", current.answer);
+          const {
+            buffer,
+            url
+          } = await renderHtmlToImage(timeoutCanvasHtml);
+          const timeoutMsg = `Hi All!
+Waktu menjawab kuis Tebak Lagu telah habis! ⌛
 
-Waktu menjawab kuis tebak lagu telah habis.
+–  *T I M E  O U T*
 
-┌  ◦  *Answer* : ${current.answer}
-└  ◦  *Option* : Opsi ${current.key}`;
-          await sock.sendMessage(chatId, {
-            text: timeoutMsg
-          });
+┌  ◦  *Judul Lagu Asli* : ${current.answer}
+└  ◦  *Opsi Tepat* : Opsi [ ${current.key} ]
+
+_Gunakan perintah \`${prefix}tebaklagu\` untuk memainkan musik lainnya!_`;
+          if (buffer || url) {
+            await sock.sendMessage(chatId, {
+              image: buffer || {
+                url: url
+              },
+              caption: timeoutMsg
+            });
+          } else {
+            await sock.sendMessage(chatId, {
+              text: timeoutMsg
+            });
+          }
         }
       }, TIMEOUT_SECONDS * 1e3);
       await ctx.react("🎵");

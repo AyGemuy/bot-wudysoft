@@ -1,4 +1,3 @@
-import axios from "axios";
 import {
   runtime
 } from "../../core/tools.js";
@@ -9,7 +8,7 @@ import {
 export default {
   name: "menu",
   aliases: ["main", "help", "list"],
-  description: "Menampilkan menu utama bot via Interactive List CTA UI Neoxr Theme",
+  description: "Menampilkan menu bot via Centered Medium A2UI Card & Footer Info",
   category: "General",
   execute: async (sock, ctx, msg) => {
     try {
@@ -22,7 +21,6 @@ export default {
       const version = global.bot?.versions || global.bot?.version || "2.0.0";
       const botFooter = global.bot?.footer || "Wudysoft • Multi-Device";
       const botUptime = runtime(process.uptime());
-      const channelUrl = global.bot?.link || "https://whatsapp.com/channel/0029VaF5pWj59PwcGj4F4v2w";
       const userData = global.db?.user?.[ctx.sender];
       const userNumber = ctx.sender.split("@")[0];
       const isOwner = userData?.ownerAcces === true || (global.bot?.owner || []).some(o => String(o).replace(/\D/g, "") === userNumber);
@@ -37,53 +35,47 @@ export default {
       try {
         profilePic = await sock.profilePictureUrl(ctx.sender, "image");
       } catch {}
-      let mediaOutput = global.bot?.media?.banner1 || global.bot?.media?.thumb || global.bot?.media?.banner2;
-      try {
-        const idCardPayload = {
-          header: "NEBULA MECHA",
-          tooltip: isOwner ? "CLEARANCE: ROOT" : isPremium ? "CLEARANCE: VIP" : "CLEARANCE: ALPHA",
-          avatar: profilePic,
-          badge: isOwner ? "OWNER 👑" : isPremium ? "PREMIUM ⭐" : `LEVEL ${userLevel} 🎮`,
-          info_pre: "✦ BOT ENGINE ✦",
-          info_badge: `${totalFitur} CMDS`,
-          name: (ctx.pushname || userNumber).slice(0, 20).toUpperCase(),
-          badge_line: `${botName} v${version}`,
-          role: isOwner ? "ROOT SYSTEM ADMIN" : isPremium ? "VIP RESEARCHER" : "STANDARD CITIZEN",
-          email: `${userNumber}@whatsapp.net`,
-          phone: `+${userNumber}`,
-          pin: `UPTIME: ${botUptime.slice(0, 15)}`,
-          valid: isOwner || isPremium ? "VALID: LIFETIME" : "VALID: 3025",
-          clearance: isOwner ? "CLEARANCE: ROOT" : `CLEARANCE: NEB-${userLevel}`,
-          mag: isOwner || isPremium ? "LIMIT: INF" : `LIMIT: ${userLimit}`,
-          model: Math.floor(Math.random() * 4) + 1
-        };
-        const {
-          data
-        } = await axios({
-          method: "POST",
-          url: `${global.bot?.api?.wudysoft}/api/maker/id/v1`,
-          data: idCardPayload,
-          responseType: "arraybuffer",
-          headers: {
-            "Content-Type": "application/json",
-            "User-Agent": "Mozilla/5.0"
-          },
-          timeout: 15e3
+      const userNameClean = (ctx.pushname || userNumber).slice(0, 20).toUpperCase();
+      const badgeRole = isOwner ? "OWNER 👑" : isPremium ? "PREMIUM ⭐" : `LEVEL ${userLevel} 🎮`;
+      const clearanceVal = isOwner ? "CLEARANCE: ROOT" : `CLEARANCE: NEB-${userLevel}`;
+      const limitVal = isOwner || isPremium ? "LIMIT: INF" : `LIMIT: ${userLimit}`;
+      const randomModel = Math.floor(Math.random() * 4) + 1;
+      const params = new URLSearchParams({
+        header: "NEBULA MECHA",
+        tooltip: isOwner ? "CLEARANCE: ROOT" : isPremium ? "CLEARANCE: VIP" : "CLEARANCE: ALPHA",
+        avatar: profilePic,
+        badge: badgeRole,
+        info_pre: "✦ BOT ENGINE ✦",
+        info_badge: `${totalFitur} CMDS`,
+        name: userNameClean,
+        badge_line: `${botName} v${version}`,
+        role: isOwner ? "ROOT SYSTEM ADMIN" : isPremium ? "VIP RESEARCHER" : "STANDARD CITIZEN",
+        email: `${userNumber}@whatsapp.net`,
+        phone: `+${userNumber}`,
+        pin: `UPTIME: ${botUptime.slice(0, 15)}`,
+        valid: isOwner || isPremium ? "VALID: LIFETIME" : "VALID: 3025",
+        clearance: clearanceVal,
+        mag: limitVal,
+        model: String(randomModel)
+      });
+      const bannerApiUrl = `${global.bot?.api?.wudysoft || "https://api.wudysoft.com"}/api/maker/id/v1?${params.toString()}`;
+      const a2ui = typeof ctx.a2ui === "function" ? ctx.a2ui() : null;
+      if (a2ui) {
+        const imageId = a2ui.raw("Image", {
+          url: bannerApiUrl,
+          fit: "scale-down",
+          variant: "mediumFeature"
         });
-        if (data) {
-          mediaOutput = Buffer.from(data);
-        }
-      } catch (err) {
-        console.warn("[Menu ID Card Maker Fail, fallback to default banner]:", err.message);
+        const centeredColId = a2ui.raw("Column", {
+          children: [imageId],
+          align: "center",
+          justify: "center"
+        });
+        const cardId = a2ui.card(centeredColId);
+        a2ui.root([cardId]);
       }
-      const baseContextInfo = {
-        mentionedJid: [ctx.sender],
-        ...global.bot?.utils?.contextInfo || {
-          forwardingScore: 999,
-          isForwarded: true
-        }
-      };
-      const bodyText = `“Hi @${userNumber}, ${greeting}!
+      const bodyText = "\0";
+      const footerText = `“Hi @${userNumber}, ${greeting}!
 Saya adalah sistem otomatis (WhatsApp Bot) yang siap membantu Anda mempermudah aktivitas dan mencari informasi melalui WhatsApp.”
 
 –  *I N F O*
@@ -105,8 +97,9 @@ Saya adalah sistem otomatis (WhatsApp Bot) yang siap membantu Anda mempermudah a
 –  *N O T E*
 
 ┌  ◦  Gunakan bot secara bijak & hindari spam.
-└  ◦  Ketik *${prefix}owner* jika menemukan kendala.`;
-      const footerText = `${botFooter}`;
+└  ◦  Ketik *${prefix}owner* jika menemukan kendala.
+
+–  ${botFooter}`;
       const categoryRows = categoryNames.map(cat => {
         const cmdCount = categories[cat]?.length || 0;
         return {
@@ -116,42 +109,81 @@ Saya adalah sistem otomatis (WhatsApp Bot) yang siap membantu Anda mempermudah a
         };
       });
       const buttons = [{
+        name: "",
+        params: {}
+      }, {
         name: "single_select",
-        buttonParamsJson: JSON.stringify({
-          title: `📂 PILIH KATEGORI (${categoryNames.length})`,
+        params: {
+          title: "\0",
           sections: [{
             title: `${botName} • LIST MENU`,
             rows: categoryRows
-          }]
-        })
+          }],
+          icon: "DEFAULT"
+        }
+      }, {
+        name: "single_select",
+        params: {
+          title: "\0",
+          sections: [{
+            title: `${botName} • MENU UTAMA`,
+            rows: [{
+              title: "All Menu",
+              description: "Buka semua perintah bot",
+              id: `${prefix}allmenu`
+            }, {
+              title: "Speed Test",
+              description: "Cek kecepatan respon bot",
+              id: `${prefix}ping`
+            }, {
+              title: "Owner Bot",
+              description: "Hubungi pemilik bot",
+              id: `${prefix}owner`
+            }]
+          }],
+          icon: "REVIEW"
+        }
       }, {
         name: "quick_reply",
-        buttonParamsJson: JSON.stringify({
-          display_text: "📜 Semua Menu",
-          id: `${prefix}allmenu`
-        })
-      }];
-      const options = {
-        image: mediaOutput,
-        title: `✦ ${botName} • Dashboard ✦`,
         params: {
-          bottom_sheet: {
-            in_thread_buttons_limit: 1,
-            divider_indices: [1],
-            list_title: `${botName} • Main Menu`,
-            button_title: "Lihat Kategori"
-          },
-          limited_time_offer: {
-            text: `🎉 DISKON UPGRADE VIP & LIMIT RESET SEGERA HADIR! 🎉`,
-            url: channelUrl,
-            copy_code: `${prefix}allmenu`,
-            expiration_time: Date.now() + 3 * 3600 * 1e3
-          }
-        },
-        contextInfo: baseContextInfo,
-        quoted: quotedMsg
+          display_text: "\0",
+          id: `${prefix}ping`
+        }
+      }];
+      const baseContextInfo = {
+        mentionedJid: [ctx.sender],
+        ...global.bot?.utils?.contextInfo || {
+          forwardingScore: 999,
+          isForwarded: true
+        }
       };
-      await ctx.sendCta(bodyText, footerText, buttons, options);
+      if (a2ui && typeof a2ui.send === "function") {
+        await a2ui.send(sock, ctx.id, {
+          bodyText: bodyText,
+          footer: footerText,
+          buttons: buttons,
+          header: {},
+          contextInfo: baseContextInfo,
+          quoted: quotedMsg
+        });
+      } else {
+        const ctaButtons = buttons.map(b => ({
+          name: b.name,
+          buttonParamsJson: JSON.stringify(b.params ?? {})
+        }));
+        await ctx.sendCta(bodyText, footerText, ctaButtons, {
+          params: {
+            bottom_sheet: {
+              in_thread_buttons_limit: 1,
+              divider_indices: [1],
+              list_title: `${botName} • Main Menu`,
+              button_title: "Lihat Kategori"
+            }
+          },
+          contextInfo: baseContextInfo,
+          quoted: quotedMsg
+        });
+      }
       await ctx.react("✅");
     } catch (e) {
       console.error("[MENU ERROR]", e);

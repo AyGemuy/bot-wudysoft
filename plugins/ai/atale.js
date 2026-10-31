@@ -146,7 +146,7 @@ export default {
       const bodyText = answerText;
       const buttons = [{
         name: "cta_copy",
-        display_text: "📄 Salin Jawaban",
+        display_text: "Salin Jawaban",
         copy_code: answerText
       }];
       let sentMsg;
@@ -292,11 +292,11 @@ Layanan percakapan karakter fiksi bertenaga AI dengan memori percakapan berlanju
       if (returnedSessionId) nextCommand += ` --sessionid ${returnedSessionId}`;
       const buttons = [{
         name: "cta_copy",
-        display_text: "📋 Salin Format Lanjut",
+        display_text: "Salin Format Lanjut",
         copy_code: nextCommand
       }, {
         name: "cta_copy",
-        display_text: "📄 Salin Jawaban",
+        display_text: "Salin Jawaban",
         copy_code: answerText
       }];
       let sentMsg;

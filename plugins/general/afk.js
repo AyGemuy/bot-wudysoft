@@ -59,6 +59,8 @@ Sistem akan otomatis memberitahu siapa saja yang menandai Anda.`;
       const num = clean.split("@")[0].replace(/\D/g, "");
       return num.length >= 6 ? `${num}@s.whatsapp.net` : null;
     }).filter(Boolean))];
+    sock.presenceSubscribe(ctx.chat).catch(() => {});
+    if (userJid) sock.presenceSubscribe(userJid).catch(() => {});
     return await ctx.reply(text, {
       quoted: quotedMsg,
       mentions: cleanMentions

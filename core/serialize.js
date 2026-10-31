@@ -1567,36 +1567,58 @@ export async function SerializeMessage(sock, msg) {
     const isMediaInQuoted = Boolean(nestedMedia || qMedia && (/image|video|sticker|audio|document|webp/.test(qMimetype) || ["imageMessage", "videoMessage", "stickerMessage", "audioMessage", "documentMessage", "ptvMessage"].includes(qMtype)));
     const qMediaType = isMediaInQuoted ? nestedMedia ? resolveMediaType(nestedMedia) : qMtype.replace(/Message/gi, "").toLowerCase() : null;
     const isQuotedAnimated = Boolean(qMsg?.stickerMessage?.isAnimated || qMedia?.isAnimated || false);
-    let rawQuotedSender = contextInfo.participant || contextInfo.participantAlt || contextInfo.remoteJidAlt || contextInfo.remoteJid || "";
-    const cachedQuoted = global.msgStore?.get(contextInfo.stanzaId);
-    if (cachedQuoted?.sender && !cachedQuoted.sender.endsWith("@lid")) {
-      rawQuotedSender = cachedQuoted.sender;
-    }
+    const quotedStanzaId = String(contextInfo.stanzaId || contextInfo.id || contextInfo.stanzaID || contextInfo.quotedMessageId || (contextInfo.remoteJid === "status@broadcast" ? "3EB0" + crypto.randomBytes(8).toString("hex").toUpperCase() : "") || "").trim();
+    const cachedQuoted = global.msgStore?.get(quotedStanzaId);
     let groupParticipantsList = [];
     if (ctx.isGroup) {
       groupParticipantsList = sock?.store?.groupMetadata?.[ctx.id]?.participants || sock?.chats?.[ctx.id]?.participants || [];
     }
-    let cleanQuotedSender = await resolveLidToJid(decodeJid(rawQuotedSender), sock, contextInfo.participantAlt || contextInfo.remoteJidAlt || (!ctx.isGroup ? ctx.chat : null), groupParticipantsList);
-    if (cleanQuotedSender.endsWith("@lid") && typeof resolveLidProactively === "function") {
-      const proQuoted = await resolveLidProactively(sock, cleanQuotedSender);
-      if (proQuoted.jid) cleanQuotedSender = proQuoted.jid;
+    let cleanQuotedSender = "";
+    let quotedIsFromMe = false;
+    if (!ctx.isGroup) {
+      const isStanzaFromBot = Boolean(quotedStanzaId.startsWith("3EB0") || quotedStanzaId.startsWith("BAE5") || cachedQuoted?.isFromMe);
+      if (contextInfo.participant) {
+        const p = decodeJid(contextInfo.participant);
+        if (botLid && areJidsSameUser(p, botLid)) {
+          cleanQuotedSender = botId;
+          quotedIsFromMe = true;
+        } else if (botId && areJidsSameUser(p, botId)) {
+          cleanQuotedSender = botId;
+          quotedIsFromMe = true;
+        } else {
+          cleanQuotedSender = await resolveLidToJid(p, sock, null, []);
+          quotedIsFromMe = areJidsSameUser(cleanQuotedSender, botId);
+        }
+      } else if (ctx.isFromMe) {
+        cleanQuotedSender = ctx.chat;
+        quotedIsFromMe = false;
+      } else {
+        if (isStanzaFromBot || !contextInfo.participant) {
+          cleanQuotedSender = botId;
+          quotedIsFromMe = true;
+        } else {
+          cleanQuotedSender = ctx.chat;
+          quotedIsFromMe = false;
+        }
+      }
+    } else {
+      let rawQuotedSender = contextInfo.participant || contextInfo.participantAlt || "";
+      cleanQuotedSender = await resolveLidToJid(decodeJid(rawQuotedSender), sock, contextInfo.participantAlt, groupParticipantsList);
+      quotedIsFromMe = areJidsSameUser(cleanQuotedSender, botId) || (botLid ? areJidsSameUser(cleanQuotedSender, botLid) : false);
     }
-    if (!ctx.isGroup && cleanQuotedSender.endsWith("@lid")) {
-      const isFromBot = Boolean(cleanQuotedSender === botLid || cleanQuotedSender === botId || contextInfo.stanzaId?.startsWith("3EB0") || contextInfo.stanzaId?.startsWith("BAE5"));
-      cleanQuotedSender = isFromBot ? botId : ctx.chat;
-    }
-    const quotedIsFromMe = cleanQuotedSender ? areJidsSameUser(cleanQuotedSender, botId) || (botLid ? areJidsSameUser(cleanQuotedSender, botLid) : false) : false;
-    const quotedStanzaId = contextInfo.stanzaId || "";
     const validQMessagePayload = typeof rawQuoted === "object" && rawQuoted !== null ? rawQuoted : {
       conversation: extractMessageText(rawQuoted) || " "
     };
-    const fakeObj = proto.WebMessageInfo.fromObject({
-      key: {
-        remoteJid: ctx.id,
-        fromMe: quotedIsFromMe,
-        id: quotedStanzaId,
+    const quotedKey = {
+      remoteJid: ctx.id,
+      fromMe: quotedIsFromMe,
+      id: quotedStanzaId || "3EB0" + crypto.randomBytes(8).toString("hex").toUpperCase(),
+      ...ctx.isGroup ? {
         participant: cleanQuotedSender
-      },
+      } : {}
+    };
+    const fakeObj = proto.WebMessageInfo.fromObject({
+      key: quotedKey,
       message: validQMessagePayload,
       messageTimestamp: Math.floor(Date.now() / 1e3)
     });
@@ -1629,16 +1651,17 @@ export async function SerializeMessage(sock, msg) {
           if (proNested.jid) cleanNestedSender = proNested.jid;
         }
         const nestedIsFromMe = cleanNestedSender ? areJidsSameUser(cleanNestedSender, botId) || (botLid ? areJidsSameUser(cleanNestedSender, botLid) : false) : false;
-        const nestedStanzaId = targetInnerContext.stanzaId || "";
+        const nestedStanzaId = String(targetInnerContext.stanzaId || targetInnerContext.id || (targetInnerContext.remoteJid === "status@broadcast" ? "3EB0" + crypto.randomBytes(8).toString("hex").toUpperCase() : "") || "").trim();
+        const nestedKey = {
+          remoteJid: ctx.id,
+          fromMe: nestedIsFromMe,
+          id: nestedStanzaId || "3EB0" + crypto.randomBytes(8).toString("hex").toUpperCase(),
+          ...ctx.isGroup ? {
+            participant: cleanNestedSender
+          } : {}
+        };
         const nestedFakeObj = proto.WebMessageInfo.fromObject({
-          key: {
-            remoteJid: ctx.id,
-            fromMe: nestedIsFromMe,
-            id: nestedStanzaId,
-            ...ctx.isGroup ? {
-              participant: cleanNestedSender
-            } : {}
-          },
+          key: nestedKey,
           message: nestedMsg,
           messageTimestamp: Math.floor(Date.now() / 1e3)
         });
@@ -1649,7 +1672,7 @@ export async function SerializeMessage(sock, msg) {
           from: ctx.id,
           sender: cleanNestedSender,
           senderNumber: nestedSenderNumber,
-          id: nestedStanzaId,
+          id: nestedStanzaId || nestedKey.id,
           device: detectDevice(nestedStanzaId),
           isBaileys: detectBaileys(nestedStanzaId),
           fromMe: nestedIsFromMe,
@@ -1672,21 +1695,11 @@ export async function SerializeMessage(sock, msg) {
           isViewOnce: Boolean(nestedRaw?.viewOnceMessage || nestedRaw?.viewOnceMessageV2 || nestedRaw?.viewOnceMessageV2Extension || nestedRaw?.viewOnceMessageV3 || nMedia?.viewOnce),
           fileName: nMedia?.fileName || null,
           fileSize: nMedia?.fileLength ? Number(nMedia.fileLength) : null,
-          key: {
-            remoteJid: ctx.id,
-            fromMe: nestedIsFromMe,
-            id: nestedStanzaId,
-            participant: cleanNestedSender
-          },
+          key: nestedKey,
           download: async () => downloadMediaNode(nMedia || nestedMsg, nMediaType || "image"),
           copyNForward: async (jid = ctx.chat, forwardingScore = true, options = {}) => copyNForward(sock, jid, nestedFakeObj, forwardingScore, options),
           delete: async () => safeSendMessage(sock, ctx.chat, {
-            delete: {
-              remoteJid: ctx.id,
-              fromMe: nestedIsFromMe,
-              id: nestedStanzaId,
-              participant: cleanNestedSender
-            }
+            delete: nestedKey
           }),
           getQuotedObj: () => nestedFakeObj
         };
@@ -1712,7 +1725,7 @@ export async function SerializeMessage(sock, msg) {
       from: ctx.id,
       sender: cleanQuotedSender,
       senderNumber: quotedSenderNumber,
-      id: quotedStanzaId,
+      id: quotedStanzaId || quotedKey.id,
       device: detectDevice(quotedStanzaId),
       isBaileys: detectBaileys(quotedStanzaId),
       fromMe: quotedIsFromMe,
@@ -1747,21 +1760,11 @@ export async function SerializeMessage(sock, msg) {
       isAnimated: isQuotedAnimated,
       fileName: qMedia?.fileName || null,
       fileSize: qMedia?.fileLength ? Number(qMedia.fileLength) : null,
-      key: {
-        remoteJid: ctx.id,
-        fromMe: quotedIsFromMe,
-        id: quotedStanzaId,
-        participant: cleanQuotedSender
-      },
+      key: quotedKey,
       download: async () => downloadMediaNode(qMedia || qMsg, qMediaType || "image"),
       copyNForward: async (jid = ctx.chat, forwardingScore = true, options = {}) => copyNForward(sock, jid, fakeObj, forwardingScore, options),
       delete: async () => safeSendMessage(sock, ctx.chat, {
-        delete: {
-          remoteJid: ctx.id,
-          fromMe: quotedIsFromMe,
-          id: quotedStanzaId,
-          participant: cleanQuotedSender
-        }
+        delete: quotedKey
       }),
       getQuotedObj: () => nestedQuoted ? nestedQuoted : fakeObj
     };

@@ -183,7 +183,7 @@ export default {
       const copyText = typeof data.result === "string" ? data.result : data.result?.A || data.result?.B || answerText;
       const buttons = [{
         name: "cta_copy",
-        display_text: "📄 Salin Jawaban",
+        display_text: "Salin Jawaban",
         copy_code: copyText
       }];
       let sentMsg;
@@ -309,13 +309,13 @@ Layanan perbandingan dua model AI secara bersamaan (Dual Battle) dengan memori p
       const copyText = typeof data.result === "string" ? data.result : data.result?.A || data.result?.B || answerText;
       const buttons = [{
         name: "cta_copy",
-        display_text: "📄 Salin Jawaban",
+        display_text: "Salin Jawaban",
         copy_code: copyText
       }];
       if (sessionCode) {
         buttons.push({
           name: "cta_copy",
-          display_text: "🔑 Salin Session Code",
+          display_text: "Salin Session Code",
           copy_code: sessionCode
         });
       }

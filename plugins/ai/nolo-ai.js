@@ -156,7 +156,7 @@ export default {
       const bodyText = answerText;
       const buttons = [{
         name: "cta_copy",
-        display_text: "📄 Salin Jawaban",
+        display_text: "Salin Jawaban",
         copy_code: answerText
       }];
       if (returnedState && returnedState !== "-") {
@@ -279,18 +279,18 @@ Layanan asisten percakapan cerdas multimodal dengan memori sesi DB dan analisis 
       const bodyText = answerText;
       const buttons = [{
         name: "cta_copy",
-        display_text: "📄 Salin Jawaban",
+        display_text: "Salin Jawaban",
         copy_code: answerText
       }];
       if (returnedState && returnedState !== "-") {
         const nextCommand = `${prefix}nolo <tulis_pertanyaan_lanjutan> --state ${returnedState}`;
         buttons.push({
           name: "cta_copy",
-          display_text: "📋 Salin Lanjutan Sesi",
+          display_text: "Salin Lanjutan Sesi",
           copy_code: nextCommand
         }, {
           name: "cta_copy",
-          display_text: "🔑 Salin State Token",
+          display_text: "Salin State Token",
           copy_code: returnedState
         });
       }

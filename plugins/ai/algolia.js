@@ -159,7 +159,7 @@ export default {
       const bodyText = answerText;
       const buttons = [{
         name: "cta_copy",
-        display_text: "📄 Salin Jawaban",
+        display_text: "Salin Jawaban",
         copy_code: answerText
       }];
       if (Array.isArray(res.suggestions) && res.suggestions.length > 0) {

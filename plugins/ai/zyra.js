@@ -172,7 +172,7 @@ export default {
       const bodyText = answerText;
       const buttons = [{
         name: "cta_copy",
-        display_text: "📄 Salin Jawaban",
+        display_text: "Salin Jawaban",
         copy_code: answerText
       }];
       let sentMsg;
@@ -296,7 +296,7 @@ Layanan asisten cerdas multimodal bertenaga Vertex Gemini 2.5 Flash & Flux Image
         const captionText = `–  *Z Y R A  I M A G E*\n\n` + `┌  ◦  *Prompt* : ${promptImage}\n` + `├  ◦  *Seed* : ${seedInfo}\n` + `├  ◦  *Cost* : ${costInfo}\n` + `└  ◦  *Engine* : Flux Gen / Firebase Storage`;
         const buttons = [{
           name: "cta_copy",
-          display_text: "📄 Salin Prompt",
+          display_text: "Salin Prompt",
           copy_code: promptImage
         }];
         if (typeof ctx.sendCta === "function") {
@@ -334,7 +334,7 @@ Layanan asisten cerdas multimodal bertenaga Vertex Gemini 2.5 Flash & Flux Image
       const bodyText = answerText;
       const buttons = [{
         name: "cta_copy",
-        display_text: "📄 Salin Jawaban",
+        display_text: "Salin Jawaban",
         copy_code: answerText
       }];
       let sentMsg;

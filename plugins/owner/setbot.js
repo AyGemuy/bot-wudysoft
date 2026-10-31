@@ -61,6 +61,34 @@ const SETTINGS = {
     key: "mute",
     scope: "group",
     aliases: ["mutegroup", "botmute", "silent"]
+  },
+  antiviewonce: {
+    name: "Anti View Once",
+    desc: "Kirim ulang foto/video sekali lihat (1x buka)",
+    key: "antiviewonce",
+    scope: "group",
+    aliases: ["antivo", "viewonce", "antisekalilihat", "vo"]
+  },
+  antisticker: {
+    name: "Anti Sticker",
+    desc: "Hapus otomatis stiker yang dikirim di grup",
+    key: "antisticker",
+    scope: "group",
+    aliases: ["antistik", "nosticker", "sticker"]
+  },
+  antivideo: {
+    name: "Anti Video",
+    desc: "Hapus otomatis video yang dikirim di grup",
+    key: "antivideo",
+    scope: "group",
+    aliases: ["antivid", "novideo", "video"]
+  },
+  antiaudio: {
+    name: "Anti Audio",
+    desc: "Hapus otomatis voice note/audio yang dikirim di grup",
+    key: "antiaudio",
+    scope: "group",
+    aliases: ["antivn", "noaudio", "audio", "vn"]
   }
 };
 
@@ -121,7 +149,7 @@ function parseFlags(input = "") {
 }
 export default {
   name: "setbot",
-  aliases: ["enable", "disable", "on", "off", "botsetting", "botsettings", "antibot", "antibotgc", "blockbot", "antilink", "antilinkgc", "linkprotect", "antitoxic", "antibadword", "antikasik", "toxic", "mute", "mutegroup", "botmute", "silent"],
+  aliases: ["enable", "disable", "on", "off", "botsetting", "botsettings", "antibot", "antibotgc", "blockbot", "antilink", "antilinkgc", "linkprotect", "antitoxic", "antibadword", "antikasik", "toxic", "mute", "mutegroup", "botmute", "silent", "antiviewonce", "antivo", "viewonce", "antisekalilihat", "vo"],
   description: "Mengaktifkan atau menonaktifkan setelan bot & grup via CLI & CTA Sheet",
   category: "Owner & Group",
   example: "setbot atau on antibot atau off self atau setbot -k mute -s on",

@@ -4,9 +4,16 @@ import {
 } from "../../lib/quoted.js";
 import {
   decodeJid,
-  extractNum
+  extractNum,
+  resolveLidToJid,
+  cleanQuotedForTarget
 } from "../../core/serialize.js";
 import db from "../../data/db.js";
+
+function sanitizeMentions(list = []) {
+  if (!Array.isArray(list)) return [];
+  return list.filter(Boolean).map(j => decodeJid(String(j).trim())).filter(j => j.endsWith("@s.whatsapp.net") && !j.endsWith("@lid"));
+}
 export default {
   name: "totalchat",
   aliases: ["memberchat", "topchat", "chatcount", "rankchat"],
@@ -24,7 +31,8 @@ export default {
       const rawGroupId = decodeJid(ctx.id || ctx.chat || msg.key?.remoteJid || "");
       const groupId = rawGroupId.endsWith("@g.us") ? rawGroupId : `${rawGroupId.split("@")[0]}@g.us`;
       const groupNumId = groupId.split("@")[0].replace(/\D/g, "");
-      const quotedMsg = typeof metaQuoted === "function" ? metaQuoted(ctx) : typeof simpleQuoted === "function" ? simpleQuoted(ctx) : msg;
+      const rawQuoted = typeof metaQuoted === "function" ? metaQuoted(ctx) : typeof simpleQuoted === "function" ? simpleQuoted(ctx) : msg?.key ? msg : undefined;
+      const quotedMsg = cleanQuotedForTarget(rawQuoted, groupId);
       const botContext = global.bot?.utils?.contextInfo || {};
       const cachedMeta = global.groupCache?.get(groupId)?.data;
       const groupData = global.db?.group?.[groupId];
@@ -33,6 +41,8 @@ export default {
       const botId = decodeJid(sock.user?.id || sock.user?.jid || "");
       const botLid = sock.user?.lid ? decodeJid(sock.user.lid) : null;
       const botNumber = extractNum(botId);
+      const rawOwners = [...Array.isArray(global.bot?.owner) ? global.bot.owner.flat(Infinity) : [global.bot?.owner], global.bot?.author?.number].filter(Boolean);
+      const ownerNumbers = new Set(rawOwners.map(o => String(o).replace(/\D/g, "")).filter(n => n.length >= 6));
       const usersDb = global.db?.user || db?.user || {};
       const userMap = new Map();
       let groupTotalMessages = 0;
@@ -52,19 +62,27 @@ export default {
         if (cleanJid.endsWith("@lid")) {
           const lidNum = cleanJid.split("@")[0].split(":")[0];
           const cachedPhone = global.lidPhoneCache?.get(lidNum);
-          if (cachedPhone) cleanJid = `${cachedPhone}@s.whatsapp.net`;
+          if (cachedPhone) {
+            cleanJid = `${cachedPhone}@s.whatsapp.net`;
+          }
         }
         const cleanNumber = extractNum(cleanJid);
-        const isBotUser = Boolean(uData.isBot === true || uData.isBaileys === true || cleanJid === botId || botLid && cleanJid === botLid || cleanNumber && botNumber && cleanNumber === botNumber);
+        const isOwnerAccount = ownerNumbers.has(cleanNumber);
+        const isOfficialBot = Boolean(cleanJid === botId || botLid && cleanJid === botLid || cleanNumber && botNumber && cleanNumber === botNumber || uData.isOfficialBot === true);
+        const isExternalBot = Boolean(!isOwnerAccount && !isOfficialBot && (uData.isBot === true || global.botJidPool?.has(cleanJid)));
         groupTotalMessages += count;
         const currentData = userMap.get(cleanJid) || {
           jid: cleanJid,
           name: uData.name || cleanNumber,
-          isBot: isBotUser,
+          isOwner: isOwnerAccount,
+          isOfficialBot: isOfficialBot,
+          isBot: isExternalBot,
           count: 0
         };
         currentData.count += count;
-        if (isBotUser) currentData.isBot = true;
+        if (isOwnerAccount) currentData.isOwner = true;
+        if (isOfficialBot) currentData.isOfficialBot = true;
+        if (isExternalBot) currentData.isBot = true;
         userMap.set(cleanJid, currentData);
       }
       const chatStats = Array.from(userMap.values());
@@ -75,7 +93,7 @@ export default {
       if (totalMemberInCache) {
         responseText += `│  ◦  *Total Member* : ${totalMemberInCache}\n`;
       }
-      responseText += `└  ◦  *Total Chat Terrekam* : ${groupTotalMessages} pesan\n\n`;
+      responseText += `└  ◦  *Total Chat Terekam* : ${groupTotalMessages} pesan\n\n`;
       const mentionedJids = [];
       if (chatStats.length > 0) {
         responseText += `*Peringkat Member Teraktif :*\n`;
@@ -84,19 +102,27 @@ export default {
           if (item.jid.endsWith("@s.whatsapp.net")) {
             mentionedJids.push(item.jid);
           }
-          const botBadge = item.isBot ? " 🤖 *(Bot)*" : "";
-          responseText += `┌  ◦  *${index + 1}.* @${num || item.jid.split("@")[0]}${botBadge}\n`;
+          let badge = "";
+          if (item.isOfficialBot) {
+            badge = " ⚡ *(Bot)*";
+          } else if (item.isOwner) {
+            badge = " 👑 *(Owner)*";
+          } else if (item.isBot) {
+            badge = " 🤖 *(Bot)*";
+          }
+          responseText += `┌  ◦  *${index + 1}.* @${num || item.jid.split("@")[0]}${badge}\n`;
           responseText += `└  ◦  *Pesan* : ${item.count} chat\n`;
         });
       } else {
         responseText += `_Belum ada riwayat akumulasi chat yang terdaftar untuk grup ini._`;
       }
+      const safeMentions = sanitizeMentions(mentionedJids);
       return await sock.sendMessage(ctx.id, {
         text: responseText,
-        mentions: mentionedJids,
+        mentions: safeMentions,
         contextInfo: {
           ...botContext,
-          mentionedJid: mentionedJids
+          mentionedJid: safeMentions
         }
       }, {
         quoted: quotedMsg

@@ -159,7 +159,7 @@ export default {
       const bodyText = answerText;
       const buttons = [{
         name: "cta_copy",
-        display_text: "📄 Salin Jawaban",
+        display_text: "Salin Jawaban",
         copy_code: answerText
       }];
       let sentMsg;
@@ -291,13 +291,13 @@ Layanan asisten cerdas berbasis AI-Seek Engine dengan memori percakapan berlanju
       if (returnedToken) {
         buttons.push({
           name: "cta_copy",
-          display_text: "🔑 Salin Token Saja",
+          display_text: "Salin Token Saja",
           copy_code: returnedToken
         });
       }
       buttons.push({
         name: "cta_copy",
-        display_text: "📄 Salin Jawaban",
+        display_text: "Salin Jawaban",
         copy_code: answerText
       });
       let sentMsg;

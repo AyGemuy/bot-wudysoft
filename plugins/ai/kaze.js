@@ -188,7 +188,7 @@ export default {
       } else {
         const buttons = [{
           name: "cta_copy",
-          display_text: "📄 Salin Jawaban",
+          display_text: "Salin Jawaban",
           copy_code: answerText
         }];
         if (typeof ctx.sendCta === "function") {
@@ -330,7 +330,7 @@ Agen asisten cerdas multimodal (Text, Image Generation, Restyle Photo & Video).
       } else {
         const buttons = [{
           name: "cta_copy",
-          display_text: "📄 Salin Jawaban",
+          display_text: "Salin Jawaban",
           copy_code: answerText
         }];
         if (typeof ctx.sendCta === "function") {

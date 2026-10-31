@@ -122,6 +122,38 @@ function extractText(cleanText, ctx) {
   }
   return "";
 }
+async function extractMediaBase64(ctx, msg) {
+  try {
+    let buffer = null;
+    let mime = "image/jpeg";
+    if (typeof ctx.download === "function" && (ctx.isMedia || /image/.test(ctx.mime))) {
+      buffer = await ctx.download();
+      mime = ctx.mime || mime;
+    } else if (ctx.quoted && typeof ctx.quoted.download === "function" && (ctx.quoted.isMedia || /image/.test(ctx.quoted.mime))) {
+      buffer = await ctx.quoted.download();
+      mime = ctx.quoted.mime || mime;
+    } else {
+      const target = ctx.quoted ? ctx.quoted.message || ctx.quoted : msg?.message || ctx.message;
+      const imgMsg = target?.imageMessage || target?.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage;
+      if (imgMsg) {
+        const {
+          downloadContentFromMessage
+        } = await import("@whiskeysockets/baileys");
+        const stream = await downloadContentFromMessage(imgMsg, "image");
+        let chunks = [];
+        for await (const chunk of stream) chunks.push(chunk);
+        buffer = Buffer.concat(chunks);
+        mime = imgMsg.mimetype || mime;
+      }
+    }
+    if (buffer && Buffer.isBuffer(buffer) && buffer.length > 0) {
+      return `data:${mime};base64,${buffer.toString("base64")}`;
+    }
+  } catch (err) {
+    console.error("[extractMediaBase64 Error]:", err.message);
+  }
+  return null;
+}
 async function renderHtmlToImage(htmlContent) {
   const rawApi = global.bot?.api?.wudysoft || "";
   const cleanApi = rawApi.replace(/^https?:\/\//i, "").replace(/\/+$/, "");
@@ -167,18 +199,20 @@ async function renderHtmlToImage(htmlContent) {
   };
 }
 
-function buildAutoValues(flags, cleanText, ctx) {
+function buildAutoValues(flags, cleanText, ctx, mediaBase64 = null) {
   const now = new Date();
   const hh = String(now.getHours()).padStart(2, "0");
   const mm = String(now.getMinutes()).padStart(2, "0");
   const clock = `${hh}:${mm}`;
   const text = extractText(cleanText, ctx);
+  const mediaHtml = mediaBase64 ? `<div class="message-media"><img src="${mediaBase64}" alt="Media"/></div>` : "";
   const defaults = {
     carrier: "Telkomsel... LTE",
     clock: clock,
     time: clock,
     battery: "100%",
     date: now.toLocaleDateString("id-ID"),
+    media: mediaHtml,
     message: text,
     messageTime: clock,
     reaction1Aria: "Suka",
@@ -221,7 +255,9 @@ function buildAutoValues(flags, cleanText, ctx) {
   }
   const result = {};
   for (const [k, v] of Object.entries(merged)) {
-    if (typeof v === "string") {
+    if (k === "media") {
+      result[k] = v;
+    } else if (typeof v === "string") {
       const escaped = escapeHtml(v);
       result[k] = k === "message" || k === "caption" ? emojiToImgHtml(escaped) : escaped;
     } else {
@@ -241,7 +277,7 @@ export default {
   aliases: ["qweb", "htmlimg", "qimg", "qimage"],
   description: "Render template HTML dengan placeholder {{...}} menjadi gambar via html2img.",
   category: "Tools",
-  example: ".qhtml Halo Dunia\n.qhtml --settheme neon\n.qhtml --list\n.qhtml --t fire --clock 20:15 Halo",
+  example: ".qhtml Halo Dunia\n.qhtml (reply gambar)\n.qhtml --settheme neon",
   execute: async (sock, ctx, msg) => {
     const tmpDir = os.tmpdir();
     const stamp = Date.now() + "_" + Math.random().toString(36).slice(2, 8);
@@ -283,7 +319,7 @@ export default {
         global.db.qhtml[chatId].updatedAt = Date.now();
         saveDB();
         await ctx.react("✅");
-        return ctx.reply(`– *Q H T M L*\n\n` + `┌ ◦ *Tema Aktif* : ${chosen.toUpperCase()}\n` + `└ ◦ *File* : \`${chosen}.html\`\n\n` + `_Tema tersimpan! Ketik \`${prefix}qhtml <teks>\` untuk render._`);
+        return ctx.reply(`– *Q H T M L*\n\n┌ ◦ *Tema Aktif* : ${chosen.toUpperCase()}\n└ ◦ *File* : \`${chosen}.html\`\n\n_Tema tersimpan! Ketik \`${prefix}qhtml <teks>\` untuk render._`);
       }
       if (flags.list || flags.page) {
         await ctx.react("⏳");
@@ -329,22 +365,26 @@ export default {
             }]
           })
         }];
-        if (page > 1) buttons.push({
-          name: "quick_reply",
-          buttonParamsJson: JSON.stringify({
-            display_text: `⬅️ Hal ${page - 1}`,
-            id: `${baseCmd} --page ${page - 1}`
-          })
-        });
-        if (page < totalPages) buttons.push({
-          name: "quick_reply",
-          buttonParamsJson: JSON.stringify({
-            display_text: `➡️ Hal ${page + 1}`,
-            id: `${baseCmd} --page ${page + 1}`
-          })
-        });
+        if (page > 1) {
+          buttons.push({
+            name: "quick_reply",
+            buttonParamsJson: JSON.stringify({
+              display_text: `⬅️ Hal ${page - 1}`,
+              id: `${baseCmd} --page ${page - 1}`
+            })
+          });
+        }
+        if (page < totalPages) {
+          buttons.push({
+            name: "quick_reply",
+            buttonParamsJson: JSON.stringify({
+              display_text: `➡️ Hal ${page + 1}`,
+              id: `${baseCmd} --page ${page + 1}`
+            })
+          });
+        }
         const activeTheme = global.db.qhtml[chatId]?.theme || DEFAULT_TPL;
-        const bodyText = `– *Q H T M L  -  T E M A*\n\n` + `┌ ◦ *Tema Aktif* : ${activeTheme.toUpperCase()}\n` + `├ ◦ *Total* : ${matched.length}\n` + `└ ◦ *Halaman* : ${page} / ${totalPages}\n\n` + `_Pilih tema dari tombol di bawah:_`;
+        const bodyText = `– *Q H T M L  -  T E M A*\n\n┌ ◦ *Tema Aktif* : ${activeTheme.toUpperCase()}\n├ ◦ *Total* : ${matched.length}\n└ ◦ *Halaman* : ${page} / ${totalPages}\n\n_Pilih tema dari tombol di bawah:_`;
         const options = {
           params: {
             bottom_sheet: {
@@ -366,11 +406,12 @@ export default {
         await ctx.react("✅");
         return;
       }
+      const mediaBase64 = await extractMediaBase64(ctx, msg);
       const text = extractText(cleanText, ctx);
-      if (!text && !flags.help || flags.help) {
+      if (!text && !mediaBase64 && !flags.help || flags.help) {
         const sessionTheme = global.db.qhtml[chatId]?.theme;
         const activeDisplay = sessionTheme ? `${sessionTheme.toUpperCase()} (Kustom)` : `${DEFAULT_TPL.toUpperCase()} (Default)`;
-        const guideText = `– *Q H T M L*\n\n` + `Render template HTML dengan placeholder \`{{...}}\` menjadi gambar.\n\n` + `┌ ◦ *Tema Aktif* : ${activeDisplay}\n` + `├ ◦ *Render teks* : \`${prefix}qhtml Halo Dunia\`\n` + `├ ◦ *Dari reply* : \`${prefix}qhtml\`\n` + `├ ◦ *Pilih tema* : \`${prefix}qhtml --list\`\n` + `├ ◦ *Set default* : \`${prefix}qhtml --settheme <tema>\`\n` + `├ ◦ *Sekali pakai* : \`${prefix}qhtml --t <tema> teks\`\n` + `└ ◦ *Custom placeholder* : \`${prefix}qhtml --clock 20:15 --battery 72% teks\`\n\n` + `*Placeholder otomatis:*\n` + `\`{{message}}\` \`{{clock}}\` \`{{time}}\` \`{{date}}\` \`{{battery}}\` \`{{carrier}}\` \`{{messageTime}}\`\n` + `\`{{reaction1Codepoint}}\` .. \`{{reaction6Codepoint}}\` (+Aria/Alt)\n` + `\`{{menuStar}}\` \`{{menuReply}}\` \`{{menuForward}}\` \`{{menuCopy}}\` \`{{menuSpeak}}\` \`{{menuReport}}\` \`{{menuDelete}}\`\n\n` + `*Custom:* \`--<namatag> value\` → otomatis isi \`{{namatag}}\` di template.\n\n` + `_Output: gambar (bukan stiker)._`;
+        const guideText = `– *Q H T M L*\n\n` + `Render template HTML menjadi gambar (Mendukung Teks & Gambar).\n\n` + `┌ ◦ *Tema Aktif* : ${activeDisplay}\n` + `├ ◦ *Render teks* : \`${prefix}qhtml Halo Dunia\`\n` + `├ ◦ *Render gambar* : Balas/Kirim gambar dengan caption \`${prefix}qhtml [opsional teks]\`\n` + `├ ◦ *Pilih tema* : \`${prefix}qhtml --list\`\n` + `├ ◦ *Set default* : \`${prefix}qhtml --settheme <tema>\`\n` + `└ ◦ *Sekali pakai* : \`${prefix}qhtml --t <tema> [teks]\`\n\n` + `*Placeholder bawaan:*\n` + `\`{{media}}\` \`{{message}}\` \`{{clock}}\` \`{{time}}\` \`{{date}}\` \`{{battery}}\` \`{{carrier}}\` \`{{messageTime}}\``;
         return ctx.reply(guideText, {
           quoted: quotedMsg
         });
@@ -382,7 +423,7 @@ export default {
       const sessionTheme = global.db.qhtml[chatId]?.theme;
       const tplName = (typeof flags.template === "string" ? flags.template : sessionTheme || DEFAULT_TPL).toLowerCase().trim();
       const template = loadTemplate(tplName);
-      const values = buildAutoValues(flags, cleanText, ctx);
+      const values = buildAutoValues(flags, cleanText, ctx, mediaBase64);
       const html = applyPlaceholders(template, values);
       const {
         url: imgUrl,

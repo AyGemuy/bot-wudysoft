@@ -46,6 +46,257 @@ const PRESET_TOPICS = [{
   name: "🌐 Pengetahuan Umum",
   desc: "Fakta unik & wawasan umum dunia"
 }];
+async function renderHtmlToImage(htmlContent) {
+  const rawApi = global.bot?.api?.wudysoft || "";
+  const cleanApi = rawApi.replace(/^https?:\/\//i, "").replace(/\/+$/, "");
+  const baseUrl = `https://${cleanApi}/api/tools/html2img/`;
+  const headers = {
+    "Content-Type": "application/json",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+  };
+  const payload = {
+    html: htmlContent,
+    fullPage: true,
+    quality: 100
+  };
+  const versions = ["v5", "v1", "v2", "v3", "v4", "v6", "v7", "v8", "v9", "v10"];
+  for (const ver of versions) {
+    try {
+      const res = await axios.post(`${baseUrl}${ver}`, payload, {
+        headers: headers,
+        timeout: 15e3
+      });
+      const imgUrl = res.data?.url || res.data?.result || (typeof res.data === "string" ? res.data : null);
+      if (imgUrl && /^https?:\/\//i.test(imgUrl)) {
+        let buffer = null;
+        try {
+          const imgRes = await axios.get(imgUrl, {
+            responseType: "arraybuffer",
+            timeout: 12e3
+          });
+          if (imgRes.data) buffer = Buffer.from(imgRes.data);
+        } catch {}
+        return {
+          url: imgUrl,
+          buffer: buffer
+        };
+      }
+    } catch {
+      continue;
+    }
+  }
+  return {
+    url: null,
+    buffer: null
+  };
+}
+
+function buildTriviaCanvasHtml(topic, qIndex, totalQ, q, status = "QUESTION") {
+  const botName = global.bot?.name || "WudysoftBot";
+  const isCorrect = status === "CORRECT";
+  const isTimeout = status === "TIMEOUT" || status === "REVEALED";
+  const statusColor = isCorrect ? "#10b981" : isTimeout ? "#ef4444" : "#8b5cf6";
+  const statusLabel = isCorrect ? "TEPAT SEKALI" : isTimeout ? "WAKTU HABIS" : "TRIVIA ARENA";
+  const cleanAns = normalizeText(q.correctAnswer);
+  const isAnsA = isCorrect || isTimeout ? normalizeText(q.optionA) === cleanAns : false;
+  const isAnsB = isCorrect || isTimeout ? normalizeText(q.optionB) === cleanAns : false;
+  const isAnsC = isCorrect || isTimeout ? normalizeText(q.optionC) === cleanAns : false;
+  const isAnsD = isCorrect || isTimeout ? normalizeText(q.optionD) === cleanAns : false;
+  return `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="utf-8">
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800;900&family=Rajdhani:wght@700&display=swap');
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        width: 750px;
+        height: 500px;
+        background: #080a12;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+      }
+      .stage {
+        width: 710px;
+        height: 460px;
+        background: radial-gradient(circle at 50% 10%, rgba(139, 92, 246, 0.22) 0%, rgba(11, 14, 24, 0.98) 85%);
+        border: 2px solid #282b42;
+        border-radius: 20px;
+        box-shadow: 0 25px 60px rgba(0,0,0,0.85);
+        padding: 22px 26px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .top-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .brand-icon {
+        background: #8b5cf6;
+        color: #fff;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+      }
+      .brand-text {
+        color: #f8fafc;
+        font-size: 18px;
+        font-weight: 900;
+        letter-spacing: 0.5px;
+      }
+      .status-pill {
+        border: 1px solid ${statusColor};
+        color: ${statusColor};
+        background: rgba(15, 23, 42, 0.8);
+        padding: 5px 14px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+      .question-box {
+        background: #111526;
+        border: 1px solid #272d4d;
+        border-radius: 14px;
+        padding: 20px 22px;
+        box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
+        text-align: center;
+      }
+      .topic-badge {
+        display: inline-block;
+        background: rgba(139, 92, 246, 0.2);
+        color: #c4b5fd;
+        border: 1px solid #8b5cf6;
+        font-size: 11px;
+        font-weight: 800;
+        padding: 3px 12px;
+        border-radius: 20px;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+      .question-text {
+        color: #f1f5f9;
+        font-size: 18px;
+        font-weight: 800;
+        line-height: 1.4;
+      }
+      .options-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px 14px;
+      }
+      .opt-card {
+        height: 48px;
+        background: #121629;
+        border: 1px solid #242c4c;
+        border-radius: 10px;
+        padding: 0 14px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .opt-card.correct-slot {
+        background: rgba(16, 185, 129, 0.2);
+        border-color: #10b981;
+      }
+      .opt-letter {
+        width: 26px;
+        height: 26px;
+        background: #252d4e;
+        color: #a78bfa;
+        border-radius: 6px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-weight: 900;
+        font-size: 13px;
+      }
+      .opt-card.correct-slot .opt-letter {
+        background: #10b981;
+        color: #042416;
+      }
+      .opt-text {
+        flex: 1;
+        color: #e2e8f0;
+        font-size: 13px;
+        font-weight: 800;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .footer-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid #1f253d;
+        padding-top: 12px;
+        color: #94a3b8;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .footer-meta b {
+        color: #8b5cf6;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stage">
+      <div class="top-row">
+        <div class="brand">
+          <div class="brand-icon">💡</div>
+          <div class="brand-text">TRIVIA <span>QUIZ</span></div>
+        </div>
+        <div class="status-pill">${statusLabel}</div>
+      </div>
+      <div class="question-box">
+        <div class="topic-badge">${topic || "GENERAL"} • SOAL ${qIndex} / ${totalQ}</div>
+        <div class="question-text">${q.question || "Pertanyaan Kuis"}</div>
+      </div>
+      <div class="options-grid">
+        <div class="opt-card ${isAnsA ? "correct-slot" : ""}">
+          <div class="opt-letter">A</div>
+          <div class="opt-text">${q.optionA || "-"}</div>
+        </div>
+        <div class="opt-card ${isAnsB ? "correct-slot" : ""}">
+          <div class="opt-letter">B</div>
+          <div class="opt-text">${q.optionB || "-"}</div>
+        </div>
+        <div class="opt-card ${isAnsC ? "correct-slot" : ""}">
+          <div class="opt-letter">C</div>
+          <div class="opt-text">${q.optionC || "-"}</div>
+        </div>
+        <div class="opt-card ${isAnsD ? "correct-slot" : ""}">
+          <div class="opt-letter">D</div>
+          <div class="opt-text">${q.optionD || "-"}</div>
+        </div>
+      </div>
+      <div class="footer-meta">
+        <div>REWARD : <b>+Rp 2.500 | +100 EXP</b></div>
+        <div>TIMEOUT : <b>${QUESTION_TIMEOUT}s</b></div>
+        <div>SYSTEM : <b>${botName}</b></div>
+      </div>
+    </div>
+  </body>
+  </html>
+  `;
+}
 
 function initDB(jid = null, name = "") {
   if (!global.db) global.db = {};
@@ -83,16 +334,19 @@ function formatTriviaBody(session) {
   const q = session.questions[session.currentIndex];
   const qNum = session.currentIndex + 1;
   const totalQ = session.questions.length;
-  return `–  *T R I V I A  Q U I Z*
+  return `Hi Survivors!
+Jawab kuis trivia pilihan ganda berikut bersama anggota grup.
 
-┌  ◦  *Topic* : ${(session.topic || "General").toUpperCase()}
-│  ◦  *Progress* : ${qNum} / ${totalQ}
-│  ◦  *Timeout* : ${QUESTION_TIMEOUT}s
+–  *T R I V I A  Q U I Z*
+
+┌  ◦  *Topik* : ${(session.topic || "General").toUpperCase()}
+│  ◦  *Progress* : Soal ${qNum} / ${totalQ}
+│  ◦  *Timeout* : ${QUESTION_TIMEOUT} Detik
 └  ◦  *Reward* : +Rp 2.500 | +100 EXP
 
 –  *Q U E S T I O N*
 
-${q.question}
+"${q.question}"
 
 –  *O P T I O N S*
 
@@ -101,11 +355,11 @@ ${q.question}
 │  ◦  *C.* ${q.optionC}
 └  ◦  *D.* ${q.optionD}
 
-Pilih opsi dari menu di bawah atau ketik langsung huruf jawabanmu (A/B/C/D).`;
+_Pilih opsi dari menu di bawah atau balas langsung dengan huruf (A / B / C / D)!_`;
 }
 async function sendTopicSelectionMenu(sock, ctx, chatId, quotedMsg, prefix = ".") {
   const botName = global.bot?.name || "WudysoftBot";
-  const botFooter = global.bot?.footer || `${botName} • Trivia Maker`;
+  const botFooter = `${global.bot?.footer || botName}`;
   const bannerImage = global.bot?.media?.banner1 || global.bot?.media?.banner2 || "https://files.catbox.moe/g2e6i5.jpg";
   const senderNum = (ctx.sender || "").split("@")[0];
   const topicRows = PRESET_TOPICS.map(t => ({
@@ -116,12 +370,12 @@ async function sendTopicSelectionMenu(sock, ctx, chatId, quotedMsg, prefix = "."
   const bodyText = `Hi @${senderNum}!
 Silakan tentukan topik kuis trivia yang ingin kamu mainkan bersama anggota grup.
 
-–  *T O P I C*
+–  *T R I V I A  T O P I C*
 
 ┌  ◦  *Format* : ${prefix}trivia <topik>
-└  ◦  *Example* : ${prefix}trivia Marvel
+└  ◦  *Contoh* : ${prefix}trivia Marvel
 
-Pilih salah satu topik populer melalui menu di bawah atau ketik manual topik kustommu.`;
+_Pilih salah satu topik populer melalui menu di bawah atau ketik topik kustommu!_`;
   const buttons = [{
     name: "single_select",
     buttonParamsJson: JSON.stringify({
@@ -134,40 +388,35 @@ Pilih salah satu topik populer melalui menu di bawah atau ketik manual topik kus
   }];
   const options = {
     image: bannerImage,
+    title: `✦ ${botName} • Pilihan Topik Trivia ✦`,
     params: {
       bottom_sheet: {
         in_thread_buttons_limit: 1,
         divider_indices: [1],
         list_title: `${botName} • Pilihan Topik`,
-        button_title: "Pilih Topik"
+        button_title: "📚 Pilih Topik"
       }
     },
     contextInfo: {
       mentionedJid: [ctx.sender],
-      forwardingScore: 0,
-      isForwarded: false
+      forwardingScore: 999,
+      isForwarded: true
     },
     quoted: quotedMsg || undefined
   };
   if (typeof ctx?.sendCta === "function" && chatId === ctx.id) {
     return await ctx.sendCta(bodyText, botFooter, buttons, options);
   }
-  let listFallback = `${bodyText}\n\n–  *A V A I L A B L E  T O P I C S*\n\n`;
-  PRESET_TOPICS.forEach((t, i) => {
-    const isLast = i === PRESET_TOPICS.length - 1;
-    const branch = isLast ? "└" : "│";
-    listFallback += `${branch}  ◦  *${t.name}* (${prefix}trivia ${t.id})\n`;
-  });
   return await sock.sendMessage(chatId, {
-    text: listFallback.trim(),
+    text: bodyText,
     mentions: [ctx.sender]
   }, {
     quoted: quotedMsg
   });
 }
-async function sendTriviaCtaMessage(sock, ctx, chatId, session, quotedMsg, prefix = ".") {
+async function sendTriviaCtaMessage(sock, ctx, chatId, session, quotedMsg, prefix = ".", imageBuffer = null, imageUrl = null) {
   const botName = global.bot?.name || "WudysoftBot";
-  const botFooter = global.bot?.footer || `${botName} • Mini Games`;
+  const botFooter = `${global.bot?.footer || botName}`;
   const q = session.questions[session.currentIndex];
   const qNum = session.currentIndex + 1;
   const bodyText = formatTriviaBody(session);
@@ -208,26 +457,24 @@ async function sendTriviaCtaMessage(sock, ctx, chatId, session, quotedMsg, prefi
       id: `${prefix}trivia --nyerah`
     })
   }];
-  const bannerImage = global.bot?.media?.banner1 || global.bot?.media?.banner2 || "https://files.catbox.moe/g2e6i5.jpg";
+  const mediaSource = imageBuffer || (imageUrl ? {
+    url: imageUrl
+  } : global.bot?.media?.banner1 || "https://files.catbox.moe/g2e6i5.jpg");
   const options = {
-    image: bannerImage,
+    image: mediaSource,
+    title: `✦ ${botName} • Trivia Quiz #${qNum} ✦`,
     params: {
       bottom_sheet: {
         in_thread_buttons_limit: 1,
         divider_indices: [1],
         list_title: `${botName} • Trivia Quiz`,
-        button_title: "Jawab Kuis"
-      },
-      limited_time_offer: {
-        text: `⏳ Sisa Waktu: ${QUESTION_TIMEOUT} Detik`,
-        url: "",
-        copy_code: "",
-        expiration_time: Date.now() + QUESTION_TIMEOUT * 1e3
+        button_title: "🔘 Jawab Kuis"
       }
     },
     contextInfo: {
-      forwardingScore: 0,
-      isForwarded: false
+      mentionedJid: [ctx?.sender].filter(Boolean),
+      forwardingScore: 999,
+      isForwarded: true
     },
     quoted: quotedMsg || undefined
   };
@@ -241,16 +488,20 @@ async function sendTriviaCtaMessage(sock, ctx, chatId, session, quotedMsg, prefi
   }
   if (!sentMsg) {
     try {
+      const mediaPayload = imageBuffer ? {
+        image: imageBuffer
+      } : imageUrl ? {
+        image: {
+          url: imageUrl
+        }
+      } : {};
       sentMsg = await sock.sendMessage(chatId, {
+        ...mediaPayload,
+        caption: bodyText,
+        footer: botFooter,
         viewOnceMessage: {
           message: {
             interactiveMessage: {
-              header: {
-                hasMediaAttachment: true,
-                imageMessage: {
-                  url: bannerImage
-                }
-              },
               body: {
                 text: bodyText
               },
@@ -258,10 +509,7 @@ async function sendTriviaCtaMessage(sock, ctx, chatId, session, quotedMsg, prefi
                 text: botFooter
               },
               nativeFlowMessage: {
-                buttons: buttons.map(b => ({
-                  name: b.name,
-                  buttonParamsJson: b.buttonParamsJson
-                }))
+                buttons: buttons
               },
               contextInfo: options.contextInfo
             }
@@ -273,14 +521,22 @@ async function sendTriviaCtaMessage(sock, ctx, chatId, session, quotedMsg, prefi
     } catch (e) {}
   }
   if (!sentMsg) {
-    sentMsg = await sock.sendMessage(chatId, {
-      image: {
-        url: bannerImage
-      },
-      caption: `${bodyText}\n\n_${botFooter}_`
-    }, {
-      quoted: quotedMsg
-    });
+    if (imageBuffer || imageUrl) {
+      sentMsg = await sock.sendMessage(chatId, {
+        image: imageBuffer || {
+          url: imageUrl
+        },
+        caption: `${bodyText}\n\n_${botFooter}_`
+      }, {
+        quoted: quotedMsg
+      });
+    } else {
+      sentMsg = await sock.sendMessage(chatId, {
+        text: `${bodyText}\n\n_${botFooter}_`
+      }, {
+        quoted: quotedMsg
+      });
+    }
   }
   if (sentMsg?.key?.id) {
     if (!Array.isArray(session.msgIds)) session.msgIds = [];
@@ -312,12 +568,13 @@ async function nextTriviaQuestion(sock, ctx, chatId, session, prefix = ".") {
     } else {
       scoreRows = `└  ◦  _Tidak ada pemain yang berhasil menjawab._\n`;
     }
-    const scoreboard = `–  *S C O R E B O A R D*
+    const scoreboard = `Hi Survivors!
+Kuis trivia telah selesai seluruhnya! 🏆
 
-Permainan kuis trivia telah selesai.
+–  *F I N A L  S C O R E B O A R D*
 
 ${scoreRows}
-Terima kasih telah berpartisipasi. Ketik *${prefix}trivia <topik>* untuk bermain lagi.`;
+_Terima kasih telah berpartisipasi! Ketik \`${prefix}trivia\` untuk memulai topik baru._`;
     return await sock.sendMessage(chatId, {
       text: scoreboard.trim(),
       mentions: mentions
@@ -331,29 +588,50 @@ Terima kasih telah berpartisipasi. Ketik *${prefix}trivia <topik>* untuk bermain
     if (activeSession && Date.now() >= activeSession.expireTime) {
       const currentQ = activeSession.questions[activeSession.currentIndex];
       const correctLtr = getCorrectLetter(currentQ);
-      const timeoutMsg = `–  *T I M E  O U T*
+      const timeoutCanvasHtml = buildTriviaCanvasHtml(activeSession.topic, activeSession.currentIndex + 1, activeSession.questions.length, currentQ, "TIMEOUT");
+      const {
+        buffer,
+        url
+      } = await renderHtmlToImage(timeoutCanvasHtml);
+      const timeoutMsg = `Hi All!
+Waktu menjawab soal #${activeSession.currentIndex + 1} telah habis! ⌛
 
-Waktu menjawab kuis telah habis.
+–  *T I M E  O U T*
 
-┌  ◦  *Question* : Soal #${activeSession.currentIndex + 1}
-└  ◦  *Answer* : [${correctLtr}] ${currentQ.correctAnswer}
+┌  ◦  *Soal* : #${activeSession.currentIndex + 1}
+└  ◦  *Kunci Jawaban* : [${correctLtr}] ${currentQ.correctAnswer}
 
-Melanjutkan ke soal berikutnya...`;
-      await sock.sendMessage(chatId, {
-        text: timeoutMsg
-      });
+_Memuat pertanyaan berikutnya..._`;
+      if (buffer || url) {
+        await sock.sendMessage(chatId, {
+          image: buffer || {
+            url: url
+          },
+          caption: timeoutMsg
+        });
+      } else {
+        await sock.sendMessage(chatId, {
+          text: timeoutMsg
+        });
+      }
       await nextTriviaQuestion(sock, ctx, chatId, activeSession, prefix);
     }
   }, QUESTION_TIMEOUT * 1e3);
-  await sendTriviaCtaMessage(sock, ctx, chatId, session, null, prefix);
+  const currentQ = session.questions[session.currentIndex];
+  const canvasHtml = buildTriviaCanvasHtml(session.topic, session.currentIndex + 1, session.questions.length, currentQ, "QUESTION");
+  const {
+    buffer: cardBuffer,
+    url: cardUrl
+  } = await renderHtmlToImage(canvasHtml);
+  await sendTriviaCtaMessage(sock, ctx, chatId, session, null, prefix, cardBuffer, cardUrl);
 }
 export default {
   name: "trivia",
   aliases: ["triviakuis", "kuistrivia", "triviamaker", "quiz"],
-  description: "Game kuis trivia pilihan ganda interaktif dengan CTA List UI & seleksi topik (Full DB)",
+  description: "Game kuis trivia pilihan ganda interaktif dengan canvas realistis bertema Neoxr",
   category: "Game",
   limit: true,
-  example: "trivia tech\ntrivia anime\ntrivia history\ntrivia science",
+  example: "trivia tech atau trivia anime",
   before: async (msg, {
     sock,
     ctx
@@ -366,9 +644,7 @@ export default {
       const isFromMe = Boolean(msg?.key?.fromMe || ctx?.isFromMe);
       if (isFromMe) return;
       const session = global.db.trivia[chatId];
-      if (Date.now() > session.expireTime) {
-        return;
-      }
+      if (Date.now() > session.expireTime) return;
       const quotedStanzaId = ctx?.quoted?.id || msg?.message?.extendedTextMessage?.contextInfo?.stanzaId;
       const isQuotingGame = quotedStanzaId && (quotedStanzaId === session.questionMsgId || Array.isArray(session.msgIds) && session.msgIds.includes(quotedStanzaId));
       if (!isQuotingGame) return;
@@ -381,7 +657,7 @@ export default {
       const correctLetter = getCorrectLetter(currentQ);
       const correctText = normalizeText(currentQ.correctAnswer);
       const isCorrect = cleanInput === correctLetter.toLowerCase() || cleanInput === correctText || cleanInput.length >= 4 && correctText.includes(cleanInput);
-      const senderName = ctx?.pushName || ctx?.pushname || "Pemain";
+      const senderName = ctx?.pushName || ctx?.pushname || "Pemain Cerdas";
       const senderJid = ctx?.sender || msg?.key?.participant;
       if (isCorrect) {
         session.scores = session.scores || {};
@@ -399,10 +675,13 @@ export default {
         }
         saveDB();
         if (typeof ctx?.react === "function") await ctx.react("✅");
-        const winNotif = `–  *C O R R E C T*
+        const winNotif = `Hi ${senderName}!
+Tebakanmu tepat sekali! (+Rp 2.500 | +100 EXP)
 
-Jawaban *[ ${correctLetter} ] ${currentQ.correctAnswer}* benar!
-Dijawab oleh @${senderJid.split("@")[0]} (+Rp 2.500 | +100 EXP)`;
+–  *C O R R E C T  A N S W E R*
+
+┌  ◦  *Penebak* : @${senderJid.split("@")[0]}
+└  ◦  *Jawaban Tepat* : [ ${correctLetter} ] ${currentQ.correctAnswer}`;
         await sock.sendMessage(chatId, {
           text: winNotif,
           mentions: [senderJid]
@@ -413,9 +692,8 @@ Dijawab oleh @${senderJid.split("@")[0]} (+Rp 2.500 | +100 EXP)`;
         return true;
       } else {
         if (typeof ctx?.react === "function") await ctx.react("❌");
-        const wrongNotif = `–  *W R O N G*
-
-Jawaban *"${userText}"* salah. Silakan coba pilih opsi lain.`;
+        const wrongNotif = `Hi ${senderName}!
+Pilihan "${userText}" tidak tepat. Coba pilih opsi lainnya!`;
         await sock.sendMessage(chatId, {
           text: wrongNotif
         }, {
@@ -435,6 +713,7 @@ Jawaban *"${userText}"* salah. Silakan coba pilih opsi lain.`;
       }
       const rawText = (ctx.query || ctx.text || "").trim();
       const prefix = ctx.prefix || ".";
+      const userName = ctx.pushName || ctx.pushname || ctx.sender.split("@")[0];
       const quotedMsg = typeof simpleQuoted === "function" ? simpleQuoted(ctx) : msg;
       const chatId = ctx.id;
       initDB();
@@ -445,13 +724,31 @@ Jawaban *"${userText}"* salah. Silakan coba pilih opsi lain.`;
           const correctLtr = getCorrectLetter(currentQ);
           delete global.db.trivia[chatId];
           saveDB();
-          const surrenderMsg = `–  *S U R R E N D E R*
+          const surrenderCanvasHtml = buildTriviaCanvasHtml(session.topic, session.currentIndex + 1, session.questions.length, currentQ, "REVEALED");
+          const {
+            buffer,
+            url
+          } = await renderHtmlToImage(surrenderCanvasHtml);
+          const surrenderMsg = `Hi ${userName}!
+Sesi kuis trivia telah dihentikan.
 
-Kuis trivia telah dihentikan.
+–  *S U R R E N D E R*
 
-┌  ◦  *Question* : Soal #${session.currentIndex + 1}
-│  ◦  *Answer* : [${correctLtr}] ${currentQ.correctAnswer}
-└  ◦  *Status* : Permainan berakhir`;
+┌  ◦  *Soal Terakhir* : #${session.currentIndex + 1}
+│  ◦  *Jawaban Asli* : [${correctLtr}] ${currentQ.correctAnswer}
+└  ◦  *Status* : Permainan Diakhiri
+
+_Ketik \`${prefix}trivia\` untuk memulai topik baru._`;
+          if (buffer || url) {
+            return await sock.sendMessage(chatId, {
+              image: buffer || {
+                url: url
+              },
+              caption: surrenderMsg
+            }, {
+              quoted: quotedMsg
+            });
+          }
           return await sock.sendMessage(chatId, {
             text: surrenderMsg
           }, {
@@ -462,7 +759,13 @@ Kuis trivia telah dihentikan.
       }
       if (global.db.trivia[chatId]) {
         const session = global.db.trivia[chatId];
-        return await sendTriviaCtaMessage(sock, ctx, chatId, session, quotedMsg, prefix);
+        const currentQ = session.questions[session.currentIndex];
+        const canvasHtml = buildTriviaCanvasHtml(session.topic, session.currentIndex + 1, session.questions.length, currentQ, "QUESTION");
+        const {
+          buffer,
+          url
+        } = await renderHtmlToImage(canvasHtml);
+        return await sendTriviaCtaMessage(sock, ctx, chatId, session, quotedMsg, prefix, buffer, url);
       }
       if (!rawText) {
         return await sendTopicSelectionMenu(sock, ctx, chatId, quotedMsg, prefix);
@@ -483,7 +786,7 @@ Kuis trivia telah dihentikan.
       const questions = data?.questions || [];
       if (!Array.isArray(questions) || questions.length === 0) {
         await ctx.react("❌");
-        return ctx.reply(`❌ Gagal memuat kuis trivia untuk topik "${topic}".\nKetik *${prefix}trivia* untuk melihat daftar topik yang tersedia.`);
+        return ctx.reply(`❌ Gagal memuat kuis trivia untuk topik "${topic}".\nKetik *${prefix}trivia* untuk melihat daftar topik populer.`);
       }
       global.db.trivia[chatId] = {
         topic: topic,
@@ -502,21 +805,42 @@ Kuis trivia telah dihentikan.
           const activeSession = global.db.trivia[chatId];
           const currentQ = activeSession.questions[activeSession.currentIndex];
           const correctLtr = getCorrectLetter(currentQ);
-          const timeoutMsg = `–  *T I M E  O U T*
+          const timeoutCanvasHtml = buildTriviaCanvasHtml(activeSession.topic, activeSession.currentIndex + 1, activeSession.questions.length, currentQ, "TIMEOUT");
+          const {
+            buffer,
+            url
+          } = await renderHtmlToImage(timeoutCanvasHtml);
+          const timeoutMsg = `Hi All!
+Waktu menjawab soal #${activeSession.currentIndex + 1} telah habis! ⌛
 
-Waktu menjawab kuis telah habis.
+–  *T I M E  O U T*
 
-┌  ◦  *Question* : Soal #${activeSession.currentIndex + 1}
-└  ◦  *Answer* : [${correctLtr}] ${currentQ.correctAnswer}
+┌  ◦  *Soal* : #${activeSession.currentIndex + 1}
+└  ◦  *Kunci Jawaban* : [${correctLtr}] ${currentQ.correctAnswer}
 
-Melanjutkan ke soal berikutnya...`;
-          await sock.sendMessage(chatId, {
-            text: timeoutMsg
-          });
+_Memuat pertanyaan berikutnya..._`;
+          if (buffer || url) {
+            await sock.sendMessage(chatId, {
+              image: buffer || {
+                url: url
+              },
+              caption: timeoutMsg
+            });
+          } else {
+            await sock.sendMessage(chatId, {
+              text: timeoutMsg
+            });
+          }
           await nextTriviaQuestion(sock, ctx, chatId, activeSession, prefix);
         }
       }, QUESTION_TIMEOUT * 1e3);
-      await sendTriviaCtaMessage(sock, ctx, chatId, global.db.trivia[chatId], quotedMsg, prefix);
+      const currentQ = global.db.trivia[chatId].questions[0];
+      const canvasHtml = buildTriviaCanvasHtml(topic, 1, questions.length, currentQ, "QUESTION");
+      const {
+        buffer: cardBuffer,
+        url: cardUrl
+      } = await renderHtmlToImage(canvasHtml);
+      await sendTriviaCtaMessage(sock, ctx, chatId, global.db.trivia[chatId], quotedMsg, prefix, cardBuffer, cardUrl);
       await ctx.react("🧠");
     } catch (error) {
       console.error("[Trivia Execute Error]:", error);

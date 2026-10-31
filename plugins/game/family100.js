@@ -4,6 +4,297 @@ import {
   simpleQuoted
 } from "../../lib/quoted.js";
 const API_URL = `${global.bot?.api?.wudysoft}/api/game/family100`;
+async function renderHtmlToImage(htmlContent) {
+  const rawApi = global.bot?.api?.wudysoft || "";
+  const cleanApi = rawApi.replace(/^https?:\/\//i, "").replace(/\/+$/, "");
+  const baseUrl = `https://${cleanApi}/api/tools/html2img/`;
+  const headers = {
+    "Content-Type": "application/json",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+  };
+  const payload = {
+    html: htmlContent,
+    fullPage: true,
+    quality: 100
+  };
+  const versions = ["v5", "v1", "v2", "v3", "v4", "v6", "v7", "v8", "v9", "v10"];
+  for (const ver of versions) {
+    try {
+      const res = await axios.post(`${baseUrl}${ver}`, payload, {
+        headers: headers,
+        timeout: 15e3
+      });
+      const imgUrl = res.data?.url || res.data?.result || (typeof res.data === "string" ? res.data : null);
+      if (imgUrl && /^https?:\/\//i.test(imgUrl)) {
+        let buffer = null;
+        try {
+          const imgRes = await axios.get(imgUrl, {
+            responseType: "arraybuffer",
+            timeout: 12e3
+          });
+          if (imgRes.data) buffer = Buffer.from(imgRes.data);
+        } catch {}
+        return {
+          url: imgUrl,
+          buffer: buffer
+        };
+      }
+    } catch {
+      continue;
+    }
+  }
+  return {
+    url: null,
+    buffer: null
+  };
+}
+
+function buildFamily100CanvasHtml(session, statusText = "PLAYING") {
+  const botName = global.bot?.name || "WudysoftBot";
+  const totalAnswers = session.jawaban.length;
+  const totalFound = session.terjawab.filter(Boolean).length;
+  const isAllSolved = totalFound === totalAnswers;
+  const isTimeout = statusText === "TIMEOUT" || statusText === "REVEALED";
+  const boardSlots = session.jawaban.map((ans, idx) => {
+    const found = session.terjawab[idx];
+    if (found) {
+      return `
+        <div class="slot-card solved">
+          <div class="slot-idx">${idx + 1}</div>
+          <div class="slot-text">${ans.toUpperCase()}</div>
+          <div class="slot-user">${found.name ? found.name.slice(0, 10) : "USER"}</div>
+        </div>
+      `;
+    }
+    if (isTimeout) {
+      return `
+        <div class="slot-card missed">
+          <div class="slot-idx">${idx + 1}</div>
+          <div class="slot-text">${ans.toUpperCase()}</div>
+          <div class="slot-user">MISSED</div>
+        </div>
+      `;
+    }
+    return `
+      <div class="slot-card locked">
+        <div class="slot-idx">${idx + 1}</div>
+        <div class="slot-text">● ● ● ● ●</div>
+        <div class="slot-user">LOCKED</div>
+      </div>
+    `;
+  }).join("");
+  const statusColor = isAllSolved ? "#22c55e" : isTimeout ? "#ef4444" : "#f59e0b";
+  const statusBadge = isAllSolved ? "SELESAI (100%)" : isTimeout ? "TERBONGKAR" : "SURVEY BERJALAN";
+  return `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="utf-8">
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800;900&family=Rajdhani:wght@700&display=swap');
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        width: 760px;
+        height: 520px;
+        background: #080a0f;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+      }
+      .stage-board {
+        width: 720px;
+        height: 480px;
+        background: radial-gradient(circle at 50% 10%, rgba(245, 158, 11, 0.18) 0%, rgba(10, 13, 20, 0.98) 75%);
+        border: 2px solid #283347;
+        border-radius: 20px;
+        box-shadow: 0 25px 60px rgba(0,0,0,0.85);
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .top-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .brand-icon {
+        background: #f59e0b;
+        color: #000;
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-weight: 900;
+        font-size: 16px;
+      }
+      .brand-title {
+        color: #f8fafc;
+        font-size: 19px;
+        font-weight: 900;
+        letter-spacing: 1px;
+      }
+      .status-pill {
+        border: 1px solid ${statusColor};
+        color: ${statusColor};
+        background: rgba(15, 23, 42, 0.8);
+        padding: 5px 14px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 2px;
+      }
+      .question-box {
+        background: #111624;
+        border: 1px solid #29344c;
+        border-radius: 12px;
+        padding: 16px 20px;
+        text-align: center;
+        box-shadow: inset 0 0 15px rgba(0,0,0,0.6);
+      }
+      .question-box small {
+        display: block;
+        color: #f59e0b;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 2px;
+        margin-bottom: 4px;
+      }
+      .question-box h2 {
+        color: #f1f5f9;
+        font-size: 20px;
+        font-weight: 800;
+        line-height: 1.35;
+      }
+      .slots-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px 14px;
+        padding: 4px 0;
+      }
+      .slot-card {
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        padding: 0 12px;
+        gap: 10px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      }
+      .slot-card.locked {
+        background: #10141f;
+        border: 1px solid #202738;
+      }
+      .slot-card.solved {
+        background: linear-gradient(90deg, #16241a 0%, #112d1b 100%);
+        border: 1px solid #22c55e;
+      }
+      .slot-card.missed {
+        background: linear-gradient(90deg, #2b1414 0%, #1f0f0f 100%);
+        border: 1px solid #ef4444;
+      }
+      .slot-idx {
+        width: 28px;
+        height: 28px;
+        background: #1e2638;
+        color: #94a3b8;
+        border-radius: 6px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-weight: 800;
+        font-size: 13px;
+      }
+      .slot-card.solved .slot-idx {
+        background: #22c55e;
+        color: #051a0c;
+      }
+      .slot-card.missed .slot-idx {
+        background: #ef4444;
+        color: #fff;
+      }
+      .slot-text {
+        flex: 1;
+        font-size: 14px;
+        font-weight: 800;
+        letter-spacing: 0.5px;
+        color: #64748b;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .slot-card.solved .slot-text {
+        color: #f0fdf4;
+      }
+      .slot-card.missed .slot-text {
+        color: #fca5a5;
+      }
+      .slot-user {
+        font-size: 11px;
+        font-weight: 800;
+        padding: 3px 8px;
+        border-radius: 4px;
+        background: rgba(0,0,0,0.4);
+        color: #64748b;
+        letter-spacing: 1px;
+      }
+      .slot-card.solved .slot-user {
+        color: #4ade80;
+        background: rgba(34, 197, 94, 0.2);
+      }
+      .slot-card.missed .slot-user {
+        color: #f87171;
+      }
+      .bottom-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid #1c2434;
+        padding-top: 12px;
+        color: #94a3b8;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .bottom-meta b {
+        color: #f59e0b;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stage-board">
+      <div class="top-meta">
+        <div class="brand">
+          <div class="brand-icon">100</div>
+          <div class="brand-title">FAMILY <span>100</span></div>
+        </div>
+        <div class="status-pill">${statusBadge}</div>
+      </div>
+      <div class="question-box">
+        <small>SURVEY QUESTION</small>
+        <h2>${session.soal}</h2>
+      </div>
+      <div class="slots-grid">
+        ${boardSlots}
+      </div>
+      <div class="bottom-meta">
+        <div>PROGRESS : <b>${totalFound} / ${totalAnswers} TERJAWAB</b></div>
+        <div>REWARD / ANSWER : <b>+Rp 3.000 | +150 EXP</b></div>
+        <div>SYSTEM : <b>${botName}</b></div>
+      </div>
+    </div>
+  </body>
+  </html>
+  `;
+}
 
 function initDB(jid = null, name = "") {
   if (!global.db) global.db = {};
@@ -31,11 +322,14 @@ function normalizeText(str) {
 function formatFamily100Board(session) {
   const totalFound = session.terjawab.filter(Boolean).length;
   const totalAnswers = session.jawaban.length;
-  let text = `–  *F A M I L Y  1 0 0*
+  let text = `Hi Survivors!
+Berikut adalah papan skor survei Family 100 terbaru.
 
-┌  ◦  *Question* : ${session.soal}
+–  *F A M I L Y  1 0 0*
+
+┌  ◦  *Pertanyaan* : ${session.soal}
 │  ◦  *Progress* : ${totalFound} / ${totalAnswers} Terjawab
-└  ◦  *Reward* : +Rp 3.000 | +150 EXP
+└  ◦  *Reward* : +Rp 3.000 | +150 EXP / Jawaban
 
 –  *B O A R D*\n\n`;
   session.jawaban.forEach((ans, idx) => {
@@ -50,17 +344,21 @@ function formatFamily100Board(session) {
       text += `${branch}  ◦  (${idx + 1}) [ ${hidden.trim()} ]\n`;
     }
   });
-  text += `\nBalas (reply) pesan ini dengan tebakanmu untuk menjawab.`;
+  text += `\n_Balas (reply) pesan ini langsung dengan tebakanmu untuk menjawab!_`;
   return text;
 }
-async function sendFamily100Message(sock, ctx, chatId, session, textContent, quotedMsg, prefix = ".") {
+async function sendNeoxrFamily100(sock, ctx, chatId, session, textContent, quotedMsg, prefix = ".", imageBuffer = null, imageUrl = null) {
   const botName = global.bot?.name || "WudysoftBot";
   const footerText = `${global.bot?.footer || botName}`;
   const mentions = [...new Set((session.terjawab || []).filter(Boolean).map(t => t.jid).filter(Boolean))];
+  const defaultBanner = global.bot?.media?.banner1 || global.bot?.media?.banner2 || "https://files.catbox.moe/g2e6i5.jpg";
+  const mediaSource = imageBuffer || (imageUrl ? {
+    url: imageUrl
+  } : defaultBanner);
   const buttons = [{
     name: "quick_reply",
     buttonParamsJson: JSON.stringify({
-      display_text: "📋 Lihat Papan",
+      display_text: "📋 Cek Papan Survei",
       id: `${prefix}family100 --papan`
     })
   }, {
@@ -71,20 +369,20 @@ async function sendFamily100Message(sock, ctx, chatId, session, textContent, quo
     })
   }];
   const options = {
-    jid: chatId,
-    to: chatId,
+    image: mediaSource,
+    title: `✦ ${botName} • Family 100 Arena ✦`,
     params: {
       bottom_sheet: {
         in_thread_buttons_limit: 2,
         divider_indices: [1],
-        list_title: `${botName} • Family 100`,
-        button_title: "Menu Kuis"
+        list_title: `${botName} • Menu Family 100`,
+        button_title: "📋 Opsi Kuis"
       }
     },
     contextInfo: {
-      forwardingScore: 0,
-      isForwarded: false,
-      mentionedJid: mentions
+      mentionedJid: mentions.length ? mentions : [ctx?.sender].filter(Boolean),
+      forwardingScore: 999,
+      isForwarded: true
     },
     quoted: quotedMsg || undefined
   };
@@ -93,12 +391,22 @@ async function sendFamily100Message(sock, ctx, chatId, session, textContent, quo
     try {
       sentMsg = await ctx.sendCta(textContent, footerText, buttons, options);
     } catch (e) {
-      console.error("[Family 100 sendCta Error]:", e.message);
+      console.error("[Family 100 ctx.sendCta Error]:", e.message);
     }
   }
   if (!sentMsg) {
     try {
+      const mediaPayload = imageBuffer ? {
+        image: imageBuffer
+      } : imageUrl ? {
+        image: {
+          url: imageUrl
+        }
+      } : {};
       sentMsg = await sock.sendMessage(chatId, {
+        ...mediaPayload,
+        caption: textContent,
+        footer: footerText,
         viewOnceMessage: {
           message: {
             interactiveMessage: {
@@ -121,14 +429,26 @@ async function sendFamily100Message(sock, ctx, chatId, session, textContent, quo
     } catch (e) {}
   }
   if (!sentMsg) {
-    sentMsg = await sock.sendMessage(chatId, {
-      text: `${textContent}\n\n_${footerText}_`,
-      mentions: mentions
-    }, {
-      quoted: quotedMsg
-    });
+    if (imageBuffer || imageUrl) {
+      sentMsg = await sock.sendMessage(chatId, {
+        image: imageBuffer || {
+          url: imageUrl
+        },
+        caption: `${textContent}\n\n_${footerText}_`,
+        mentions: mentions
+      }, {
+        quoted: quotedMsg
+      });
+    } else {
+      sentMsg = await sock.sendMessage(chatId, {
+        text: `${textContent}\n\n_${footerText}_`,
+        mentions: mentions
+      }, {
+        quoted: quotedMsg
+      });
+    }
   }
-  if (sentMsg?.key?.id) {
+  if (sentMsg?.key?.id && session) {
     if (!Array.isArray(session.msgIds)) session.msgIds = [];
     if (!session.msgIds.includes(sentMsg.key.id)) {
       session.msgIds.push(sentMsg.key.id);
@@ -141,7 +461,7 @@ async function sendFamily100Message(sock, ctx, chatId, session, textContent, quo
 export default {
   name: "family100",
   aliases: ["f100", "fam100", "survey100"],
-  description: "Game survei Family 100 dengan papan tebakan multi-jawaban via API (Full DB)",
+  description: "Game survei Family 100 dengan visual papan skor realistis bertema Neoxr",
   category: "Game",
   limit: true,
   example: "family100",
@@ -176,9 +496,12 @@ export default {
       if (alreadyAnswered !== -1) {
         const answerer = session.terjawab[alreadyAnswered];
         if (typeof ctx?.react === "function") await ctx.react("⚠️");
-        const alreadyText = `–  *A L R E A D Y  A N S W E R E D*
+        const alreadyText = `Hi ${ctx?.pushName || "Pemain"}!
+Jawaban *"${session.jawaban[alreadyAnswered].toUpperCase()}"* sudah pernah dijawab oleh @${answerer.jid.split("@")[0]}.
 
-Jawaban *"${session.jawaban[alreadyAnswered].toUpperCase()}"* sudah pernah ditebak oleh @${answerer.jid.split("@")[0]}.`;
+–  *A L R E A D Y  A N S W E R E D*
+
+Silakan cari dan tebak jawaban survei lainnya!`;
         await sock.sendMessage(chatId, {
           text: alreadyText,
           mentions: [answerer.jid]
@@ -214,36 +537,62 @@ Jawaban *"${session.jawaban[alreadyAnswered].toUpperCase()}"* sudah pernah diteb
           const allWinners = session.terjawab.filter(Boolean).map(t => t.jid);
           delete global.db.family100[chatId];
           saveDB();
-          const winText = `–  *C O N G R A T U L A T I O N S*
+          const winCanvasHtml = buildFamily100CanvasHtml(session, "SOLVED");
+          const {
+            buffer,
+            url
+          } = await renderHtmlToImage(winCanvasHtml);
+          const winText = `Hi Survivors!
+Luar biasa! Seluruh jawaban survei berhasil dibuka 100%!
 
-Semua jawaban survei berhasil ditebak dengan benar!
+–  *C O N G R A T U L A T I O N S*
 
 ${finalBoard}
 
-Permainan selesai. Terima kasih kepada seluruh pemain yang telah berpartisipasi.`;
+_Permainan selesai. Selamat kepada seluruh pemenang!_`;
           if (typeof ctx?.react === "function") await ctx.react("🎉");
-          await sock.sendMessage(chatId, {
-            text: winText,
-            mentions: allWinners
-          }, {
-            quoted: msg
-          });
+          if (buffer || url) {
+            await sock.sendMessage(chatId, {
+              image: buffer || {
+                url: url
+              },
+              caption: winText,
+              mentions: allWinners
+            }, {
+              quoted: msg
+            });
+          } else {
+            await sock.sendMessage(chatId, {
+              text: winText,
+              mentions: allWinners
+            }, {
+              quoted: msg
+            });
+          }
           return true;
         }
         const updatedBoard = formatFamily100Board(session);
-        const correctInfo = `–  *C O R R E C T*
+        const correctInfo = `Hi ${senderName}!
+Tebakanmu ada dalam survei! (+Rp 3.000 | +150 EXP)
 
-Jawaban *[ ${matchedAnswer.toUpperCase()} ]* berhasil ditebak oleh @${senderJid.split("@")[0]}! (+Rp 3.000, +150 EXP)
+–  *C O R R E C T  A N S W E R*
+
+┌  ◦  *Penebak* : @${senderJid.split("@")[0]}
+└  ◦  *Jawaban* : [ ${matchedAnswer.toUpperCase()} ]
 
 ${updatedBoard}`;
+        const boardCanvasHtml = buildFamily100CanvasHtml(session, "PLAYING");
+        const {
+          buffer,
+          url
+        } = await renderHtmlToImage(boardCanvasHtml);
         if (typeof ctx?.react === "function") await ctx.react("✅");
-        await sendFamily100Message(sock, ctx, chatId, session, correctInfo, msg, ctx?.prefix || ".");
+        await sendNeoxrFamily100(sock, ctx, chatId, session, correctInfo, msg, ctx?.prefix || ".", buffer, url);
         return true;
       } else {
         if (typeof ctx?.react === "function") await ctx.react("❌");
-        const wrongText = `–  *W R O N G*
-
-Jawaban *"${userText}"* salah atau tidak ada dalam survei ini.`;
+        const wrongText = `Hi ${ctx?.pushName || "Pemain"}!
+Jawaban "${userText}" salah atau tidak ada dalam survei ini. Coba tebakan lain!`;
         await sock.sendMessage(chatId, {
           text: wrongText
         }, {
@@ -263,6 +612,7 @@ Jawaban *"${userText}"* salah atau tidak ada dalam survei ini.`;
       }
       const rawText = (ctx.query || ctx.text || "").trim().toLowerCase();
       const prefix = ctx.prefix || ".";
+      const userName = ctx.pushName || ctx.pushname || ctx.sender.split("@")[0];
       const quotedMsg = typeof simpleQuoted === "function" ? simpleQuoted(ctx) : msg;
       const chatId = ctx.id;
       initDB();
@@ -271,13 +621,19 @@ Jawaban *"${userText}"* salah atau tidak ada dalam survei ini.`;
           const session = global.db.family100[chatId];
           delete global.db.family100[chatId];
           saveDB();
+          const revealCanvasHtml = buildFamily100CanvasHtml(session, "REVEALED");
+          const {
+            buffer,
+            url
+          } = await renderHtmlToImage(revealCanvasHtml);
           const totalAnswers = session.jawaban.length;
-          let revealText = `–  *S U R R E N D E R*
+          let revealText = `Hi ${userName}!
+Sesi Family 100 telah dihentikan.
 
-Permainan Family 100 dihentikan oleh pemain.
+–  *S U R R E N D E R*
 
-┌  ◦  *Question* : ${session.soal}
-└  ◦  *Total Answers* : ${totalAnswers}
+┌  ◦  *Pertanyaan* : ${session.soal}
+└  ◦  *Total Jawaban* : ${totalAnswers}
 
 –  *A N S W E R S*\n\n`;
           const mentions = [];
@@ -292,6 +648,18 @@ Permainan Family 100 dihentikan oleh pemain.
               revealText += `${branch}  ◦  (${idx + 1}) *${ans.toUpperCase()}* ❌\n`;
             }
           });
+          revealText += `\n_Ketik \`${prefix}family100\` untuk memulai ronde baru._`;
+          if (buffer || url) {
+            return await sock.sendMessage(chatId, {
+              image: buffer || {
+                url: url
+              },
+              caption: revealText.trim(),
+              mentions: mentions
+            }, {
+              quoted: quotedMsg
+            });
+          }
           return await sock.sendMessage(chatId, {
             text: revealText.trim(),
             mentions: mentions
@@ -306,13 +674,23 @@ Permainan Family 100 dihentikan oleh pemain.
           return ctx.reply(`❌ Tidak ada game aktif. Mulai game baru dengan mengetik *${prefix}family100*`);
         }
         const session = global.db.family100[chatId];
+        const boardCanvasHtml = buildFamily100CanvasHtml(session, "PLAYING");
+        const {
+          buffer,
+          url
+        } = await renderHtmlToImage(boardCanvasHtml);
         const boardText = formatFamily100Board(session);
-        return await sendFamily100Message(sock, ctx, chatId, session, boardText, quotedMsg, prefix);
+        return await sendNeoxrFamily100(sock, ctx, chatId, session, boardText, quotedMsg, prefix, buffer, url);
       }
       if (global.db.family100[chatId]) {
         const session = global.db.family100[chatId];
+        const boardCanvasHtml = buildFamily100CanvasHtml(session, "PLAYING");
+        const {
+          buffer,
+          url
+        } = await renderHtmlToImage(boardCanvasHtml);
         const boardText = formatFamily100Board(session);
-        return await sendFamily100Message(sock, ctx, chatId, session, `⚠️ Masih ada permainan Family 100 yang sedang berlangsung.\n\n` + boardText, quotedMsg, prefix);
+        return await sendNeoxrFamily100(sock, ctx, chatId, session, boardText, quotedMsg, prefix, buffer, url);
       }
       await ctx.react("⏳");
       const {
@@ -325,7 +703,7 @@ Permainan Family 100 dihentikan oleh pemain.
       });
       if (!data || !data.soal || !Array.isArray(data.jawaban) || data.jawaban.length === 0) {
         await ctx.react("❌");
-        return ctx.reply("❌ Gagal memuat kuis Family 100 dari server. Silakan coba beberapa saat lagi.");
+        return ctx.reply("❌ Gagal memuat kuis Family 100 dari server. Silakan coba sesaat lagi.");
       }
       const TIMEOUT_SECONDS = 180;
       global.db.family100[chatId] = {
@@ -344,13 +722,19 @@ Permainan Family 100 dihentikan oleh pemain.
           const activeSession = global.db.family100[chatId];
           delete global.db.family100[chatId];
           saveDB();
+          const timeoutCanvasHtml = buildFamily100CanvasHtml(activeSession, "TIMEOUT");
+          const {
+            buffer,
+            url
+          } = await renderHtmlToImage(timeoutCanvasHtml);
           const totalAnswers = activeSession.jawaban.length;
-          let timeoutText = `–  *T I M E  O U T*
+          let timeoutText = `Hi All!
+Waktu survei Family 100 telah habis! ⌛
 
-Waktu menjawab Family 100 telah habis.
+–  *T I M E  O U T*
 
-┌  ◦  *Question* : ${activeSession.soal}
-└  ◦  *Total Answers* : ${totalAnswers}
+┌  ◦  *Pertanyaan* : ${activeSession.soal}
+└  ◦  *Total Jawaban* : ${totalAnswers}
 
 –  *A N S W E R S*\n\n`;
           const mentions = [];
@@ -365,14 +749,30 @@ Waktu menjawab Family 100 telah habis.
               timeoutText += `${branch}  ◦  (${idx + 1}) *${ans.toUpperCase()}* ❌\n`;
             }
           });
-          await sock.sendMessage(chatId, {
-            text: timeoutText.trim(),
-            mentions: mentions
-          });
+          timeoutText += `\n_Ketik \`${prefix}family100\` untuk bermain lagi!_`;
+          if (buffer || url) {
+            await sock.sendMessage(chatId, {
+              image: buffer || {
+                url: url
+              },
+              caption: timeoutText.trim(),
+              mentions: mentions
+            });
+          } else {
+            await sock.sendMessage(chatId, {
+              text: timeoutText.trim(),
+              mentions: mentions
+            });
+          }
         }
       }, TIMEOUT_SECONDS * 1e3);
       const initialBoard = formatFamily100Board(global.db.family100[chatId]);
-      await sendFamily100Message(sock, ctx, chatId, global.db.family100[chatId], initialBoard, quotedMsg, prefix);
+      const initialCanvasHtml = buildFamily100CanvasHtml(global.db.family100[chatId], "PLAYING");
+      const {
+        buffer: cardBuffer,
+        url: cardUrl
+      } = await renderHtmlToImage(initialCanvasHtml);
+      await sendNeoxrFamily100(sock, ctx, chatId, global.db.family100[chatId], initialBoard, quotedMsg, prefix, cardBuffer, cardUrl);
       await ctx.react("👨‍👩‍👧‍👦");
     } catch (error) {
       console.error("[Family 100 Execute Error]:", error);

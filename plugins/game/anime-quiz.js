@@ -5,6 +5,274 @@ import {
 } from "../../lib/quoted.js";
 const API_URL = `${global.bot?.api?.wudysoft}/api/game/anime-quiz`;
 const DEFAULT_TIMEOUT = 30;
+async function renderHtmlToImage(htmlContent) {
+  const rawApi = global.bot?.api?.wudysoft || "";
+  const cleanApi = rawApi.replace(/^https?:\/\//i, "").replace(/\/+$/, "");
+  const baseUrl = `https://${cleanApi}/api/tools/html2img/`;
+  const headers = {
+    "Content-Type": "application/json",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+  };
+  const payload = {
+    html: htmlContent,
+    fullPage: true,
+    quality: 100
+  };
+  const versions = ["v5", "v1", "v2", "v3", "v4", "v6", "v7", "v8", "v9", "v10"];
+  for (const ver of versions) {
+    try {
+      const res = await axios.post(`${baseUrl}${ver}`, payload, {
+        headers: headers,
+        timeout: 15e3
+      });
+      const imgUrl = res.data?.url || res.data?.result || (typeof res.data === "string" ? res.data : null);
+      if (imgUrl && /^https?:\/\//i.test(imgUrl)) {
+        let buffer = null;
+        try {
+          const imgRes = await axios.get(imgUrl, {
+            responseType: "arraybuffer",
+            timeout: 12e3
+          });
+          if (imgRes.data) buffer = Buffer.from(imgRes.data);
+        } catch {}
+        return {
+          url: imgUrl,
+          buffer: buffer
+        };
+      }
+    } catch {
+      continue;
+    }
+  }
+  return {
+    url: null,
+    buffer: null
+  };
+}
+
+function buildAnimeQuizCanvasHtml(session, statusText = "GUESS THE CHARACTER") {
+  const botName = global.bot?.name || "WudysoftBot";
+  const stats = session?.data?.stats || {};
+  const quiz = session?.data?.quiz || {};
+  const choices = quiz?.choices || [];
+  const qNum = session?.data?.question_number || 1;
+  const livesCount = Math.max(0, stats.lives ?? 3);
+  const imageUrl = quiz?.image || "https://files.catbox.moe/g2e6i5.jpg";
+  const letters = ["A", "B", "C", "D"];
+  const choicesHtml = choices.map((c, i) => `
+    <div class="opt-card">
+      <div class="opt-key">${letters[i]}</div>
+      <div class="opt-meta">
+        <div class="char-title">${c.name}</div>
+        <div class="anime-title">${c.anime}</div>
+      </div>
+    </div>
+  `).join("");
+  const heartsHtml = Array.from({
+    length: 3
+  }, (_, i) => `<span class="heart-icon ${i < livesCount ? "active" : "lost"}">❤</span>`).join("");
+  return `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="utf-8">
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800;900&family=Rajdhani:wght@700&display=swap');
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        width: 750px;
+        height: 500px;
+        background: #090812;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+      }
+      .quiz-card {
+        width: 710px;
+        height: 460px;
+        background: radial-gradient(circle at 75% 25%, rgba(236, 72, 153, 0.22) 0%, rgba(11, 10, 22, 0.98) 80%);
+        border: 2px solid #28243d;
+        border-radius: 20px;
+        box-shadow: 0 25px 60px rgba(0,0,0,0.85);
+        padding: 22px 24px;
+        display: flex;
+        gap: 22px;
+      }
+      .visual-frame {
+        width: 290px;
+        height: 100%;
+        background: #110f1e;
+        border: 2px solid #362e54;
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: inset 0 0 20px rgba(0,0,0,0.8), 0 10px 25px rgba(0,0,0,0.5);
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .visual-frame img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .corner-badge {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background: rgba(15, 12, 28, 0.85);
+        border: 1px solid #ec4899;
+        color: #f472b6;
+        font-size: 11px;
+        font-weight: 800;
+        padding: 3px 10px;
+        border-radius: 6px;
+        letter-spacing: 1px;
+        backdrop-filter: blur(4px);
+      }
+      .panel-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .top-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .brand-title {
+        font-size: 18px;
+        font-weight: 900;
+        color: #f8fafc;
+        letter-spacing: 0.5px;
+      }
+      .lives-box {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .heart-icon {
+        font-size: 18px;
+      }
+      .heart-icon.active {
+        color: #ec4899;
+        filter: drop-shadow(0 0 6px rgba(236, 72, 153, 0.8));
+      }
+      .heart-icon.lost {
+        color: #3f3c4d;
+      }
+      .sub-heading {
+        background: #110e1d;
+        border: 1px solid #231d38;
+        border-radius: 10px;
+        padding: 10px 14px;
+        margin: 6px 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .sub-heading small {
+        color: #a855f7;
+        font-weight: 800;
+        font-size: 11px;
+        letter-spacing: 1px;
+      }
+      .sub-heading b {
+        color: #38bdf8;
+        font-size: 13px;
+      }
+      .options-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .opt-card {
+        height: 48px;
+        background: #131022;
+        border: 1px solid #241d3d;
+        border-radius: 10px;
+        padding: 0 12px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .opt-key {
+        width: 26px;
+        height: 26px;
+        background: #231b3e;
+        color: #ec4899;
+        border-radius: 6px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-weight: 900;
+        font-size: 13px;
+      }
+      .opt-meta {
+        flex: 1;
+        overflow: hidden;
+      }
+      .char-title {
+        font-size: 13px;
+        font-weight: 800;
+        color: #f1f5f9;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .anime-title {
+        font-size: 11px;
+        color: #94a3b8;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .bottom-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid #1c1830;
+        padding-top: 10px;
+        color: #94a3b8;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .bottom-meta b {
+        color: #ec4899;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="quiz-card">
+      <div class="visual-frame">
+        <div class="corner-badge">QUESTION #${qNum}</div>
+        <img src="${imageUrl}" alt="Anime Character">
+      </div>
+      <div class="panel-content">
+        <div class="top-meta">
+          <div class="brand-title">ANIME <span>QUIZ</span></div>
+          <div class="lives-box">${heartsHtml}</div>
+        </div>
+        <div class="sub-heading">
+          <small>SCORE : <b>${stats.score || "0"}</b></small>
+          <small>LEVEL : <b>${stats.level || "1"}</b></small>
+        </div>
+        <div class="options-list">
+          ${choicesHtml}
+        </div>
+        <div class="bottom-meta">
+          <div>REWARD : <b>+Rp 3.000 | +150 EXP</b></div>
+          <div>BOT : <b>${botName}</b></div>
+        </div>
+      </div>
+    </div>
+  </body>
+  </html>
+  `;
+}
 
 function initDB(jid = null, name = "") {
   if (!global.db) global.db = {};
@@ -51,30 +319,29 @@ function formatAnimeQuizBody(session) {
     const branch = isLast ? "└" : "│";
     return `${branch}  ◦  *${letters[idx] || idx + 1}.* ${c.name} (${c.anime})`;
   }).join("\n");
-  return `–  *A N I M E  Q U I Z*
+  return `Hi Survivors!
+Tebak nama karakter anime pada gambar kuis di atas.
 
-Tebak nama karakter anime pada gambar di atas.
-
-–  *I N F O*
+–  *A N I M E  Q U I Z*
 
 ┌  ◦  *Question* : #${qNum} (Level ${stats.level || 1})
-│  ◦  *Lives* : ${hearts} (${livesCount}/3)
-│  ◦  *Score* : ${stats.score || "00000"} Poin
-│  ◦  *Timeout* : ${session.data.time_limit || DEFAULT_TIMEOUT}s
+│  ◦  *Nyawa Tersisa* : ${hearts} (${livesCount}/3)
+│  ◦  *Skor Saat Ini* : ${stats.score || "0"} Poin
+│  ◦  *Timeout* : ${session.data.time_limit || DEFAULT_TIMEOUT} Detik
 └  ◦  *Reward* : +Rp 3.000 | +150 EXP
 
-–  *O P T I O N S*
+–  *C H A R A C T E R  O P T I O N S*
 
 ${choiceText}
 
-Pilih opsi dari menu di bawah atau balas chat dengan huruf A/B/C/D.`;
+_Pilih opsi dari tombol menu di bawah atau balas chat dengan huruf (A / B / C / D)!_`;
 }
-async function sendAnimeQuizMessage(sock, ctx, chatId, session, quotedMsg, prefix = ".") {
+async function sendAnimeQuizMessage(sock, ctx, chatId, session, quotedMsg, prefix = ".", imageBuffer = null, imageUrl = null) {
   const botName = global.bot?.name || "WudysoftBot";
-  const botFooter = global.bot?.footer || `${botName} • Mini Games`;
+  const botFooter = `${global.bot?.footer || botName}`;
   const choices = session.data.quiz?.choices || [];
   const qNum = session.data.question_number || 1;
-  const imageUrl = session.data.quiz?.image || "https://files.catbox.moe/g2e6i5.jpg";
+  const rawImageUrl = session.data.quiz?.image || "https://files.catbox.moe/g2e6i5.jpg";
   const bodyText = formatAnimeQuizBody(session);
   const letters = ["A", "B", "C", "D"];
   const choiceRows = choices.map((c, i) => ({
@@ -103,25 +370,26 @@ async function sendAnimeQuizMessage(sock, ctx, chatId, session, quotedMsg, prefi
       id: `${prefix}animequiz --nyerah`
     })
   }];
+  const mediaSource = imageBuffer || (imageUrl ? {
+    url: imageUrl
+  } : {
+    url: rawImageUrl
+  });
   const options = {
-    image: imageUrl,
+    image: mediaSource,
+    title: `✦ ${botName} • Anime Quiz #${qNum} ✦`,
     params: {
       bottom_sheet: {
         in_thread_buttons_limit: 1,
         divider_indices: [1],
         list_title: `${botName} • Anime Quiz`,
-        button_title: "Pilih Karakter"
-      },
-      limited_time_offer: {
-        text: `⏳ Sisa Waktu: ${session.data.time_limit || DEFAULT_TIMEOUT} Detik`,
-        url: "",
-        copy_code: "",
-        expiration_time: Date.now() + (session.data.time_limit || DEFAULT_TIMEOUT) * 1e3
+        button_title: "🔘 Pilih Karakter"
       }
     },
     contextInfo: {
-      forwardingScore: 0,
-      isForwarded: false
+      mentionedJid: [ctx?.sender].filter(Boolean),
+      forwardingScore: 999,
+      isForwarded: true
     },
     quoted: quotedMsg || undefined
   };
@@ -135,16 +403,20 @@ async function sendAnimeQuizMessage(sock, ctx, chatId, session, quotedMsg, prefi
   }
   if (!sentMsg) {
     try {
+      const mediaPayload = imageBuffer ? {
+        image: imageBuffer
+      } : {
+        image: {
+          url: imageUrl || rawImageUrl
+        }
+      };
       sentMsg = await sock.sendMessage(chatId, {
+        ...mediaPayload,
+        caption: bodyText,
+        footer: botFooter,
         viewOnceMessage: {
           message: {
             interactiveMessage: {
-              header: {
-                hasMediaAttachment: true,
-                imageMessage: {
-                  url: imageUrl
-                }
-              },
               body: {
                 text: bodyText
               },
@@ -152,10 +424,7 @@ async function sendAnimeQuizMessage(sock, ctx, chatId, session, quotedMsg, prefi
                 text: botFooter
               },
               nativeFlowMessage: {
-                buttons: buttons.map(b => ({
-                  name: b.name,
-                  buttonParamsJson: b.buttonParamsJson
-                }))
+                buttons: buttons
               },
               contextInfo: options.contextInfo
             }
@@ -168,8 +437,8 @@ async function sendAnimeQuizMessage(sock, ctx, chatId, session, quotedMsg, prefi
   }
   if (!sentMsg) {
     sentMsg = await sock.sendMessage(chatId, {
-      image: {
-        url: imageUrl
+      image: imageBuffer || {
+        url: imageUrl || rawImageUrl
       },
       caption: `${bodyText}\n\n_${botFooter}_`
     }, {
@@ -189,10 +458,10 @@ async function sendAnimeQuizMessage(sock, ctx, chatId, session, quotedMsg, prefi
 export default {
   name: "animequiz",
   aliases: ["tebakanime", "tebakkarakter", "animeguess", "aquiz"],
-  description: "Game tebak gambar karakter & anime interaktif dengan sistem nyawa dan level (Full DB)",
+  description: "Game tebak gambar karakter & anime interaktif dengan canvas realistis bertema Neoxr",
   category: "Game",
   limit: true,
-  example: "animequiz\nanimequiz --nyerah",
+  example: "animequiz atau animequiz --nyerah",
   before: async (msg, {
     sock,
     ctx
@@ -231,7 +500,7 @@ export default {
         chosenItem = choices.find(c => normalizeText(c.name) === cleanInput || normalizeText(c.anime) === cleanInput || cleanInput.length >= 4 && normalizeText(c.name).includes(cleanInput));
       }
       if (!chosenItem) return;
-      const senderName = ctx?.pushName || ctx?.pushname || "Pemain";
+      const senderName = ctx?.pushName || ctx?.pushname || "Pemain Cerdas";
       const senderJid = ctx?.sender || msg?.key?.participant;
       const resultData = await callAnimeQuizApi({
         session: session.apiSession,
@@ -245,16 +514,17 @@ export default {
           global.db.user[senderJid].money = (Number(global.db.user[senderJid].money) || 0) + 3e3;
           saveDB();
         }
-        const winNotif = `–  *C O R R E C T*
+        const winNotif = `Hi ${senderName}!
+Tebakan karakter animemu tepat sekali! (+Rp 3.000 | +150 EXP)
 
-Tebakan Anda benar! (+Rp 3.000 | +150 EXP)
+–  *C O R R E C T  A N S W E R*
 
-┌  ◦  *Character* : ${chosenItem.name}
+┌  ◦  *Karakter* : ${chosenItem.name}
 │  ◦  *Anime* : ${chosenItem.anime}
-│  ◦  *Player* : @${senderJid.split("@")[0]}
-└  ◦  *Score* : +${resultData.stats?.added_score || 100} Poin
+│  ◦  *Penebak* : @${senderJid.split("@")[0]}
+└  ◦  *Tambahan Skor* : +${resultData.stats?.added_score || 100} Poin
 
-Memuat soal berikutnya...`;
+_Memuat pertanyaan level berikutnya..._`;
         await sock.sendMessage(chatId, {
           text: winNotif,
           mentions: [senderJid]
@@ -271,15 +541,18 @@ Memuat soal berikutnya...`;
           if (global.db.animeQuiz[chatId] && Date.now() >= global.db.animeQuiz[chatId].expireTime) {
             delete global.db.animeQuiz[chatId];
             saveDB();
-            const timeoutText = `–  *T I M E  O U T*
-
-Waktu menjawab Anime Quiz telah habis karena tidak ada jawaban.`;
+            const timeoutText = `Hi All! Waktu menjawab kuis anime telah habis! ⌛`;
             await sock.sendMessage(chatId, {
               text: timeoutText
             });
           }
         }, timeLimit * 1e3);
-        await sendAnimeQuizMessage(sock, ctx, chatId, session, msg, ctx?.prefix || ".");
+        const nextCanvasHtml = buildAnimeQuizCanvasHtml(session, "NEXT QUESTION");
+        const {
+          buffer,
+          url
+        } = await renderHtmlToImage(nextCanvasHtml);
+        await sendAnimeQuizMessage(sock, ctx, chatId, session, msg, ctx?.prefix || ".", buffer, url);
         return true;
       }
       if (resultData?.is_correct === false || resultData?.stats?.lives === 0) {
@@ -288,14 +561,15 @@ Waktu menjawab Anime Quiz telah habis karena tidak ada jawaban.`;
         if (remainingLives <= 0) {
           delete global.db.animeQuiz[chatId];
           saveDB();
-          const gameOverText = `–  *G A M E  O V E R*
+          const gameOverText = `Hi Survivors!
+Seluruh nyawa kuis telah habis! 💀
 
-Nyawa Anda telah habis!
+–  *G A M E  O V E R*
 
-┌  ◦  *Final Score* : ${resultData?.stats?.score || session.data.stats?.score || "0"} Poin
-└  ◦  *Final Level* : Level ${resultData?.stats?.level || session.data.stats?.level || 1}
+┌  ◦  *Skor Akhir* : ${resultData?.stats?.score || session.data.stats?.score || "0"} Poin
+└  ◦  *Level Terakhir* : Level ${resultData?.stats?.level || session.data.stats?.level || 1}
 
-Ketik *${ctx?.prefix || "."}animequiz* untuk memulai game baru.`;
+_Ketik \`${ctx?.prefix || "."}animequiz\` untuk mencoba tantangan baru._`;
           await sock.sendMessage(chatId, {
             text: gameOverText
           }, {
@@ -308,12 +582,13 @@ Ketik *${ctx?.prefix || "."}animequiz* untuk memulai game baru.`;
         session.apiSession = resultData.session || session.apiSession;
         session.expireTime = Date.now() + timeLimit * 1e3;
         saveDB();
-        const wrongText = `–  *W R O N G*
+        const wrongText = `Hi ${senderName}!
+Tebakan "${chosenItem.name}" tidak tepat.
 
-Tebakan *"${chosenItem.name}"* kurang tepat.
-Sisa Nyawa: ❤️ *${remainingLives}/3*
+–  *W R O N G  A N S W E R*
 
-Silakan coba tebak pilihan lainnya.`;
+┌  ◦  *Sisa Nyawa* : ❤️ ${remainingLives}/3
+└  ◦  *Aksi* : Silakan tebak pilihan karakter lainnya!`;
         await sock.sendMessage(chatId, {
           text: wrongText
         }, {
@@ -324,9 +599,7 @@ Silakan coba tebak pilihan lainnya.`;
           if (global.db.animeQuiz[chatId] && Date.now() >= global.db.animeQuiz[chatId].expireTime) {
             delete global.db.animeQuiz[chatId];
             saveDB();
-            const timeoutText = `–  *T I M E  O U T*
-
-Waktu menjawab Anime Quiz telah habis.`;
+            const timeoutText = `Hi All! Waktu menjawab kuis anime telah habis! ⌛`;
             await sock.sendMessage(chatId, {
               text: timeoutText
             });
@@ -346,6 +619,7 @@ Waktu menjawab Anime Quiz telah habis.`;
       }
       const rawText = (ctx.query || ctx.text || "").trim().toLowerCase();
       const prefix = ctx.prefix || ".";
+      const userName = ctx.pushName || ctx.pushname || ctx.sender.split("@")[0];
       const quotedMsg = typeof simpleQuoted === "function" ? simpleQuoted(ctx) : msg;
       const chatId = ctx.id;
       initDB();
@@ -353,9 +627,12 @@ Waktu menjawab Anime Quiz telah habis.`;
         if (global.db.animeQuiz[chatId]) {
           delete global.db.animeQuiz[chatId];
           saveDB();
-          const surrenderMsg = `–  *S U R R E N D E R*
+          const surrenderMsg = `Hi ${userName}!
+Sesi Anime Quiz telah dihentikan oleh pemain.
 
-Permainan Anime Quiz telah dihentikan.`;
+–  *S U R R E N D E R*
+
+_Ketik \`${prefix}animequiz\` untuk memulai kuis baru._`;
           return await sock.sendMessage(chatId, {
             text: surrenderMsg
           }, {
@@ -366,13 +643,18 @@ Permainan Anime Quiz telah dihentikan.`;
       }
       if (global.db.animeQuiz[chatId]) {
         const session = global.db.animeQuiz[chatId];
-        return await sendAnimeQuizMessage(sock, ctx, chatId, session, quotedMsg, prefix);
+        const canvasHtml = buildAnimeQuizCanvasHtml(session, "CURRENT QUIZ");
+        const {
+          buffer,
+          url
+        } = await renderHtmlToImage(canvasHtml);
+        return await sendAnimeQuizMessage(sock, ctx, chatId, session, quotedMsg, prefix, buffer, url);
       }
       await ctx.react("⏳");
       const initialData = await callAnimeQuizApi();
       if (!initialData?.quiz?.choices || !initialData.quiz?.image) {
         await ctx.react("❌");
-        return ctx.reply("❌ Gagal memuat data Anime Quiz dari server. Silakan coba beberapa saat lagi.");
+        return ctx.reply("❌ Gagal memuat data Anime Quiz dari server. Silakan coba sesaat lagi.");
       }
       const timeLimit = initialData.time_limit || DEFAULT_TIMEOUT;
       global.db.animeQuiz[chatId] = {
@@ -389,15 +671,18 @@ Permainan Anime Quiz telah dihentikan.`;
         if (global.db.animeQuiz[chatId] && Date.now() >= global.db.animeQuiz[chatId].expireTime) {
           delete global.db.animeQuiz[chatId];
           saveDB();
-          const timeoutText = `–  *T I M E  O U T*
-
-Waktu menjawab Anime Quiz telah habis karena tidak ada jawaban.`;
+          const timeoutText = `Hi All! Waktu menjawab kuis anime telah habis! ⌛`;
           await sock.sendMessage(chatId, {
             text: timeoutText
           });
         }
       }, timeLimit * 1e3);
-      await sendAnimeQuizMessage(sock, ctx, chatId, global.db.animeQuiz[chatId], quotedMsg, prefix);
+      const canvasHtml = buildAnimeQuizCanvasHtml(global.db.animeQuiz[chatId], "GUESS THE CHARACTER");
+      const {
+        buffer: cardBuffer,
+        url: cardUrl
+      } = await renderHtmlToImage(canvasHtml);
+      await sendAnimeQuizMessage(sock, ctx, chatId, global.db.animeQuiz[chatId], quotedMsg, prefix, cardBuffer, cardUrl);
       await ctx.react("🎌");
     } catch (error) {
       console.error("[Anime Quiz Execute Error]:", error);

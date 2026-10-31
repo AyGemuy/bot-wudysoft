@@ -107,7 +107,7 @@ export default {
       const bodyText = cleanReply;
       const buttons = [{
         name: "cta_copy",
-        display_text: "📄 Salin Jawaban",
+        display_text: "Salin Jawaban",
         copy_code: cleanReply
       }];
       let sentMsg;
@@ -314,7 +314,7 @@ export default {
       const bodyText = cleanReply;
       const buttons = [{
         name: "cta_copy",
-        display_text: "📄 Salin Jawaban",
+        display_text: "Salin Jawaban",
         copy_code: cleanReply
       }];
       let sentMsg;

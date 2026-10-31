@@ -165,7 +165,7 @@ export default {
       const bodyText = answerText;
       const buttons = [{
         name: "cta_copy",
-        display_text: "📄 Salin Jawaban",
+        display_text: "Salin Jawaban",
         copy_code: answerText
       }];
       let sentMsg;
@@ -369,11 +369,11 @@ Layanan asisten AI multi-model mutakhir untuk percakapan teks, penulisan kode, d
       if (bodyPayload.chatModel) nextCommand += ` --model ${bodyPayload.chatModel}`;
       const buttons = [{
         name: "cta_copy",
-        display_text: "📋 Salin Lanjutan Sesi",
+        display_text: "Salin Lanjutan Sesi",
         copy_code: nextCommand
       }, {
         name: "cta_copy",
-        display_text: "📄 Salin Jawaban",
+        display_text: "Salin Jawaban",
         copy_code: answerText
       }];
       let sentMsg;

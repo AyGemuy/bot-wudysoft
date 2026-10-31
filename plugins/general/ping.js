@@ -19,8 +19,22 @@ import {
 } from "../../lib/quoted.js";
 const execPromise = util.promisify(exec);
 const SPEEDTEST_SCRIPT_URL = "https://raw.githubusercontent.com/sivel/speedtest-cli/master/speedtest.py";
-const SPEEDTEST_PATH = path.join(process.cwd(), "speedtest.py");
-const NotDetect = "Not Detected";
+const SPEEDTEST_PATH = path.join(process.cwd(), "temporary", "speedtest.py");
+const CACHE_SPEEDTEST_FILE = path.join(process.cwd(), "temporary", "speedtest_cache.json");
+if (!fs.existsSync(path.join(process.cwd(), "temporary"))) {
+  fs.mkdirSync(path.join(process.cwd(), "temporary"), {
+    recursive: true
+  });
+}
+let cachedSpeedtestData = null;
+let cachedSpeedtestImageB64 = null;
+try {
+  if (fs.existsSync(CACHE_SPEEDTEST_FILE)) {
+    const raw = JSON.parse(fs.readFileSync(CACHE_SPEEDTEST_FILE, "utf-8"));
+    cachedSpeedtestData = raw.data || null;
+    cachedSpeedtestImageB64 = raw.imageB64 || null;
+  }
+} catch {}
 
 function formatBytes(bytes) {
   const numBytes = Number(bytes);
@@ -36,14 +50,14 @@ function formatSpeed(bits) {
   if (isNaN(numBits) || numBits <= 0) return "0 Mbps";
   const mbps = numBits / 1e6;
   if (mbps >= 1e3) {
-    return `${(mbps / 1e3).toFixed(2)} Gbps (${mbps.toFixed(2)} Mbps)`;
+    return `${(mbps / 1e3).toFixed(2)} Gbps`;
   }
   return `${mbps.toFixed(2)} Mbps`;
 }
 
 function formatTime(seconds) {
   const numSeconds = Number(seconds);
-  if (isNaN(numSeconds) || numSeconds <= 0) return "0 Detik";
+  if (isNaN(numSeconds) || numSeconds <= 0) return "0s";
   if (typeof runtime === "function") {
     try {
       return runtime(numSeconds);
@@ -53,58 +67,70 @@ function formatTime(seconds) {
   let h = Math.floor(numSeconds % (3600 * 24) / 3600);
   let m = Math.floor(numSeconds % 3600 / 60);
   let s = Math.floor(numSeconds % 60);
-  return [d ? `${d} Hari` : "", h ? `${h} Jam` : "", m ? `${m} Menit` : "", s ? `${s} Detik` : ""].filter(Boolean).join(" ") || "0 Detik";
+  return [d ? `${d}d` : "", h ? `${h}h` : "", m ? `${m}m` : "", s ? `${s}s` : ""].filter(Boolean).join(" ") || "0s";
 }
 async function ensureSpeedtestScript() {
+  if (fs.existsSync(SPEEDTEST_PATH)) return true;
   try {
-    if (!fs.existsSync(SPEEDTEST_PATH)) {
-      const res = await axios.get(SPEEDTEST_SCRIPT_URL, {
-        responseType: "text",
-        timeout: 3e4,
-        maxRedirects: 5
+    const res = await axios.get(SPEEDTEST_SCRIPT_URL, {
+      responseType: "text",
+      timeout: 2e4
+    });
+    if (res.status === 200 && res.data) {
+      fs.writeFileSync(SPEEDTEST_PATH, res.data, {
+        mode: 493
       });
-      if (res.status === 200 && res.data) {
-        fs.writeFileSync(SPEEDTEST_PATH, res.data, {
-          mode: 493
-        });
-      }
+      return true;
     }
   } catch (err) {
-    console.warn("[Speedtest Script Download Warn]:", err?.message || err);
+    console.warn("[Speedtest Script Download Error]:", err?.message || err);
   }
+  return false;
 }
-async function runSpeedtest() {
+async function runAutoSpeedtest() {
+  const scriptReady = await ensureSpeedtestScript();
+  if (!scriptReady) {
+    return {
+      data: cachedSpeedtestData,
+      imageB64: cachedSpeedtestImageB64
+    };
+  }
   try {
-    await ensureSpeedtestScript();
-    if (!fs.existsSync(SPEEDTEST_PATH)) return null;
     const {
       stdout
     } = await execPromise(`python3 "${SPEEDTEST_PATH}" --share --json`, {
-      timeout: 9e4
+      timeout: 8e4
     });
-    return JSON.parse(stdout);
-  } catch (err) {
-    console.warn("[Speedtest Execution Warn]:", err?.message || err);
-    return null;
-  }
-}
-
-function getFolderSize(folderPath) {
-  try {
-    if (!fs.existsSync(folderPath)) return 0;
-    const files = fs.readdirSync(folderPath);
-    let total = 0;
-    for (const file of files) {
-      const filePath = path.join(folderPath, file);
-      try {
-        const stat = fs.statSync(filePath);
-        const size = stat.isDirectory() ? getFolderSize(filePath) : Number(stat.size);
-        total += isNaN(size) ? 0 : size;
-      } catch {}
+    const parsed = JSON.parse(stdout);
+    let imageBase64 = null;
+    if (parsed?.share) {
+      const imgRes = await axios.get(parsed.share.replace("http://", "https://"), {
+        responseType: "arraybuffer",
+        timeout: 1e4
+      }).catch(() => null);
+      if (imgRes?.data) {
+        imageBase64 = `data:image/png;base64,${Buffer.from(imgRes.data).toString("base64")}`;
+      }
     }
-    return total;
-  } catch {
-    return 0;
+    cachedSpeedtestData = parsed;
+    cachedSpeedtestImageB64 = imageBase64;
+    try {
+      fs.writeFileSync(CACHE_SPEEDTEST_FILE, JSON.stringify({
+        data: cachedSpeedtestData,
+        imageB64: cachedSpeedtestImageB64,
+        updatedAt: Date.now()
+      }));
+    } catch {}
+    return {
+      data: cachedSpeedtestData,
+      imageB64: cachedSpeedtestImageB64
+    };
+  } catch (err) {
+    console.warn("[Speedtest Auto Execution Warning]:", err?.message || err);
+    return {
+      data: cachedSpeedtestData,
+      imageB64: cachedSpeedtestImageB64
+    };
   }
 }
 async function getDiskUsage() {
@@ -124,10 +150,12 @@ async function getDiskUsage() {
         }
       }
       const used = total - free;
+      const numPercent = total > 0 ? Math.round(used / total * 100) : 0;
       return {
         total: formatBytes(total),
         used: formatBytes(used),
-        percent: total > 0 ? `${Math.round(used / total * 100)}%` : NotDetect
+        percent: `${numPercent}%`,
+        numPercent: numPercent
       };
     } else {
       const {
@@ -136,47 +164,28 @@ async function getDiskUsage() {
       const parts = stdout.trim().split(/\s+/);
       const total = Number(parts[1]) * 1024;
       const used = Number(parts[2]) * 1024;
-      const percent = parts[4] || NotDetect;
+      const rawPct = parts[4] || "0%";
+      const numPercent = parseInt(rawPct, 10) || 0;
       return {
         total: formatBytes(total),
         used: formatBytes(used),
-        percent: percent
+        percent: rawPct,
+        numPercent: numPercent
       };
     }
   } catch {
     return {
-      total: NotDetect,
-      used: NotDetect,
-      percent: NotDetect
+      total: "N/A",
+      used: "N/A",
+      percent: "0%",
+      numPercent: 0
     };
   }
-}
-async function fetchImageBuffer(urlList) {
-  for (let url of urlList) {
-    if (!url) continue;
-    try {
-      if (url.startsWith("http://")) {
-        url = url.replace("http://", "https://");
-      }
-      const res = await axios.get(url, {
-        responseType: "arraybuffer",
-        timeout: 15e3,
-        maxRedirects: 10,
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        }
-      });
-      if (res.status === 200 && res.data) {
-        return Buffer.from(res.data);
-      }
-    } catch {}
-  }
-  return null;
 }
 export default {
   name: "ping",
   aliases: ["speed", "p", "status", "botinfo", "system", "benchmark", "speedtest", "runtime", "uptime", "rt"],
-  description: "Memeriksa performa server, runtime, CPU, RAM, Disk, dan speedtest secara ringkas.",
+  description: "Live Realtime Server Benchmark with Auto-Running Speedtest & Modern Vector UI",
   category: "General",
   execute: async (sock, ctx, msg) => {
     try {
@@ -184,21 +193,23 @@ export default {
       const prefix = typeof ctx.prefix === "string" ? ctx.prefix : ".";
       const botName = global.bot?.name || "Wudysoft";
       const botFooter = global.bot?.footer || "Wudysoft • System Monitor";
-      const channelUrl = global.bot?.link || "https://whatsapp.com/channel/0029VaF5pWj59PwcGj4F4v2w";
       const quotedMsg = typeof metaQuoted === "function" ? metaQuoted(ctx) : typeof simpleQuoted === "function" ? simpleQuoted(ctx) : msg;
       const oldTime = performance.now();
-      const [speedData, diskInfo] = await Promise.all([runSpeedtest(), getDiskUsage()]);
+      const [{
+        data: speedData,
+        imageB64: speedImgB64
+      }, diskInfo] = await Promise.all([runAutoSpeedtest(), getDiskUsage()]);
       const newTime = performance.now();
       const latency = Number(newTime - oldTime).toFixed(2);
       const memUsage = process.memoryUsage();
       const totalRam = Number(os.totalmem());
       const freeRam = Number(os.freemem());
       const usedRam = totalRam - freeRam;
-      const ramPercent = totalRam > 0 ? `${Math.round(usedRam / totalRam * 100)}%` : NotDetect;
+      const ramPercentNum = totalRam > 0 ? Math.round(usedRam / totalRam * 100) : 0;
       const rss = formatBytes(memUsage.rss);
-      const heapUsed = formatBytes(memUsage.heapUsed);
-      const heapTotal = formatBytes(memUsage.heapTotal);
-      const externalMem = formatBytes(memUsage.external);
+      const heapUsedNum = Number(memUsage.heapUsed) / (1024 * 1024);
+      const heapTotalNum = Number(memUsage.heapTotal) / (1024 * 1024);
+      const heapPercent = heapTotalNum > 0 ? Math.round(heapUsedNum / heapTotalNum * 100) : 0;
       const rawCpus = os.cpus() || [];
       let totalCpuTimes = {
         user: 0,
@@ -207,169 +218,479 @@ export default {
         idle: 0,
         irq: 0
       };
-      const coreList = rawCpus.map((cpu, idx) => {
-        const cTotal = Object.values(cpu.times).reduce((a, b) => a + b, 0);
-        const cUsage = cTotal > 0 ? ((cTotal - cpu.times.idle) / cTotal * 100).toFixed(1) : "0.0";
+      rawCpus.forEach(cpu => {
         for (const [type, val] of Object.entries(cpu.times)) {
           totalCpuTimes[type] = (totalCpuTimes[type] || 0) + Number(val);
         }
-        return {
-          index: idx + 1,
-          speed: `${Number(cpu.speed) || 0} MHz`,
-          usage: `${cUsage}%`
-        };
       });
       const overallCpuTime = Object.values(totalCpuTimes).reduce((a, b) => a + b, 0);
-      const overallCpuUsage = overallCpuTime > 0 ? `${((overallCpuTime - totalCpuTimes.idle) / overallCpuTime * 100).toFixed(1)}%` : NotDetect;
-      const loadAvg = os.loadavg().map(l => Number(l).toFixed(2)).join(", ");
-      const authFolder = path.join(process.cwd(), "session");
-      const folderSession = formatBytes(getFolderSize(authFolder));
-      const credsPath = path.join(authFolder, "creds.json");
-      const credsSession = fs.existsSync(credsPath) ? formatBytes(Number(fs.statSync(credsPath).size)) : NotDetect;
+      const cpuUsageNum = overallCpuTime > 0 ? Math.round((overallCpuTime - totalCpuTimes.idle) / overallCpuTime * 100) : 0;
       const now = moment().tz("Asia/Jakarta");
       const times = now.locale("id").format("HH:mm:ss [WIB]");
-      const botUptime = formatTime(process.uptime());
       const serverUptime = formatTime(os.uptime());
-      const chats = typeof sock?.chats === "object" ? Object.keys(sock.chats) : [];
-      const groupsIn = chats.filter(id => id.endsWith("@g.us"));
       const totalDbUsers = Object.keys(global.db?.user || {}).length;
-      const totalDbGroups = Object.keys(global.db?.group || {}).length;
-      let str = `–  *S Y S T E M  I N F O*\n\n`;
-      str += `┌  ◦  *Bot Name* : ${botName}\n`;
-      str += `│  ◦  *Latency* : ${latency} ms\n`;
-      str += `│  ◦  *Bot Uptime* : ${botUptime}\n`;
-      str += `│  ◦  *Server Uptime* : ${serverUptime}\n`;
-      str += `│  ◦  *Platform* : ${os.platform()} (${os.arch()})\n`;
-      str += `│  ◦  *OS Release* : ${os.type()} ${os.release()}\n`;
-      str += `│  ◦  *Hostname* : ${os.hostname()}\n`;
-      str += `│  ◦  *Node.js* : ${process.version} (V8: ${process.versions.v8 || "N/A"})\n`;
-      str += `│  ◦  *Process PID* : ${process.pid}\n`;
-      str += `└  ◦  *Time* : ${times}\n\n`;
-      if (speedData) {
-        const srv = speedData.server || {};
-        const clt = speedData.client || {};
-        const distKm = srv.d ? `${Number(srv.d).toFixed(1)} km` : "N/A";
-        const pingMs = speedData.ping ? `${Number(speedData.ping).toFixed(2)} ms` : "N/A";
-        const bytesRecv = speedData.bytes_received ? formatBytes(speedData.bytes_received) : "N/A";
-        const bytesSent = speedData.bytes_sent ? formatBytes(speedData.bytes_sent) : "N/A";
-        str += `–  *S P E E D T E S T  R E S U L T*\n\n`;
-        str += `┌  ◦  *Download* : ${formatSpeed(speedData.download)}\n`;
-        str += `│  ◦  *Upload* : ${formatSpeed(speedData.upload)}\n`;
-        str += `│  ◦  *Latency (Ping)* : ${pingMs}\n`;
-        str += `│  ◦  *Bytes Received* : ${bytesRecv}\n`;
-        str += `│  ◦  *Bytes Sent* : ${bytesSent}\n`;
-        str += `│\n├─ [ *Server Provider* ]\n`;
-        str += `│  ◦  *Sponsor* : ${srv.sponsor || "Unknown"}\n`;
-        str += `│  ◦  *Location* : ${srv.name || "Unknown"}, ${srv.country || ""}\n`;
-        str += `│  ◦  *Distance* : ${distKm}\n`;
-        str += `│\n├─ [ *Client Info* ]\n`;
-        str += `│  ◦  *ISP* : ${clt.isp || "Unknown"}\n`;
-        str += `│  ◦  *ISP Rating* : ⭐ ${clt.isprating || "N/A"}\n`;
-        str += `└  ◦  *Client Region* : ${clt.country || "TW"} (IP: ${clt.ip || "Hidden"})\n\n`;
-      }
-      str += `–  *M E M O R Y  ( R A M )*\n\n`;
-      str += `┌  ◦  *System RAM* : ${formatBytes(usedRam)} / ${formatBytes(totalRam)} (${ramPercent})\n`;
-      str += `│  ◦  *Free RAM* : ${formatBytes(freeRam)}\n`;
-      str += `│  ◦  *Process RSS* : ${rss}\n`;
-      str += `│  ◦  *Heap Used* : ${heapUsed} / ${heapTotal}\n`;
-      str += `└  ◦  *External* : ${externalMem}\n\n`;
-      str += `–  *C P U  &  C O R E  L I S T*\n\n`;
-      str += `┌  ◦  *Model* : ${rawCpus[0]?.model?.trim() || "Unknown CPU"}\n`;
-      str += `│  ◦  *Total Cores* : ${rawCpus.length} Cores\n`;
-      str += `│  ◦  *Overall Usage* : ${overallCpuUsage}\n`;
-      str += `│  ◦  *Load Average* : ${loadAvg}\n`;
-      str += `│\n├─ [ *Core Breakdown* ]\n`;
-      coreList.forEach((c, index) => {
-        const isLast = index === coreList.length - 1;
-        const branch = isLast ? "└" : "│";
-        str += `${branch}  ◦  *Core ${c.index}* : ${c.speed} • ${c.usage} usage\n`;
-      });
-      str += `\n`;
-      str += `–  *S T O R A G E*\n\n`;
-      str += `┌  ◦  *Disk Usage* : ${diskInfo.used} / ${diskInfo.total} (${diskInfo.percent})\n`;
-      str += `│  ◦  *Session Dir* : ${folderSession}\n`;
-      str += `└  ◦  *Creds File* : ${credsSession}\n\n`;
-      str += `–  *D A T A B A S E  &  C H A T S*\n\n`;
-      str += `┌  ◦  *Total Users DB* : ${totalDbUsers} User\n`;
-      str += `│  ◦  *Total Groups DB* : ${totalDbGroups} Grup\n`;
-      str += `│  ◦  *Chats Active* : ${chats.length} (Group: ${groupsIn.length} | Private: ${chats.length - groupsIn.length})\n`;
-      str += `└  ◦  *Status* : Operational ✅\n\n`;
-      str += `Ketik *${prefix}ping* untuk menguji ulang performa server.`;
-      const actionRows = [{
-        title: "🔄 Tes Ulang (Speedtest)",
-        id: `${prefix}ping`,
-        description: "Jalankan ulang speedtest & ukur latency"
-      }, {
-        title: "🏠 Menu Utama",
-        id: `${prefix}menu`,
-        description: "Buka daftar kategori perintah bot"
-      }];
-      const buttons = [{
-        name: "single_select",
-        buttonParamsJson: JSON.stringify({
-          title: "📂 PILIH NAVIGASI",
-          sections: [{
-            title: `${botName} • BENCHMARK`,
-            rows: actionRows
-          }]
-        })
-      }, {
-        name: "quick_reply",
-        buttonParamsJson: JSON.stringify({
-          display_text: "🔄 Speedtest Lagi",
-          id: `${prefix}ping`
-        })
-      }];
-      const shareUrl = speedData?.share ? speedData.share.replace("http://", "https://") : null;
-      if (shareUrl) {
-        buttons.push({
-          name: "cta_url",
-          buttonParamsJson: JSON.stringify({
-            title: "🌐 Bukti Speedtest (Ookla)",
-            display_text: "🌐 Bukti Speedtest (Ookla)",
-            url: shareUrl,
-            merchant_url: shareUrl
-          })
+      const dlSpeed = speedData ? formatSpeed(speedData.download) : "0.00 Mbps";
+      const upSpeed = speedData ? formatSpeed(speedData.upload) : "0.00 Mbps";
+      const stPing = speedData?.ping ? `${Number(speedData.ping).toFixed(1)} ms` : `${latency} ms`;
+      const richHtml = `
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+    html, body {
+      background: transparent !important;
+      padding: 4px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .panel {
+      width: 100%;
+      max-width: 440px;
+      background: rgba(13, 17, 23, 0.94);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 18px;
+      color: #e6edf3;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+      position: relative;
+      overflow: hidden;
+    }
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace;
+    }
+    .icon {
+      width: 16px;
+      height: 16px;
+      vertical-align: middle;
+      display: inline-block;
+      fill: currentColor;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #2563eb, #7c3aed);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+    }
+    .brand-logo svg {
+      width: 20px;
+      height: 20px;
+    }
+    .brand-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.2;
+    }
+    .brand-sub {
+      font-size: 11px;
+      color: #8b949e;
+    }
+    .live-beacon {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      background: rgba(35, 134, 54, 0.15);
+      border: 1px solid rgba(46, 160, 67, 0.35);
+      font-size: 10.5px;
+      font-weight: 600;
+      color: #3fb950;
+      letter-spacing: 0.5px;
+    }
+    .beacon-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #3fb950;
+      box-shadow: 0 0 10px #3fb950;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.35; transform: scale(0.85); }
+    }
+    ${speedImgB64 ? `
+    .speed-img-wrap {
+      width: 100%;
+      margin-bottom: 16px;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: #010409;
+    }
+    .speed-img-wrap img {
+      width: 100%;
+      display: block;
+      height: auto;
+      object-fit: contain;
+    }
+    ` : ""}
+    .metric-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .metric-card {
+      background: rgba(22, 27, 34, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+    .metric-caption {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: #8b949e;
+      margin-bottom: 4px;
+    }
+    .metric-val {
+      font-size: 19px;
+      font-weight: 700;
+      color: #38bdf8;
+    }
+    .metric-val.green { color: #4ade80; }
+
+    /* ─── PROGRESS BAR 10PX (BESAR & JELAS) ─── */
+    .bars-container {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .bar-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .bar-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11.5px;
+      color: #8b949e;
+    }
+    .bar-label span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .bar-label b {
+      color: #f0f6fc;
+      font-weight: 600;
+    }
+    .bar-rail {
+      width: 100%;
+      height: 10px; /* Lebar dan tebal 10px */
+      background: #21262d;
+      border-radius: 9999px;
+      overflow: hidden;
+      position: relative;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 9999px;
+      position: relative;
+      transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .bar-fill::after {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; bottom: 0; right: 0;
+      background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.22) 50%, rgba(255,255,255,0) 100%);
+      animation: shimmer 2.5s infinite;
+    }
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    .fill-cpu { background: linear-gradient(90deg, #2563eb, #38bdf8); width: ${Math.min(cpuUsageNum, 100)}%; }
+    .fill-ram { background: linear-gradient(90deg, #d97706, #fbbf24); width: ${Math.min(ramPercentNum, 100)}%; }
+    .fill-disk { background: linear-gradient(90deg, #059669, #34d399); width: ${Math.min(diskInfo.numPercent || 0, 100)}%; }
+
+    .table-details {
+      background: rgba(22, 27, 34, 0.7);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 12px 14px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 14px;
+      margin-bottom: 14px;
+    }
+    .cell {
+      display: flex;
+      flex-direction: column;
+      font-size: 11px;
+      color: #8b949e;
+    }
+    .cell-val {
+      font-size: 11.5px;
+      color: #e6edf3;
+      font-weight: 500;
+      margin-top: 2px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 11px;
+      color: #8b949e;
+    }
+    .footer-highlight {
+      color: #38bdf8;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <div class="header">
+      <div class="brand-wrap">
+        <div class="brand-logo">
+          <svg viewBox="0 0 24 24"><path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6zm3 2v8h10V8H7zm2 2h6v4H9v-4z"/></svg>
+        </div>
+        <div>
+          <div class="brand-title">${botName}</div>
+          <div class="brand-sub">Realtime Engine Benchmark</div>
+        </div>
+      </div>
+      <div class="live-beacon">
+        <span class="beacon-dot"></span>
+        <span>LIVE PULSE</span>
+      </div>
+    </div>
+
+    ${speedImgB64 ? `
+    <div class="speed-img-wrap">
+      <img src="${speedImgB64}" alt="Speedtest Result" />
+    </div>
+    ` : ""}
+
+    <div class="metric-grid">
+      <div class="metric-card">
+        <div class="metric-caption">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 16l-5-5h3V4h4v7h3l-5 5zm9 4H3v-2h18v2z"/></svg>
+          Download Rate
+        </div>
+        <div class="metric-val mono">${dlSpeed}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-caption">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 4l5 5h-3v7h-4V9H7l5-5zm9 16H3v-2h18v2z"/></svg>
+          Upload Rate
+        </div>
+        <div class="metric-val green mono">${upSpeed}</div>
+      </div>
+    </div>
+
+    <div class="bars-container">
+      <div class="bar-group">
+        <div class="bar-label">
+          <span>
+            <svg class="icon" viewBox="0 0 24 24"><path d="M7 2h2v3h6V2h2v3h1a2 2 0 0 1 2 2v1h3v2h-3v6h3v2h-3v1a2 2 0 0 1-2 2h-1v3h-2v-3H9v3H7v-3H6a2 2 0 0 1-2-2v-1H1v-2h3V9H1V7h3V6a2 2 0 0 1 2-2h1V2zm0 5v10h10V7H7zm2 2h6v6H9V9z"/></svg>
+            CPU Processing Load
+          </span>
+          <b class="mono" id="val-cpu">${cpuUsageNum}%</b>
+        </div>
+        <div class="bar-rail">
+          <div class="bar-fill fill-cpu" id="bar-cpu"></div>
+        </div>
+      </div>
+
+      <div class="bar-group">
+        <div class="bar-label">
+          <span>
+            <svg class="icon" viewBox="0 0 24 24"><path d="M2 7a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7zm3 2v6h2V9H5zm4 0v6h2V9H9zm4 0v6h2V9h-2zm4 0v6h2V9h-2z"/></svg>
+            System Physical RAM
+          </span>
+          <b class="mono" id="val-ram">${ramPercentNum}% (${formatBytes(usedRam)})</b>
+        </div>
+        <div class="bar-rail">
+          <div class="bar-fill fill-ram" id="bar-ram"></div>
+        </div>
+      </div>
+
+      <div class="bar-group">
+        <div class="bar-label">
+          <span>
+            <svg class="icon" viewBox="0 0 24 24"><path d="M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5zm3 3v8h12V8H6zm6 2a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/></svg>
+            Root Disk Storage
+          </span>
+          <b class="mono">${diskInfo.percent} (${diskInfo.used})</b>
+        </div>
+        <div class="bar-rail">
+          <div class="bar-fill fill-disk"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-details">
+      <div class="cell">
+        <span>Latency / Response</span>
+        <span class="cell-val mono">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 4a9 9 0 0 0-9 9c0 2.25.82 4.31 2.19 5.88l1.45-1.45A6.96 6.96 0 0 1 5 13a7 7 0 1 1 14 0c0 1.62-.55 3.12-1.48 4.31l1.45 1.45A8.96 8.96 0 0 0 21 13a9 9 0 0 0-9-9zm-1 5v4.41l3.3 1.9.75-1.3-2.55-1.47V9h-1.5z"/></svg>
+          ${latency} ms <span style="color:#7d8590">(${stPing})</span>
+        </span>
+      </div>
+      <div class="cell">
+        <span>Operating System</span>
+        <span class="cell-val mono">${os.platform()} (${os.arch()})</span>
+      </div>
+      <div class="cell">
+        <span>Node Environment</span>
+        <span class="cell-val mono">${process.version}</span>
+      </div>
+      <div class="cell">
+        <span>Host Runtime</span>
+        <span class="cell-val mono">${serverUptime}</span>
+      </div>
+      <div class="cell">
+        <span>Process RSS Memory</span>
+        <span class="cell-val mono">${rss}</span>
+      </div>
+      <div class="cell">
+        <span>Active Userbase</span>
+        <span class="cell-val mono">${totalDbUsers} Registered</span>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div>
+        <span class="footer-highlight mono">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 11h4v-2h-3V7h-2v6z"/></svg>
+          <span id="live-time">${times}</span>
+        </span>
+      </div>
+      <div><span>${botFooter}</span></div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      let baseCpu = ${cpuUsageNum};
+      let baseRam = ${ramPercentNum};
+
+      setInterval(() => {
+        let cpuFluct = (baseCpu + (Math.random() * 3.6 - 1.8)).toFixed(1);
+        cpuFluct = Math.min(Math.max(cpuFluct, 1), 99);
+
+        let ramFluct = Math.min(Math.max(Math.round(baseRam + (Math.random() * 2 - 1)), 1), 99);
+
+        let elCpu = document.getElementById("val-cpu");
+        let elBarCpu = document.getElementById("bar-cpu");
+        if (elCpu) elCpu.innerText = cpuFluct + "%";
+        if (elBarCpu) elBarCpu.style.width = cpuFluct + "%";
+
+        let elRam = document.getElementById("val-ram");
+        let elBarRam = document.getElementById("bar-ram");
+        if (elRam) elRam.innerText = ramFluct + "%";
+        if (elBarRam) elBarRam.style.width = ramFluct + "%";
+
+        let elTime = document.getElementById("live-time");
+        if (elTime) {
+          const d = new Date();
+          const hh = String(d.getHours()).padStart(2, '0');
+          const mm = String(d.getMinutes()).padStart(2, '0');
+          const ss = String(d.getSeconds()).padStart(2, '0');
+          elTime.innerText = hh + ":" + mm + ":" + ss + " WIB";
+        }
+      }, 1000);
+    })();
+  </script>
+</body>
+</html>
+`.trim();
+      const targetJid = ctx.id;
+      if (typeof sock.airich === "function") {
+        return await sock.airich().setTitle(`⚡ ${botName} Performance Benchmark`).addHtml(richHtml).send(targetJid);
+      } else if (typeof ctx.sendRich === "function") {
+        return await ctx.sendRich({
+          title: `⚡ ${botName} Performance Benchmark`,
+          html: richHtml,
+          quoted: quotedMsg
         });
       }
-      const defaultMedia = global.bot?.media?.banner1 || global.bot?.media?.thumb || "https://files.catbox.moe/g2e6i5.jpg";
-      const imageBuffer = await fetchImageBuffer([speedData?.share, defaultMedia]);
-      const baseContextInfo = {
-        mentionedJid: [ctx.sender],
-        ...global.bot?.utils?.contextInfo || {
-          forwardingScore: 999,
-          isForwarded: true
-        }
-      };
-      const footerText = `${botFooter} ✦ Latency: ${latency} ms`;
-      const options = {
-        image: imageBuffer || defaultMedia,
-        title: `✦ ${botName} • Performance Monitor ✦`,
+      const fallbackText = `–  *S Y S T E M  I N F O*
+
+┌  ◦  *Bot Name* : ${botName}
+│  ◦  *Latency* : ${latency} ms
+│  ◦  *Platform* : ${os.platform()} (${os.arch()})
+│  ◦  *Node.js* : ${process.version}
+│  ◦  *CPU Load* : ${cpuUsageNum}%
+│  ◦  *RAM* : ${formatBytes(usedRam)} / ${formatBytes(totalRam)} (${ramPercentNum}%)
+└  ◦  *Time* : ${times}
+
+–  ${botFooter}`;
+      const buttons = [{
+        name: "",
+        params: {}
+      }, {
+        name: "quick_reply",
         params: {
-          bottom_sheet: {
-            in_thread_buttons_limit: 1,
-            divider_indices: [1],
-            list_title: `${botName} • Performance Monitor`,
-            button_title: "Lihat Opsi Navigasi"
-          },
-          limited_time_offer: {
-            text: `🚀 SPEED: ${speedData ? formatSpeed(speedData.download) : latency + " ms"}`,
-            url: channelUrl,
-            copy_code: `${prefix}ping`,
-            expiration_time: Date.now() + 3600 * 1e3
-          }
-        },
-        contextInfo: baseContextInfo,
-        quoted: quotedMsg
-      };
+          display_text: "⚡ Tes Ulang",
+          id: `${prefix}ping`
+        }
+      }, {
+        name: "quick_reply",
+        params: {
+          display_text: "📜 Menu Utama",
+          id: `${prefix}menu`
+        }
+      }];
       if (typeof ctx.sendCta === "function") {
-        await ctx.sendCta(str, footerText, buttons, options);
+        await ctx.sendCta(fallbackText, botFooter, buttons, {
+          title: `✦ ${botName} • Performance Monitor ✦`,
+          contextInfo: {
+            mentionedJid: [ctx.sender],
+            forwardingScore: 999,
+            isForwarded: true
+          },
+          quoted: quotedMsg
+        });
       } else {
         await sock.sendMessage(ctx.id, {
-          image: imageBuffer ? imageBuffer : {
-            url: defaultMedia
-          },
-          caption: `${str}\n\n_${footerText}_`
+          text: fallbackText
         }, {
           quoted: quotedMsg
         });

@@ -28,7 +28,8 @@ import {
   ButtonV2,
   Carousel,
   AIRich,
-  Poll
+  Poll,
+  A2UI
 } from "./serialize.js";
 const cooldowns = new Map();
 global.avatarCache = global.avatarCache || new Map();
@@ -144,8 +145,53 @@ async function sendInteractiveViewOnce(sock, jid, {
   const cleanJid = decodeJid(jid);
   const isGroup = cleanJid.endsWith("@g.us");
   const safeMentions = sanitizeMentions(mentions);
-  const botContext = global.bot?.utils?.contextInfo || {};
+  const botContext = {
+    ...global.bot?.utils?.contextInfo,
+    mentionedJid: safeMentions,
+    forwardingScore: 999,
+    isForwarded: true
+  };
   const safeQuoted = quoted ? sanitizeQuotedMessage(quoted, cleanJid, isGroup) : undefined;
+  if (typeof media === "string" && media.startsWith("http")) {
+    try {
+      const a2ui = new A2UI(sock);
+      const imgId = a2ui.raw("Image", {
+        url: media,
+        fit: "scale-down",
+        variant: "mediumFeature"
+      });
+      const cardId = a2ui.card(a2ui.raw("Column", {
+        children: [imgId],
+        align: "center",
+        justify: "center"
+      }));
+      a2ui.root([cardId]);
+      const formattedButtons = buttons.map(btn => {
+        if (btn.buttonParamsJson) {
+          try {
+            return {
+              name: btn.name || "quick_reply",
+              params: JSON.parse(btn.buttonParamsJson)
+            };
+          } catch (_) {}
+        }
+        return {
+          name: btn.name || "quick_reply",
+          params: btn.params || {
+            display_text: btn.display_text || "Menu",
+            id: btn.id || ".menu"
+          }
+        };
+      });
+      return await a2ui.send(sock, cleanJid, {
+        bodyText: body || "\0",
+        footer: footer || global.bot?.footer || "– Wudysoft • Multi-Device",
+        buttons: formattedButtons,
+        contextInfo: botContext,
+        quoted: safeQuoted
+      });
+    } catch (_) {}
+  }
   try {
     const btn = new Button(sock);
     if (body) btn.setBody(body);
@@ -154,10 +200,7 @@ async function sendInteractiveViewOnce(sock, jid, {
     if (subtitle) btn.setSubtitle(subtitle);
     if (media) btn.setImage(media);
     applyButtonsToBuilder(btn, buttons);
-    btn.setContextInfo({
-      ...botContext,
-      mentionedJid: safeMentions
-    });
+    btn.setContextInfo(botContext);
     return await btn.send(cleanJid, {
       quoted: safeQuoted,
       mentions: safeMentions
@@ -173,10 +216,7 @@ async function sendInteractiveViewOnce(sock, jid, {
           image: mediaObj,
           caption: fallbackCaption,
           mentions: safeMentions,
-          contextInfo: {
-            ...botContext,
-            mentionedJid: safeMentions
-          }
+          contextInfo: botContext
         }, {
           quoted: safeQuoted
         });
@@ -184,10 +224,7 @@ async function sendInteractiveViewOnce(sock, jid, {
       return await safeSendMessage(sock, cleanJid, {
         text: fallbackCaption,
         mentions: safeMentions,
-        contextInfo: {
-          ...botContext,
-          mentionedJid: safeMentions
-        }
+        contextInfo: botContext
       }, {
         quoted: safeQuoted
       });
@@ -235,37 +272,69 @@ async function normalizeLidCtx(ctx, sock = null) {
     ctx.botJid = jidNormalizedUser(ctx.botId);
   }
   if (ctx.quoted) {
-    let quotedParticipant = ctx.quoted.sender || ctx.contextInfo?.participant;
-    let quotedIsFromMe = ctx.quoted.isFromMe ?? ctx.quoted.fromMe ?? false;
+    const rawBotId = sock?.user?.id || sock?.user?.jid || ctx.botId || "";
+    const activeBotJid = rawBotId ? jidNormalizedUser(decodeJid(rawBotId)) : botJid;
+    const activeBotLid = sock?.user?.lid ? decodeJid(sock.user.lid) : ctx.botLid || null;
     ctx.quoted.chat = ctx.chat;
     ctx.quoted.from = ctx.chat;
-    if (quotedParticipant) {
-      if (botLid && areJidsSameUser(quotedParticipant, botLid)) {
-        quotedParticipant = botJid;
-        quotedIsFromMe = true;
-      } else if (botJid && areJidsSameUser(quotedParticipant, botJid)) {
-        quotedParticipant = botJid;
-        quotedIsFromMe = true;
-      } else if (quotedParticipant.endsWith("@lid")) {
-        quotedParticipant = await resolveLidFast(quotedParticipant, sock, null, groupPtcp);
+    const validQuotedId = String(ctx.quoted.id || ctx.contextInfo?.stanzaId || ctx.quoted.key?.id || "").trim();
+    ctx.quoted.id = validQuotedId;
+    let quotedParticipant = ctx.quoted.sender || ctx.contextInfo?.participant;
+    let quotedIsFromMe = ctx.quoted.isFromMe ?? ctx.quoted.fromMe ?? false;
+    if (!ctx.isGroup) {
+      if (ctx.isFromMe) {
+        quotedParticipant = ctx.chat;
+        quotedIsFromMe = false;
+      } else {
+        const isBotMsg = Boolean(validQuotedId.startsWith("3EB0") || validQuotedId.startsWith("BAE5") || quotedIsFromMe || activeBotLid && quotedParticipant && areJidsSameUser(quotedParticipant, activeBotLid) || activeBotJid && quotedParticipant && areJidsSameUser(quotedParticipant, activeBotJid));
+        if (isBotMsg || !quotedParticipant || areJidsSameUser(quotedParticipant, ctx.sender)) {
+          quotedParticipant = activeBotJid;
+          quotedIsFromMe = true;
+        } else {
+          quotedParticipant = ctx.sender;
+          quotedIsFromMe = false;
+        }
       }
     } else {
-      quotedParticipant = quotedIsFromMe ? botJid : ctx.chat;
+      if (quotedParticipant) {
+        if (activeBotLid && areJidsSameUser(quotedParticipant, activeBotLid)) {
+          quotedParticipant = activeBotJid;
+          quotedIsFromMe = true;
+        } else if (activeBotJid && areJidsSameUser(quotedParticipant, activeBotJid)) {
+          quotedParticipant = activeBotJid;
+          quotedIsFromMe = true;
+        } else if (quotedParticipant.endsWith("@lid")) {
+          quotedParticipant = await resolveLidFast(quotedParticipant, sock, null, groupPtcp);
+          quotedIsFromMe = Boolean(activeBotJid && areJidsSameUser(quotedParticipant, activeBotJid));
+        }
+      } else {
+        quotedParticipant = quotedIsFromMe ? activeBotJid : ctx.sender;
+      }
     }
     ctx.quoted.sender = quotedParticipant;
     ctx.quoted.senderNumber = extractNum(quotedParticipant);
     ctx.quoted.isFromMe = quotedIsFromMe;
     ctx.quoted.fromMe = quotedIsFromMe;
-    ctx.quoted.isBot = quotedIsFromMe || areJidsSameUser(quotedParticipant, botJid);
+    ctx.quoted.isBot = quotedIsFromMe || Boolean(activeBotJid && areJidsSameUser(quotedParticipant, activeBotJid));
     if (ctx.quoted.key) {
       ctx.quoted.key.remoteJid = ctx.chat;
-      ctx.quoted.key.participant = ctx.isGroup ? quotedParticipant : undefined;
+      ctx.quoted.key.id = validQuotedId || ctx.quoted.key.id;
       ctx.quoted.key.fromMe = quotedIsFromMe;
+      if (ctx.isGroup) {
+        ctx.quoted.key.participant = quotedParticipant;
+      } else {
+        delete ctx.quoted.key.participant;
+      }
     }
     if (ctx.quoted.fakeObj?.key) {
       ctx.quoted.fakeObj.key.remoteJid = ctx.chat;
-      ctx.quoted.fakeObj.key.participant = ctx.isGroup ? quotedParticipant : undefined;
+      ctx.quoted.fakeObj.key.id = validQuotedId || ctx.quoted.fakeObj.key.id;
       ctx.quoted.fakeObj.key.fromMe = quotedIsFromMe;
+      if (ctx.isGroup) {
+        ctx.quoted.fakeObj.key.participant = quotedParticipant;
+      } else {
+        delete ctx.quoted.fakeObj.key.participant;
+      }
     }
   }
 }
@@ -443,47 +512,11 @@ export async function UpsertMsgHandle(sock, msg, ctx, {
   }
   let chatId = isGroup ? rawChatId : userPhoneJid && !userPhoneJid.endsWith("@lid") ? userPhoneJid : sender;
   const msgId = String(keyId || msg.key?.id || ctx.key?.id || "");
-  const isBaileys = Boolean(ctx.isBaileys || msgId && (msgId.startsWith("BAE5") || msgId.startsWith("3EB0") || msgId.startsWith("B1E") || msgId.startsWith("XYZ0") || msgId.length === 16 && /^[0-9A-F]+$/i.test(msgId) || msgId.length === 18 && /^[0-9A-F]+$/i.test(msgId) || msgId.length === 22));
   const isFromMe = Boolean(msg.key?.fromMe || ctx.isFromMe);
   const botId = decodeJid(sock.user?.id || sock.user?.jid || "");
   const botLid = sock.user?.lid ? decodeJid(sock.user.lid) : null;
   const botJid = jidNormalizedUser(botId || "");
   const isBotMyself = Boolean(isFromMe || areJidsSameUser(sender, botJid) || botLid && areJidsSameUser(sender, botLid) || senderAlt && areJidsSameUser(senderAlt, botJid) || senderAlt && botLid && areJidsSameUser(senderAlt, botLid));
-  const rawSenderName = String(ctx.pushname || ctx.pushName || "");
-  const isExternalBot = Boolean(isBaileys || ctx.isBot || global.botJidPool?.has(decodeJid(sender)) || global.botJidPool?.has(decodeJid(userPhoneJid)));
-  const isBot = isBotMyself || isExternalBot;
-  const autoEnsureUserDb = (jid, name) => {
-    if (!jid) return null;
-    const clean = decodeJid(jid);
-    db.ensureUser?.(clean, name);
-    if (!global.db) global.db = {};
-    if (!global.db.user) global.db.user = {};
-    if (!global.db.user[clean]) global.db.user[clean] = {};
-    const u = global.db.user[clean];
-    if (!u.chatCount || typeof u.chatCount !== "object") {
-      u.chatCount = {};
-    }
-    if (isBotMyself || clean === userPhoneJid && isExternalBot) {
-      u.isBot = true;
-      global.botJidPool?.add(clean);
-    }
-    return u;
-  };
-  let groupData = null;
-  if (isGroup && chatId) {
-    try {
-      db.ensureGroup?.(chatId);
-      groupData = global.db?.group?.[chatId] || null;
-      const targetChatJid = isBotMyself ? botJid : userPhoneJid;
-      const targetName = isBotMyself ? global.bot?.name || "Bot" : rawSenderName || senderNumber;
-      const uDb = autoEnsureUserDb(targetChatJid, targetName);
-      if (uDb) {
-        uDb.chatCount[chatId] = (uDb.chatCount[chatId] || 0) + 1;
-      }
-    } catch (_) {}
-  }
-  if (isBotMyself && !global.bot?.selfbot) return;
-  autoEnsureUserDb(userPhoneJid, rawSenderName || senderNumber);
   const rawOwners = [...Array.isArray(global.bot?.owner) ? global.bot.owner.flat(Infinity) : [global.bot?.owner], global.bot?.author?.number].filter(Boolean);
   const ownerNumbers = new Set();
   const ownerJids = new Set();
@@ -504,10 +537,67 @@ export async function UpsertMsgHandle(sock, msg, ctx, {
   let isOwnerJid = checkIsOwner([sender, senderAlt, userPhoneJid, ctx.sender, ctx.senderAlt, ctx.userPhoneJid, ctx.senderNumber, rawSender, rawSenderAlt]);
   let isOwner = isOwnerJid || isFromMe && global.bot?.selfbot === true || ctx.isOwner === true;
   let isROwner = isOwnerJid || isFromMe && global.bot?.selfbot === true || ctx.isROwner === true;
-  const userData = global.db?.user?.[userPhoneJid] || global.db?.user?.[ctx.sender];
-  if (userData && userData.limit === undefined) {
-    userData.limit = global.bot?.limit?.free || global.bot?.defaultLimit || 20;
+  const isBaileys = Boolean(ctx.isBaileys || msgId && (msgId.startsWith("BAE5") || msgId.startsWith("B1E") || msgId.startsWith("XYZ0") || msgId.startsWith("3EB0") && msgId.length >= 22 && !isOwner && !isBotMyself));
+  const isRealUserDevice = Boolean(!isBaileys && (/^3A.{18}$/.test(msgId) || /^([0-9A-F]{21}|[0-9A-F]{32})$/i.test(msgId) || /^(3EB0.{16}|3EB0.{18})$/.test(msgId)));
+  global.botJidPool = global.botJidPool || new Set();
+  const cleanTargetJid = decodeJid(userPhoneJid);
+  const targetUserDb = global.db?.user?.[cleanTargetJid];
+  if (isOwner || isBotMyself || isRealUserDevice) {
+    if (global.botJidPool.has(cleanTargetJid) || global.botJidPool.has(decodeJid(sender))) {
+      global.botJidPool.delete(cleanTargetJid);
+      global.botJidPool.delete(decodeJid(sender));
+    }
+    if (targetUserDb && targetUserDb.isBot === true && !isBotMyself) {
+      targetUserDb.isBot = false;
+      targetUserDb.unbannedBotAt = Date.now();
+      db.write(global.db).catch(() => {});
+    }
   }
+  const isExternalBot = Boolean(!isOwner && !isBotMyself && !isRealUserDevice && (isBaileys || ctx.isBot || global.botJidPool.has(decodeJid(sender)) || global.botJidPool.has(cleanTargetJid)));
+  const isBot = isBotMyself || isExternalBot;
+  const autoEnsureUserDb = (jid, name) => {
+    if (!jid) return null;
+    const clean = decodeJid(jid);
+    db.ensureUser?.(clean, name);
+    if (!global.db) global.db = {};
+    if (!global.db.user) global.db.user = {};
+    if (!global.db.user[clean]) global.db.user[clean] = {};
+    const u = global.db.user[clean];
+    if (typeof u.chatCount !== "object" || !u.chatCount) u.chatCount = {};
+    if (typeof u.exp !== "number") u.exp = 0;
+    if (typeof u.money !== "number") u.money = 1e3;
+    if (typeof u.level !== "number") u.level = 1;
+    if (typeof u.limit !== "number") u.limit = global.bot?.limit?.free || global.bot?.defaultLimit || 20;
+    if (typeof u.registered !== "boolean") u.registered = false;
+    if (!u.name) u.name = name || extractNum(clean);
+    if (isBotMyself) {
+      u.isBot = false;
+      u.isOfficialBot = true;
+    } else if (clean === userPhoneJid && isExternalBot && !isOwner) {
+      u.isBot = true;
+      global.botJidPool.add(clean);
+    } else if (isOwner || isRealUserDevice) {
+      u.isBot = false;
+      global.botJidPool.delete(clean);
+    }
+    return u;
+  };
+  let groupData = null;
+  if (isGroup && chatId) {
+    try {
+      db.ensureGroup?.(chatId);
+      groupData = global.db?.group?.[chatId] || null;
+      const targetChatJid = isBotMyself ? botJid : userPhoneJid;
+      const targetName = isBotMyself ? global.bot?.name || "Bot" : rawSenderName || senderNumber;
+      const uDb = autoEnsureUserDb(targetChatJid, targetName);
+      if (uDb) {
+        uDb.chatCount[chatId] = (uDb.chatCount[chatId] || 0) + 1;
+      }
+    } catch (_) {}
+  }
+  if (isBotMyself && !global.bot?.selfbot) return;
+  const rawSenderName = String(ctx.pushname || ctx.pushName || "");
+  const userData = autoEnsureUserDb(userPhoneJid, rawSenderName || senderNumber);
   if (userData?.ownerAcces === true) isOwner = true;
   let isPremium = Boolean(userData?.premium?.status || isOwner);
   if (userData && ctx.pushname && userData.name !== ctx.pushname) {
@@ -587,51 +677,58 @@ export async function UpsertMsgHandle(sock, msg, ctx, {
   }
   ctx.text = textBody;
   ctx.body = textBody;
-  const isAntiBotActive = global.bot?.antiBot === true || isGroup && groupData?.antibot === true;
-  if (isAntiBotActive && (ctx.isBaileys || ctx.isBot) && !isFromMe && !isOwner) {
-    if (isGroup) {
-      if (ctx.isBotAdmin) {
-        await ctx.delete().catch(() => {});
-      }
-      const antiBotNotice = `Terdeteksi aktivitas bot lain di dalam grup.\n\n` + `┌  ◦  *User* : @${senderNumber}\n` + `│  ◦  *Aksi* : Pesan telah dihapus otomatis\n` + `└  ◦  *Status* : Bot Unauthorized\n\n` + `_Silakan admin klik tombol di bawah jika ingin mengeluarkan bot ini dari grup._`;
-      const prefix = ctx.prefix || ".";
-      const buttons = [{
-        name: "quick_reply",
-        display_text: "🚫 Kick Bot Ini",
-        id: `${prefix}kick @${senderNumber}`
-      }, {
-        name: "quick_reply",
-        display_text: "📜 Rules Grup",
-        id: `${prefix}rules`
-      }];
-      await sendInteractiveViewOnce(sock, chatId, {
-        title: "–  A N T I - B O T",
-        subtitle: "Aktivitas Bot Terdeteksi",
-        body: antiBotNotice,
-        footer: global.bot?.name || "Wudysoft",
-        buttons: buttons,
-        mentions: [userPhoneJid]
-      });
-      return;
-    } else {
-      return;
+  const isAntiBotActive = isGroup && (global.bot?.antiBot === true || groupData?.antibot === true);
+  if (isAntiBotActive && isExternalBot && !isFromMe && !isOwner) {
+    if (ctx.isBotAdmin) {
+      await ctx.delete().catch(() => {});
     }
+    const antiBotNotice = `Terdeteksi aktivitas bot lain di dalam grup.\n\n` + `┌  ◦  *User* : @${senderNumber}\n` + `│  ◦  *Aksi* : Pesan telah dihapus otomatis\n` + `└  ◦  *Status* : Bot Unauthorized\n\n` + `_Silakan admin klik tombol di bawah jika ingin mengeluarkan bot ini dari grup._`;
+    const prefix = ctx.prefix || ".";
+    const buttons = [{
+      name: "quick_reply",
+      display_text: "🚫 Kick Bot Ini",
+      id: `${prefix}kick @${senderNumber}`
+    }, {
+      name: "quick_reply",
+      display_text: "📜 Rules Grup",
+      id: `${prefix}rules`
+    }];
+    await sendInteractiveViewOnce(sock, chatId, {
+      title: "–  A N T I - B O T",
+      subtitle: "Aktivitas Bot Terdeteksi",
+      body: antiBotNotice,
+      footer: global.bot?.name || "Wudysoft",
+      buttons: buttons,
+      mentions: [userPhoneJid]
+    });
+    return;
   }
   const isAfkCmd = /^[!./#]?\s*(afk|away)(\s+.*)?$/i.test(textBody.trim());
-  if (userData?.afk?.afkTime && !isAfkCmd) {
-    const afkDuration = formatDuration(Date.now() - userData.afk.afkTime);
+  const userAfkTime = Number(userData?.afk?.afkTime || userData?.afk?.time || 0);
+  const isActuallyAfk = Boolean(userData?.afk && userAfkTime > 0 && Date.now() - userAfkTime > 5e3);
+  if (isActuallyAfk && !isAfkCmd) {
+    const afkDuration = formatDuration(Date.now() - userAfkTime);
     const reason = userData.afk.reason || "Tanpa alasan";
     delete userData.afk;
+    if (global.db?.user?.[userPhoneJid]) delete global.db.user[userPhoneJid].afk;
+    if (global.db?.user?.[ctx.sender]) delete global.db.user[ctx.sender].afk;
     db.write(global.db).catch(() => {});
-    await ctx.reply(`–  *A F K  -  D O N E*\n\n` + `Selamat datang kembali! Kamu telah berhenti AFK.\n\n` + `┌  ◦  *Reason* : ${reason}\n` + `└  ◦  *Duration* : ${afkDuration}`);
+    await ctx.reply(`–  *A F K  -  D O N E*\n\n` + `Selamat datang kembali @${senderNumber}! Mode AFK telah dinonaktifkan.\n\n` + `┌  ◦  *Reason* : ${reason}\n` + `└  ◦  *Duration* : ${afkDuration}`, {
+      mentions: [userPhoneJid]
+    });
+  } else if (userData?.afk && userAfkTime <= 0) {
+    delete userData.afk;
+    if (global.db?.user?.[userPhoneJid]) delete global.db.user[userPhoneJid].afk;
+    if (global.db?.user?.[ctx.sender]) delete global.db.user[ctx.sender].afk;
   }
   if (ctx.mentionedJid?.length > 0) {
     for (const jid of ctx.mentionedJid) {
       let phoneJid = await resolveLidFast(decodeJid(jid), sock, null, ctx.participants || []);
       const targetUser = global.db?.user?.[phoneJid];
-      if (targetUser?.afk?.afkTime) {
-        const afkDuration = formatDuration(Date.now() - targetUser.afk.afkTime);
-        await ctx.reply(`–  *A F K  -  M O D E*\n\n` + `Jangan tag pengguna ini, dia sedang tidak aktif!\n\n` + `┌  ◦  *User* : @${extractNum(phoneJid)}\n` + `│  ◦  *Reason* : ${targetUser.afk.reason || "Tanpa alasan"}\n` + `└  ◦  *Since* : ${afkDuration} lalu`, {
+      const targetAfkTime = Number(targetUser?.afk?.afkTime || targetUser?.afk?.time || 0);
+      if (targetUser?.afk && targetAfkTime > 0 && Date.now() - targetAfkTime > 5e3) {
+        const afkDuration = formatDuration(Date.now() - targetAfkTime);
+        await ctx.reply(`–  *A F K  -  M O D E*\n\n` + `Ssstt! Jangan tag @${extractNum(phoneJid)}, pengguna ini sedang AFK!\n\n` + `┌  ◦  *User* : @${extractNum(phoneJid)}\n` + `│  ◦  *Reason* : ${targetUser.afk.reason || "Tanpa alasan"}\n` + `└  ◦  *Since* : ${afkDuration} yang lalu`, {
           mentions: [phoneJid]
         });
       }
@@ -669,26 +766,6 @@ export async function UpsertMsgHandle(sock, msg, ctx, {
   }
   if (userData?.banned === true && !isOwner) {
     return ctx.reply(`–  *B A N N E D*\n\n` + `Akses kamu telah ditangguhkan!\n\n` + `┌  ◦  *Reason* : ${userData?.banReason || "Melanggar terms of service bot."}\n` + `└  ◦  *Contact* : Hubungi owner untuk banding.`);
-  }
-  const beforeHandlers = cmd?.getBeforeHandlers?.() || [];
-  if (beforeHandlers.length) {
-    const results = await Promise.all(beforeHandlers.map(({
-      fn
-    }) => typeof fn === "function" ? Promise.race([fn(msg, {
-      sock: sock,
-      ctx: ctx,
-      cmd: cmd,
-      db: {
-        data: global.db?.cmd || {}
-      },
-      isOwner: isOwner,
-      isROwner: isROwner,
-      isPremium: isPremium
-    }), new Promise(r => setTimeout(() => r(false), 2e3))]).catch(e => {
-      console.error(chalk.red("[BEFORE HANDLER ERROR]"), e.message);
-      return false;
-    }) : Promise.resolve(false)));
-    if (results.some(Boolean)) return;
   }
   let command = null;
   const groupPrefix = isGroup && groupData?.prefix ? [groupData.prefix] : null;
@@ -737,6 +814,26 @@ export async function UpsertMsgHandle(sock, msg, ctx, {
       ctx.args = parts.slice(1);
       ctx.query = textBody;
     }
+  }
+  const beforeHandlers = cmd?.getBeforeHandlers?.() || [];
+  if (beforeHandlers.length) {
+    const results = await Promise.all(beforeHandlers.map(({
+      fn
+    }) => typeof fn === "function" ? Promise.race([fn(msg, {
+      sock: sock,
+      ctx: ctx,
+      cmd: cmd,
+      db: {
+        data: global.db?.cmd || {}
+      },
+      isOwner: isOwner,
+      isROwner: isROwner,
+      isPremium: isPremium
+    }), new Promise(r => setTimeout(() => r(false), 2e3))]).catch(e => {
+      console.error(chalk.red("[BEFORE HANDLER ERROR]"), e.message);
+      return false;
+    }) : Promise.resolve(false)));
+    if (results.some(Boolean)) return;
   }
   if (!ctx.cmd || !command) return;
   const spamKey = `${userPhoneJid}_${chatId}_spam`;
@@ -867,6 +964,7 @@ export async function UpsertMsgHandle(sock, msg, ctx, {
       isPremium: ctx.isPremium,
       isAdmin: ctx.isAdmin,
       isBotAdmin: ctx.isBotAdmin,
+      a2ui: () => new A2UI(sock),
       button: () => new Button(sock).setJid(ctx.chat),
       buttonV2: () => new ButtonV2(sock),
       carousel: () => new Carousel(sock),
@@ -1013,35 +1111,56 @@ export async function UpsertMsgHandle(sock, msg, ctx, {
           nextLevel: newLevel,
           userData: userData
         }).catch(() => null);
-        const bannerImage = cardBuffer || userPic || "https://picsum.photos/seed/cyber/800/400";
-        const options = {
-          image: bannerImage,
-          title: `– ${botName} • Level Up (Lv. ${newLevel})`,
+        const bannerImageUrl = typeof bannerImage === "string" && bannerImage.startsWith("http") ? bannerImage : "https://picsum.photos/seed/cyber/800/400";
+        const a2ui = new A2UI(sock);
+        const imgId = a2ui.raw("Image", {
+          url: bannerImageUrl,
+          fit: "scale-down",
+          variant: "mediumFeature"
+        });
+        const centeredCard = a2ui.card(a2ui.raw("Column", {
+          children: [imgId],
+          align: "center",
+          justify: "center"
+        }));
+        a2ui.root([centeredCard]);
+        const a2uiButtons = [{
+          name: "",
+          params: {}
+        }, {
+          name: "single_select",
           params: {
-            bottom_sheet: {
-              in_thread_buttons_limit: 1,
-              divider_indices: [1],
-              list_title: `${botName} • Level Up`,
-              button_title: `Lihat Pilihan Aksi`
+            title: "\0",
+            sections: listSections,
+            icon: "DEFAULT"
+          }
+        }, {
+          name: "quick_reply",
+          params: {
+            display_text: "👤 Profile",
+            id: `${prefix}profile`
+          }
+        }, {
+          name: "quick_reply",
+          params: {
+            display_text: "🎒 Inventory",
+            id: `${prefix}inv`
+          }
+        }];
+        try {
+          await a2ui.send(sock, ctx.id || ctx.chat, {
+            bodyText: "\0",
+            footer: bodyText,
+            buttons: a2uiButtons,
+            contextInfo: {
+              ...global.bot?.utils?.contextInfo,
+              forwardingScore: 999,
+              isForwarded: true,
+              mentionedJid: sanitizeMentions([userPhoneJid])
             },
-            limited_time_offer: {
-              text: `👑 BONUS STATUS BARU EVOLUSI LV.${newLevel} TELAH AKTIF! 👑`,
-              url: channelUrl,
-              copy_code: `CLAIM_BUFF_LV${newLevel}`,
-              expiration_time: Date.now() + 3600 * 1e3
-            }
-          },
-          contextInfo: {
-            ...global.bot?.utils?.contextInfo,
-            forwardingScore: 999,
-            isForwarded: true,
-            mentionedJid: sanitizeMentions([userPhoneJid])
-          },
-          quoted: quotedMsg
-        };
-        if (typeof ctx.sendCta === "function") {
-          await ctx.sendCta(bodyText, `${botName} • RPG System`, buttons, options);
-        } else {
+            quoted: quotedMsg
+          });
+        } catch (_) {
           await sendInteractiveViewOnce(sock, ctx.id || ctx.chat, {
             title: `– ${botName} • Level Up (Lv. ${newLevel})`,
             body: bodyText,

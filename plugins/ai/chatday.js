@@ -147,7 +147,7 @@ export default {
       const bodyText = answerText;
       const buttons = [{
         name: "cta_copy",
-        display_text: "📄 Salin Jawaban",
+        display_text: "Salin Jawaban",
         copy_code: answerText
       }];
       let sentMsg;
@@ -251,13 +251,13 @@ Layanan asisten AI multi-model cerdas dengan memori percakapan berlanjut (Multi-
       const bodyText = answerText;
       const buttons = [{
         name: "cta_copy",
-        display_text: "📄 Salin Jawaban",
+        display_text: "Salin Jawaban",
         copy_code: answerText
       }];
       if (returnedState) {
         buttons.push({
           name: "cta_copy",
-          display_text: "🔑 Salin State Token",
+          display_text: "Salin State Token",
           copy_code: returnedState
         });
       }

@@ -186,7 +186,7 @@ export default {
       const bodyText = outputDetails.trim();
       const buttons = [{
         name: "cta_copy",
-        display_text: "📄 Salin Jawaban",
+        display_text: "Salin Jawaban",
         copy_code: primaryResponse
       }];
       let sentMsg;
@@ -356,13 +356,13 @@ Layanan ensemble multi-model AI dengan kemampuan pencarian web real-time, kompar
       if (returnedToken) {
         buttons.push({
           name: "cta_copy",
-          display_text: "🔑 Salin Token Saja",
+          display_text: "Salin Token Saja",
           copy_code: returnedToken
         });
       }
       buttons.push({
         name: "cta_copy",
-        display_text: "📄 Salin Jawaban",
+        display_text: "Salin Jawaban",
         copy_code: primaryResponse
       });
       let sentMsg;

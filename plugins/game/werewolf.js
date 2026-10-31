@@ -1,7 +1,250 @@
+import axios from "axios";
 import db from "../../data/db.js";
 import {
   simpleQuoted
 } from "../../lib/quoted.js";
+async function renderHtmlToImage(htmlContent) {
+  const rawApi = global.bot?.api?.wudysoft || "";
+  const cleanApi = rawApi.replace(/^https?:\/\//i, "").replace(/\/+$/, "");
+  const baseUrl = `https://${cleanApi}/api/tools/html2img/`;
+  const headers = {
+    "Content-Type": "application/json",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+  };
+  const payload = {
+    html: htmlContent,
+    fullPage: true,
+    quality: 100
+  };
+  const versions = ["v5", "v1", "v2", "v3", "v4", "v6", "v7", "v8", "v9", "v10"];
+  for (const ver of versions) {
+    try {
+      const res = await axios.post(`${baseUrl}${ver}`, payload, {
+        headers: headers,
+        timeout: 15e3
+      });
+      const imgUrl = res.data?.url || res.data?.result || (typeof res.data === "string" ? res.data : null);
+      if (imgUrl && /^https?:\/\//i.test(imgUrl)) {
+        let buffer = null;
+        try {
+          const imgRes = await axios.get(imgUrl, {
+            responseType: "arraybuffer",
+            timeout: 12e3
+          });
+          if (imgRes.data) buffer = Buffer.from(imgRes.data);
+        } catch {}
+        return {
+          url: imgUrl,
+          buffer: buffer
+        };
+      }
+    } catch {
+      continue;
+    }
+  }
+  return {
+    url: null,
+    buffer: null
+  };
+}
+
+function buildWerewolfCanvasHtml(game, phaseText = "LOBBY", dayCount = 1, showRoles = false) {
+  const botName = global.bot?.name || "WudysoftBot";
+  const players = game?.players || [];
+  const isNight = phaseText.includes("NIGHT");
+  const isDay = phaseText.includes("DAY");
+  const isEnd = phaseText.includes("WIN");
+  const bgGradient = isNight ? "radial-gradient(circle at 80% 20%, rgba(147, 51, 234, 0.25) 0%, rgba(8, 10, 18, 0.98) 85%)" : isDay ? "radial-gradient(circle at 80% 20%, rgba(245, 158, 11, 0.22) 0%, rgba(10, 13, 20, 0.98) 85%)" : "radial-gradient(circle at 50% 50%, rgba(220, 38, 38, 0.25) 0%, rgba(9, 10, 16, 0.98) 85%)";
+  const statusColor = isNight ? "#c084fc" : isDay ? "#f59e0b" : "#ef4444";
+  const playersHtml = players.map((p, idx) => {
+    let roleBadge = "SECRET";
+    if (showRoles && p.role) {
+      if (p.role === "werewolf") roleBadge = "🐺 WOLF";
+      else if (p.role === "seer") roleBadge = "🔮 SEER";
+      else if (p.role === "guardian") roleBadge = "🛡️ GUARD";
+      else roleBadge = "👨‍🌾 VILLAGER";
+    }
+    return `
+      <div class="player-card ${p.isAlive ? "alive" : "dead"}">
+        <div class="p-num">${idx + 1}</div>
+        <div class="p-info">
+          <div class="p-name">${p.name ? p.name.slice(0, 10) : "Player"}</div>
+          <div class="p-status">${p.isAlive ? "● ALIVE" : "💀 DEAD"}</div>
+        </div>
+        ${showRoles ? `<div class="p-role">${roleBadge}</div>` : ""}
+      </div>
+    `;
+  }).join("");
+  return `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="utf-8">
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800;900&family=Rajdhani:wght@700&display=swap');
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        width: 750px;
+        height: 500px;
+        background: #080a10;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+      }
+      .village-card {
+        width: 710px;
+        height: 460px;
+        background: ${bgGradient};
+        border: 2px solid #23293a;
+        border-radius: 20px;
+        box-shadow: 0 25px 60px rgba(0,0,0,0.85);
+        padding: 22px 26px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .top-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .brand-icon {
+        background: ${isNight ? "#9333ea" : "#d97706"};
+        color: #fff;
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+      }
+      .brand-text {
+        color: #f8fafc;
+        font-size: 19px;
+        font-weight: 900;
+        letter-spacing: 0.5px;
+      }
+      .status-pill {
+        border: 1px solid ${statusColor};
+        color: ${statusColor};
+        background: rgba(15, 23, 42, 0.85);
+        padding: 5px 14px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+      .players-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px 12px;
+        margin: 10px 0;
+      }
+      .player-card {
+        height: 46px;
+        background: #111420;
+        border: 1px solid #1f2738;
+        border-radius: 10px;
+        padding: 0 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .player-card.alive {
+        border-color: #2b354c;
+      }
+      .player-card.dead {
+        border-color: #7f1d1d;
+        background: rgba(127, 29, 29, 0.2);
+        opacity: 0.6;
+      }
+      .p-num {
+        width: 24px;
+        height: 24px;
+        background: #1c2436;
+        color: #94a3b8;
+        border-radius: 6px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-weight: 900;
+        font-size: 12px;
+      }
+      .p-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      .p-name {
+        font-size: 13px;
+        font-weight: 800;
+        color: #f1f5f9;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .p-status {
+        font-size: 10px;
+        font-weight: 700;
+        color: #10b981;
+      }
+      .player-card.dead .p-status {
+        color: #ef4444;
+      }
+      .p-role {
+        font-size: 11px;
+        font-weight: 800;
+        padding: 2px 8px;
+        border-radius: 4px;
+        background: rgba(0,0,0,0.4);
+        color: #fbbf24;
+      }
+      .footer-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid #1c2333;
+        padding-top: 10px;
+        color: #94a3b8;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .footer-meta b {
+        color: ${statusColor};
+      }
+    </style>
+  </head>
+  <body>
+    <div class="village-card">
+      <div class="top-row">
+        <div class="brand">
+          <div class="brand-icon">🐺</div>
+          <div class="brand-text">WEREWOLF <span>VILLAGE</span></div>
+        </div>
+        <div class="status-pill">${phaseText}</div>
+      </div>
+      <div class="players-grid">
+        ${playersHtml}
+      </div>
+      <div class="footer-meta">
+        <div>WARGA HIDUP : <b>${players.filter(p => p.isAlive).length} / ${players.length} PEMAIN</b></div>
+        <div>HARI KE : <b>${dayCount}</b></div>
+        <div>BOT : <b>${botName}</b></div>
+      </div>
+    </div>
+  </body>
+  </html>
+  `;
+}
 
 function initDB(jid = null, name = "") {
   if (!global.db) global.db = {};
@@ -21,24 +264,27 @@ function saveDB() {
     db.write(global.db);
   }
 }
-async function sendWwCta(sock, ctx, targetJid, bodyText, footerText, buttons, quoted = null, mentions = []) {
+async function sendNeoxrWw(sock, ctx, targetJid, bodyText, footerText, buttons, quoted = null, mentions = [], imageBuffer = null, imageUrl = null) {
   const botName = global.bot?.name || "WudysoftBot";
+  const defaultBanner = global.bot?.media?.banner1 || global.bot?.media?.banner2 || "https://files.catbox.moe/g2e6i5.jpg";
+  const mediaSource = imageBuffer || (imageUrl ? {
+    url: imageUrl
+  } : defaultBanner);
   const options = {
-    jid: targetJid,
-    to: targetJid,
-    chat: targetJid,
+    image: mediaSource,
+    title: `✦ ${botName} • Werewolf Village ✦`,
     params: {
       bottom_sheet: {
         in_thread_buttons_limit: 3,
         divider_indices: [2],
-        list_title: `${botName} • Werewolf Village`,
-        button_title: "Menu Aksi"
+        list_title: `${botName} • Aksi Desa`,
+        button_title: "🐺 Menu Aksi"
       }
     },
     contextInfo: {
-      forwardingScore: 0,
-      isForwarded: false,
-      mentionedJid: mentions
+      mentionedJid: mentions.length ? mentions : [ctx?.sender].filter(Boolean),
+      forwardingScore: 999,
+      isForwarded: true
     },
     quoted: quoted || undefined
   };
@@ -46,7 +292,7 @@ async function sendWwCta(sock, ctx, targetJid, bodyText, footerText, buttons, qu
     try {
       return await ctx.sendCta(bodyText, footerText, buttons, options);
     } catch (e) {
-      console.error("[sendWwCta ctx.sendCta error]:", e.message);
+      console.error("[sendNeoxrWw ctx.sendCta Error]:", e.message);
     }
   }
   try {
@@ -57,7 +303,17 @@ async function sendWwCta(sock, ctx, targetJid, bodyText, footerText, buttons, qu
         id: b.id || b.copy_code || ""
       })
     }));
+    const mediaPayload = imageBuffer ? {
+      image: imageBuffer
+    } : imageUrl ? {
+      image: {
+        url: imageUrl
+      }
+    } : {};
     return await sock.sendMessage(targetJid, {
+      ...mediaPayload,
+      caption: bodyText,
+      footer: footerText,
       viewOnceMessage: {
         message: {
           interactiveMessage: {
@@ -77,8 +333,17 @@ async function sendWwCta(sock, ctx, targetJid, bodyText, footerText, buttons, qu
     }, {
       quoted: quoted
     });
-  } catch (e) {
-    console.error("[sendWwCta native interactive error]:", e.message);
+  } catch (e) {}
+  if (imageBuffer || imageUrl) {
+    return await sock.sendMessage(targetJid, {
+      image: imageBuffer || {
+        url: imageUrl
+      },
+      caption: `${bodyText}\n\n_${footerText}_`,
+      mentions: mentions
+    }, {
+      quoted: quoted
+    });
   }
   return await sock.sendMessage(targetJid, {
     text: `${bodyText}\n\n_${footerText}_`,
@@ -90,7 +355,7 @@ async function sendWwCta(sock, ctx, targetJid, bodyText, footerText, buttons, qu
 export default {
   name: "werewolf",
   aliases: ["ww", "warewolf", "desaserigala"],
-  description: "Bermain game Werewolf PvP bersama anggota grup dengan aksi malam di PC (Full DB)",
+  description: "Bermain game Werewolf PvP bersama anggota grup dengan canvas realistis bertema Neoxr",
   category: "Game",
   limit: false,
   before: async (msg, {
@@ -136,9 +401,10 @@ export default {
     try {
       const isGroup = Boolean(ctx?.isGroup || ctx?.id?.endsWith("@g.us"));
       const botName = global.bot?.name || "WudysoftBot";
+      const footerText = `${global.bot?.footer || botName}`;
       const prefix = ctx?.prefix || ".";
       const senderJid = ctx?.sender || msg?.key?.participant;
-      const senderName = ctx?.pushName || "Pemain";
+      const senderName = ctx?.pushName || ctx?.pushname || "Pemain";
       const quotedMsg = typeof simpleQuoted === "function" ? simpleQuoted(ctx) : msg;
       const args = ctx?.args || [];
       const subCommand = (args[0] || "").trim().toLowerCase();
@@ -153,22 +419,22 @@ export default {
           const targetInput = args[1] || "";
           return await handleNightAction(sock, ctx, groupId, senderJid, targetInput);
         }
-        return ctx.reply("❌ *Game Werewolf hanya bisa dimulai di dalam Grup!*");
+        return ctx.reply("❌ *Game Werewolf hanya dapat dimulai di dalam Grup!*");
       }
       const groupId = ctx.id;
       if (["join", "gabung", "ikut"].includes(subCommand)) {
         if (!global.db.werewolf[groupId]) {
-          return ctx.reply(`⚠️ Belum ada sesi game Werewolf yang dibuka. Ketik \`${prefix}ww create\` untuk membuka kamar!`);
+          return ctx.reply(`⚠️ Belum ada lobby Werewolf yang dibuka. Ketik \`${prefix}ww create\` untuk membuka room!`);
         }
         const game = global.db.werewolf[groupId];
         if (game.status !== "LOBBY") {
           return ctx.reply("⚠️ Game Werewolf di grup ini sudah dimulai.");
         }
         if (game.players.some(p => p.jid === senderJid)) {
-          return ctx.reply("⚠️ Kamu sudah bergabung di dalam room!");
+          return ctx.reply("⚠️ Kamu sudah berada di dalam lobby!");
         }
         if (game.players.length >= 10) {
-          return ctx.reply("⚠️ Batas maksimal pemain (10 orang) telah tercapai!");
+          return ctx.reply("⚠️ Kapasitas maksimal lobby (10 pemain) telah tercapai.");
         }
         game.players.push({
           jid: senderJid,
@@ -179,25 +445,39 @@ export default {
         });
         saveDB();
         await ctx.react("✅");
-        return ctx.reply(`👤 *${senderName}* berhasil bergabung!\n` + `👥 *Total Pemain:* ${game.players.length}/10\n` + `_Ketik \`${prefix}ww start\` jika minimal 4 pemain sudah terkumpul._`);
+        const joinNotif = `Hi ${senderName}!
+Kamu berhasil bergabung ke dalam Werewolf Village.
+
+–  *L O B B Y  U P D A T E*
+
+┌  ◦  *Player Baru* : @${senderJid.split("@")[0]}
+└  ◦  *Total Pemain* : ${game.players.length} / 10
+
+_Minimal 4 pemain untuk memulai. Ketik \`${prefix}ww start\` jika sudah siap!_`;
+        return await sock.sendMessage(groupId, {
+          text: joinNotif,
+          mentions: [senderJid]
+        }, {
+          quoted: quotedMsg
+        });
       }
       if (["start", "mulai"].includes(subCommand)) {
         if (!global.db.werewolf[groupId]) {
-          return ctx.reply(`⚠️ Buat sesi terlebih dahulu dengan mengetik \`${prefix}ww create\``);
+          return ctx.reply(`⚠️ Buat lobby terlebih dahulu dengan mengetik \`${prefix}ww create\``);
         }
         const game = global.db.werewolf[groupId];
         if (game.status !== "LOBBY") {
-          return ctx.reply("⚠️ Game sudah berjalan!");
+          return ctx.reply("⚠️ Game Werewolf sudah berjalan!");
         }
         if (game.players.length < 4) {
-          return ctx.reply(`❌ Pemain belum mencukupi! Minimal *4 pemain* untuk memulai game. (Saat ini: ${game.players.length} pemain)`);
+          return ctx.reply(`❌ Pemain belum mencukupi! Minimal 4 pemain untuk bermain. (Saat ini: ${game.players.length} pemain)`);
         }
         return await startGameSession(sock, ctx, groupId);
       }
       if (["vote", "pilih"].includes(subCommand)) {
         const game = global.db.werewolf[groupId];
         if (!game || game.status !== "DAY") {
-          return ctx.reply("⚠️ Sesi voting eksekusi belum dibuka.");
+          return ctx.reply("⚠️ Sesi voting eksekusi desa belum dibuka.");
         }
         const voter = game.players.find(p => p.jid === senderJid);
         if (!voter || !voter.isAlive) {
@@ -205,7 +485,7 @@ export default {
         }
         const targetNum = parseInt(args[1]);
         if (isNaN(targetNum)) {
-          return ctx.reply(`⚠️ Masukkan nomor pemain yang ingin kamu gantung! Contoh: \`${prefix}ww vote 2\``);
+          return ctx.reply(`⚠️ Masukkan nomor pemain target! Contoh: \`${prefix}ww vote 2\``);
         }
         return await processVote(sock, ctx, groupId, senderJid, targetNum);
       }
@@ -215,7 +495,7 @@ export default {
         }
         const game = global.db.werewolf[groupId];
         if (game.host !== senderJid) {
-          return ctx.reply("❌ Hanya pembuat game (host) yang dapat membatalkannya.");
+          return ctx.reply("❌ Hanya host (pembuat room) yang berhak membatalkan permainan.");
         }
         delete global.db.werewolf[groupId];
         saveDB();
@@ -224,7 +504,7 @@ export default {
       if (global.db.werewolf[groupId]) {
         const game = global.db.werewolf[groupId];
         if (game.status === "LOBBY") {
-          return ctx.reply(`⚠️ Sudah ada lobby terbuka! Ketik \`${prefix}ww join\` untuk bergabung (${game.players.length} pemain).`);
+          return ctx.reply(`⚠️ Lobby sudah dibuka sebelumnya! Ketik \`${prefix}ww join\` untuk ikut bergabung (${game.players.length} pemain).`);
         }
         return ctx.reply("⚠️ Masih ada game Werewolf yang sedang berlangsung di grup ini!");
       }
@@ -262,8 +542,26 @@ export default {
         display_text: "🛑 Batal",
         id: `${prefix}ww stop`
       }];
-      const lobbyText = `🏰 *LOBBY WEREWOLF VILLAGE DIBUKA!* 🏰\n\n` + `👤 *Pembuat Lobby:* @${senderJid.split("@")[0]}\n` + `👥 *Pemain Bergabung:* 1/10 Pemain\n` + `📋 *Daftar Pemain:*\n` + `1. @${senderJid.split("@")[0]}\n\n` + `_Minimal 4 pemain untuk memulai. Ketuk *Join Game* untuk ikut bermain!_`;
-      await sendWwCta(sock, ctx, groupId, lobbyText, `${botName} • Menunggu Pemain`, buttons, quotedMsg, [senderJid]);
+      const lobbyText = `Hi Survivors!
+Lobby desa misterius Werewolf Village telah dibuka!
+
+–  *L O B B Y  W E R E W O L F*
+
+┌  ◦  *Host* : @${senderJid.split("@")[0]}
+│  ◦  *Kapasitas* : 4 - 10 Pemain
+└  ◦  *Status* : Rekrutmen Terbuka
+
+–  *D A F T A R  W A R G A*
+
+┌  ◦  [1] @${senderJid.split("@")[0]}
+
+_Ketuk tombol Join di bawah atau ketik \`${prefix}ww join\` untuk bergabung!_`;
+      const canvasHtml = buildWerewolfCanvasHtml(global.db.werewolf[groupId], "LOBBY RECRUITMENT", 1);
+      const {
+        buffer,
+        url
+      } = await renderHtmlToImage(canvasHtml);
+      await sendNeoxrWw(sock, ctx, groupId, lobbyText, footerText, buttons, quotedMsg, [senderJid], buffer, url);
     } catch (e) {
       console.error("[WEREWOLF ERROR]:", e);
       await ctx.react("❌");
@@ -293,24 +591,37 @@ async function startGameSession(sock, ctx, groupId) {
   });
   saveDB();
   for (const p of game.players) {
+    let roleName = "";
     let roleDesc = "";
     if (p.role === "werewolf") {
-      roleDesc = "🐺 *WEREWOLF*\nTugasmu memangsa para warga desa di setiap malam tanpa ketahuan!";
+      roleName = "🐺 WEREWOLF";
+      roleDesc = "Tugasmu memangsa para warga desa di setiap malam secara rahasia!";
     } else if (p.role === "seer") {
-      roleDesc = "🔮 *SEER (Penerawang)*\nKamu dapat menerawang 1 identitas pemain lain setiap malam.";
+      roleName = "🔮 SEER (Penerawang)";
+      roleDesc = "Kamu dapat menerawang 1 identitas asli pemain lain di setiap malam.";
     } else if (p.role === "guardian") {
-      roleDesc = "🛡️ *GUARDIAN (Pelindung)*\nKamu dapat melindungi 1 orang setiap malam dari serangan serigala.";
+      roleName = "🛡️ GUARDIAN (Pelindung)";
+      roleDesc = "Kamu dapat melindungi 1 orang setiap malam dari serangan serigala.";
     } else {
-      roleDesc = "👨‍🌾 *VILLAGER (Warga Desa)*\nCari dan gantung seluruh serigala di siang hari lewat voting!";
+      roleName = "👨‍🌾 VILLAGER (Warga Desa)";
+      roleDesc = "Cari dan gantung seluruh serigala di siang hari melalui voting!";
     }
-    const pcRoleText = `🎴 *KARTU PERAN RAHASIA KAMU* 🎴\n\n` + `Peranmu adalah: ${roleDesc}\n\n` + `_Jaga rahasia peranmu dan jangan biarkan orang lain tahu!_`;
+    const pcRoleText = `Hi ${p.name}!
+Kartu identitas rahasiamu dalam Werewolf Village telah diterbitkan.
+
+–  *S E C R E T  R O L E*
+
+┌  ◦  *Peran* : ${roleName}
+└  ◦  *Misi* : ${roleDesc}
+
+_Simpan rahasiamu rapat-rapat dan jangan biarkan warga lain mengetahuinya!_`;
     await sock.sendMessage(p.jid, {
       text: pcRoleText
     }).catch(() => {});
   }
   const allMentions = game.players.map(p => p.jid);
   await sock.sendMessage(game.groupId, {
-    text: `🎴 *Semua peran telah dikirimkan ke Private Chat masing-masing pemain!*\n\nPermainan segera dimulai...`,
+    text: `🎴 Seluruh kartu peran telah dikirimkan ke Private Chat masing-masing pemain! Sesi malam pertama segera tiba...`,
     mentions: allMentions
   });
   await enterNightPhase(sock, ctx, groupId);
@@ -329,11 +640,23 @@ async function enterNightPhase(sock, ctx, groupId) {
   saveDB();
   const alivePlayers = game.players.filter(p => p.isAlive);
   const prefix = ctx?.prefix || ".";
-  const nightText = `🌙 *MALAM HARI KE-${game.dayCount} TELAH TIBA...* 🌙\n\n` + `Seluruh warga desa tertidur lelap. Para pemilik kekuatan malam, silakan buka Private Chat (PC) dengan bot untuk menjalankan aksi kalian!\n\n` + `⏳ *Waktu malam:* 60 detik.`;
-  await sock.sendMessage(game.groupId, {
-    text: nightText
-  });
-  const targetListText = alivePlayers.map((p, idx) => `[${idx + 1}] @${p.jid.split("@")[0]}`).join("\n");
+  const nightText = `Hi Survivors!
+Malam hari ke-${game.dayCount} telah tiba. Kabut dingin menyelimuti desa... 🌙
+
+–  *N I G H T  P H A S E*
+
+┌  ◦  *Kondisi* : Seluruh warga tertidur lelap
+│  ◦  *Aksi Khusus* : Werewolf, Seer, & Guardian
+└  ◦  *Waktu Malam* : 60 Detik
+
+_Pemilik peran malam, buka Private Chat (PC) bot sekarang untuk memilih targetmu!_`;
+  const canvasHtml = buildWerewolfCanvasHtml(game, `NIGHT ${game.dayCount}`, game.dayCount);
+  const {
+    buffer,
+    url
+  } = await renderHtmlToImage(canvasHtml);
+  await sendNeoxrWw(sock, ctx, game.groupId, nightText, "Waktu Malam: 60s", [], null, alivePlayers.map(p => p.jid), buffer, url);
+  const targetListText = alivePlayers.map((p, idx) => `┌  ◦  [${idx + 1}] @${p.jid.split("@")[0]}`).join("\n");
   const mentions = alivePlayers.map(p => p.jid);
   for (const p of alivePlayers) {
     if (["werewolf", "seer", "guardian"].includes(p.role)) {
@@ -343,11 +666,11 @@ async function enterNightPhase(sock, ctx, groupId) {
         id: `${prefix}ww act ${idx + 1}`
       }));
       let actionTitle = "";
-      if (p.role === "werewolf") actionTitle = "🐺 *PILIH MANGSA UNTUK DIBUNUH:*";
-      if (p.role === "seer") actionTitle = "🔮 *PILIH PEMAIN UNTUK DITERAWANG:*";
-      if (p.role === "guardian") actionTitle = "🛡️ *PILIH PEMAIN UNTUK DILINDUNGI:*";
-      const body = `${actionTitle}\n\n${targetListText}\n\n_Tekan tombol di bawah atau balas chat ini dengan angka (1 - ${alivePlayers.length})!_`;
-      await sendWwCta(sock, ctx, p.jid, body, "Aksi Malam Rahasia", buttons, null, mentions);
+      if (p.role === "werewolf") actionTitle = "🐺 PILIH MANGSA UNTUK DIMANGSA:";
+      if (p.role === "seer") actionTitle = "🔮 PILIH PEMAIN UNTUK DITERAWANG:";
+      if (p.role === "guardian") actionTitle = "🛡️ PILIH PEMAIN UNTUK DILINDUNGI:";
+      const body = `Hi ${p.name}!\n${actionTitle}\n\n–  *T A R G E T  L I S T*\n\n${targetListText}\n\n_Tekan tombol di bawah atau balas chat ini dengan angka targetmu!_`;
+      await sendNeoxrWw(sock, ctx, p.jid, body, "Aksi Malam Rahasia", buttons, null, mentions);
     }
   }
   setTimeout(async () => {
@@ -365,26 +688,26 @@ async function handleNightAction(sock, ctx, groupId, playerJid, input) {
   const alivePlayers = game.players.filter(p => p.isAlive);
   const targetIdx = parseInt(input) - 1;
   if (isNaN(targetIdx) || targetIdx < 0 || targetIdx >= alivePlayers.length) {
-    return ctx.reply(`⚠️ Nomor tidak valid! Pilih angka antara 1 sampai ${alivePlayers.length}.`);
+    return ctx.reply(`⚠️ Nomor tidak valid! Pilih angka 1 sampai ${alivePlayers.length}.`);
   }
   const targetPlayer = alivePlayers[targetIdx];
   if (player.role === "werewolf") {
     game.nightActions.killTarget = targetPlayer.jid;
     saveDB();
-    await ctx.reply(`🐺 Kamu memilih untuk memangsa *@${targetPlayer.jid.split("@")[0]}* malam ini.`, {
+    await ctx.reply(`🐺 Pilihanmu dikunci: Memangsa *@${targetPlayer.jid.split("@")[0]}* malam ini.`, {
       mentions: [targetPlayer.jid]
     });
   } else if (player.role === "guardian") {
     game.nightActions.protectTarget = targetPlayer.jid;
     saveDB();
-    await ctx.reply(`🛡️ Kamu memilih untuk melindungi *@${targetPlayer.jid.split("@")[0]}* malam ini.`, {
+    await ctx.reply(`🛡️ Pilihanmu dikunci: Melindungi *@${targetPlayer.jid.split("@")[0]}* malam ini.`, {
       mentions: [targetPlayer.jid]
     });
   } else if (player.role === "seer") {
     game.nightActions.checkTarget = targetPlayer.jid;
     saveDB();
     const isWolf = targetPlayer.role === "werewolf";
-    await ctx.reply(`🔮 *HASIL PENERAWANGAN:*\n@${targetPlayer.jid.split("@")[0]} adalah seorang *${isWolf ? "🐺 WEREWOLF" : "👨‍🌾 WARGA DESA/BAIK"}*!`, {
+    await ctx.reply(`🔮 Hasil penerawangan mata batin:\n@${targetPlayer.jid.split("@")[0]} adalah seorang *${isWolf ? "🐺 WEREWOLF" : "👨‍🌾 WARGA DESA (BAIK)"}*!`, {
       mentions: [targetPlayer.jid]
     });
   }
@@ -426,25 +749,30 @@ async function enterDayPhase(sock, ctx, groupId, victimJid) {
   saveDB();
   const alivePlayers = game.players.filter(p => p.isAlive);
   const prefix = ctx?.prefix || ".";
-  let morningNews = `☀️ *PAGI HARI KE-${game.dayCount} TELAH TIBA!* ☀️\n\n`;
+  let morningNews = `Hi Survivors!
+Matahari terbit di hari ke-${game.dayCount}. Sesi voting desa dibuka! ☀️\n\n`;
   if (victimJid) {
-    morningNews += `🩸 *KABAR DUKA:* @${victimJid.split("@")[0]} ditemukan tewas mengenaskan tadi malam terkoyak cakar serigala!\n\n`;
+    morningNews += `–  *N I G H T  C A S U A L T Y*\n\n` + `🩸 Korban Terbunuh: @${victimJid.split("@")[0]} ditemukan tewas tercabik cakar serigala!\n\n`;
   } else {
-    morningNews += `✨ *KABAR GEMBIRA:* Tidak ada korban tewas tadi malam! Semua warga selamat.\n\n`;
+    morningNews += `–  *P E A C E F U L  N I G H T*\n\n` + `✨ Tidak ada korban semalam! Penjaga desa berhasil melindungi target.\n\n`;
   }
-  morningNews += `⚖️ *SESI DISKUSI & VOTING EKSEKUSI DIBUKA!*\n`;
-  morningNews += `Daftar warga yang masih hidup:\n`;
+  morningNews += `–  *D I S C U S S I O N  &  V O T E*\n\n`;
   alivePlayers.forEach((p, idx) => {
-    morningNews += `[${idx + 1}] @${p.jid.split("@")[0]}\n`;
+    morningNews += `┌  ◦  [${idx + 1}] @${p.jid.split("@")[0]}\n`;
   });
-  morningNews += `\n⏳ *Waktu voting:* 60 detik.\nKetik \`${prefix}ww vote <nomor>\` atau balas pesan ini dengan angka untuk memilih siapa yang akan digantung!`;
+  morningNews += `\n_Ketik \`${prefix}ww vote <nomor>\` atau balas dengan angka untuk menggantung tersangka!_`;
   const buttons = alivePlayers.map((p, idx) => ({
     name: "quick_reply",
     display_text: `${idx + 1}. @${p.jid.split("@")[0]}`,
     id: `${prefix}ww vote ${idx + 1}`
   }));
   const mentions = victimJid ? [...alivePlayers.map(p => p.jid), victimJid] : alivePlayers.map(p => p.jid);
-  await sendWwCta(sock, ctx, game.groupId, morningNews, "Waktu Voting: 60s", buttons, null, mentions);
+  const canvasHtml = buildWerewolfCanvasHtml(game, `DAY ${game.dayCount}`, game.dayCount);
+  const {
+    buffer,
+    url
+  } = await renderHtmlToImage(canvasHtml);
+  await sendNeoxrWw(sock, ctx, game.groupId, morningNews, "Waktu Voting: 60s", buttons, null, mentions, buffer, url);
   setTimeout(async () => {
     initDB();
     if (global.db.werewolf[groupId]?.status === "DAY" && Date.now() >= global.db.werewolf[groupId].expireTime) {
@@ -466,7 +794,7 @@ async function processVote(sock, ctx, groupId, voterJid, targetNum) {
   voter.votedFor = target.jid;
   saveDB();
   const totalVoted = alivePlayers.filter(p => p.votedFor !== null).length;
-  await ctx.reply(`🗳️ @${voter.jid.split("@")[0]} memilih untuk menggantung @${target.jid.split("@")[0]} (${totalVoted}/${alivePlayers.length} suara)`, {
+  await ctx.reply(`🗳️ @${voter.jid.split("@")[0]} memberikan suara untuk menggantung @${target.jid.split("@")[0]} (${totalVoted}/${alivePlayers.length} suara)`, {
     mentions: [voter.jid, target.jid]
   });
   if (totalVoted >= alivePlayers.length) {
@@ -498,7 +826,7 @@ async function resolveDayVoting(sock, ctx, groupId) {
   }
   if (!lynchedJid || isTie || maxVotes === 0) {
     await sock.sendMessage(game.groupId, {
-      text: `⚖️ *VOTING IMBANG ATAU TIDAK ADA SUARA!*\nTidak ada pemain yang dieksekusi hari ini.`
+      text: `⚖️ Hasil voting imbang atau tidak ada suara bulat! Tidak ada warga yang digantung hari ini.`
     });
   } else {
     const lynchedPlayer = game.players.find(p => p.jid === lynchedJid);
@@ -507,7 +835,7 @@ async function resolveDayVoting(sock, ctx, groupId) {
       saveDB();
       const roleName = lynchedPlayer.role === "werewolf" ? "🐺 WEREWOLF" : "👨‍🌾 WARGA DESA";
       await sock.sendMessage(game.groupId, {
-        text: `⚰️ *HASIL EKSEKUSI WARGA:*\n@${lynchedPlayer.jid.split("@")[0]} memperoleh suara terbanyak dan digantung di tiang gantungan desa!\nPeran aslinya adalah: *${roleName}*`,
+        text: `⚰️ @${lynchedPlayer.jid.split("@")[0]} memperoleh suara terbanyak dan digantung di tiang eksekusi desa!\nPeran aslinya: *${roleName}*`,
         mentions: [lynchedPlayer.jid]
       });
     }
@@ -536,17 +864,29 @@ async function checkWinConditions(sock, ctx, groupId) {
   const prefix = ctx?.prefix || ".";
   let winText = "";
   if (winnerTeam === "VILLAGERS") {
-    winText = `🎉 *TIM WARGA DESA MENANG!* 🎉\n\n` + `Seluruh Werewolf telah musnah! Kedamaian desa kembali pulih.\n` + `✨ *Pemain yang menang mendapatkan +Rp 15.000 & +100 EXP!*`;
+    winText = `Hi Survivors!
+Seluruh Werewolf telah dibinasakan! Desa kembali damai. 🎉
+
+–  *V I L L A G E R S  W I N*
+
+┌  ◦  *Tim Pemenang* : Warga Desa & Pelindung
+└  ◦  *Reward* : +Rp 15.000 | +100 EXP / Pemain`;
   } else {
-    winText = `🐺 *TIM WEREWOLF MENANG!* 🐺\n\n` + `Kawanan Serigala berhasil menguasai desa dan menghabisi para warga!\n` + `✨ *Werewolf yang menang mendapatkan +Rp 25.000 & +150 EXP!*`;
+    winText = `Hi Survivors!
+Kawanan Werewolf berhasil membantai mayoritas warga desa! 🐺
+
+–  *W E R E W O L V E S  W I N*
+
+┌  ◦  *Tim Pemenang* : Kawanan Serigala (Werewolves)
+└  ◦  *Reward* : +Rp 25.000 | +150 EXP / Pemain`;
   }
-  winText += `\n\n📋 *Daftar Peran Seluruh Pemain:*\n`;
-  game.players.forEach(p => {
+  winText += `\n\n–  *F I N A L  R O L E S*\n\n`;
+  game.players.forEach((p, idx) => {
     let rIcon = "👨‍🌾 Villager";
     if (p.role === "werewolf") rIcon = "🐺 Werewolf";
     if (p.role === "seer") rIcon = "🔮 Seer";
     if (p.role === "guardian") rIcon = "🛡️ Guardian";
-    winText += `• @${p.jid.split("@")[0]} : ${rIcon} (${p.isAlive ? "Hidup" : "Mati"})\n`;
+    winText += `┌  ◦  [${idx + 1}] @${p.jid.split("@")[0]} : ${rIcon} (${p.isAlive ? "Hidup" : "Gugur"})\n`;
   });
   for (const p of game.players) {
     initDB(p.jid, p.name);
@@ -564,9 +904,14 @@ async function checkWinConditions(sock, ctx, groupId) {
   saveDB();
   const playAgainBtn = [{
     name: "quick_reply",
-    display_text: "🐺 Buka Lobby Baru",
+    display_text: "🐺 Buat Room Baru",
     id: `${prefix}ww create`
   }];
-  await sendWwCta(sock, ctx, game.groupId, winText, "Game Over", playAgainBtn, null, game.players.map(p => p.jid));
+  const canvasHtml = buildWerewolfCanvasHtml(game, `${winnerTeam} WIN`, game.dayCount, true);
+  const {
+    buffer,
+    url
+  } = await renderHtmlToImage(canvasHtml);
+  await sendNeoxrWw(sock, ctx, game.groupId, winText, "Game Over", playAgainBtn, null, game.players.map(p => p.jid), buffer, url);
   return true;
 }

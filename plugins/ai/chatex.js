@@ -154,7 +154,7 @@ export default {
       const bodyText = answerText;
       const buttons = [{
         name: "cta_copy",
-        display_text: "📄 Salin Jawaban",
+        display_text: "Salin Jawaban",
         copy_code: answerText
       }];
       if (returnedState) {
@@ -289,13 +289,13 @@ Layanan kecerdasan buatan GPT-5.6 Luna dengan fitur sesi percakapan berkelanjuta
       if (returnedState) {
         buttons.push({
           name: "cta_copy",
-          display_text: "🔑 Salin State Saja",
+          display_text: "Salin State Saja",
           copy_code: returnedState
         });
       }
       buttons.push({
         name: "cta_copy",
-        display_text: "📄 Salin Jawaban",
+        display_text: "Salin Jawaban",
         copy_code: answerText
       });
       let sentMsg;
