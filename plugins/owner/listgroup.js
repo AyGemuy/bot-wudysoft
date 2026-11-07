@@ -73,7 +73,7 @@ export default {
         const isCurBanned = Boolean(currentGroupData?.isBanned);
         if (isCurBanned) {
           bannedRows.push({
-            title: `🚫 📍 ${currentName.slice(0, 28)}`,
+            title: `📍 ${currentName.slice(0, 28)}`,
             description: `Grup Ini • STATUS: BANNED ❌`,
             id: `${prefix}groupinfo ${currentChatId}`
           });
@@ -93,13 +93,13 @@ export default {
         const shortJid = group.jid.split("@")[0].slice(-8);
         if (group.isBanned) {
           bannedRows.push({
-            title: `🚫 ${groupTitle.slice(0, 30)}`,
-            description: `STATUS: BANNED ❌ | ID: ${shortJid}`,
+            title: `${groupTitle.slice(0, 30)}`,
+            description: `BANNED ❌ • ID: ${shortJid}`,
             id: `${prefix}groupinfo ${group.jid}`
           });
         } else {
           activeRows.push({
-            title: `👥 ${groupTitle.slice(0, 30)}`,
+            title: `${groupTitle.slice(0, 30)}`,
             description: `${memberText} • ID: ${shortJid}`,
             id: `${prefix}groupinfo ${group.jid}`
           });
@@ -110,29 +110,27 @@ export default {
       const sections = [];
       if (activeGroupList.length > 0) {
         sections.push({
-          title: `🟢 DAFTAR GRUP AKTIF (${activeGroupList.length})`,
+          title: `GRUP AKTIF (${activeGroupList.length})`,
           rows: activeGroupList.slice(0, 25)
         });
       }
       if (bannedGroupList.length > 0) {
         sections.push({
-          title: `🔴 DAFTAR GRUP TER-BAN (${bannedGroupList.length})`,
+          title: `GRUP TER-BANNED (${bannedGroupList.length})`,
           rows: bannedGroupList.slice(0, 10)
         });
       }
       const totalGroupCount = groupList.length;
       const totalDisplayed = (sections[0]?.rows?.length || 0) + (sections[1]?.rows?.length || 0);
-      const bodyText = `–  *G R O U P  L I S T*\n\n` + `Berikut adalah daftar seluruh grup WhatsApp yang diikuti oleh bot.\n\n` + `┌  ◦  *Bot Name* : ${botName}\n` + `│  ◦  *Total Grup* : ${totalGroupCount} Grup\n` + `│  ◦  *Grup Aktif* : ${activeGroupList.length} Grup\n` + `└  ◦  *Grup Ter-ban* : ${bannedGroupList.length} Grup\n\n` + `Silakan pilih grup pada tombol di bawah untuk melihat rincian informasi:`;
+      const bodyText = `–  *G R O U P - L I S T*\n\n` + `Berikut adalah daftar grup WhatsApp yang diikuti oleh bot saat ini.\n\n` + `┌  ◦  *Name* : ${botName}\n` + `│  ◦  *Total* : ${totalGroupCount} Group\n` + `│  ◦  *Active* : ${activeGroupList.length} Group\n` + `└  ◦  *Banned* : ${bannedGroupList.length} Group\n\n` + `Silakan klik tombol di bawah untuk melihat rincian grup.`;
       const buttons = [{
         name: "single_select",
         buttonParamsJson: JSON.stringify({
-          title: `📋 PILIH DAFTAR GRUP (${totalDisplayed})`,
+          title: `📋 PILIH GRUP (${totalDisplayed})`,
           sections: sections
         })
       }];
-      const bannerMedia = global.bot?.media?.banner1 || global.bot?.media?.banner2 || null;
       const options = {
-        image: bannerMedia,
         params: {
           bottom_sheet: {
             in_thread_buttons_limit: 1,
@@ -148,9 +146,9 @@ export default {
       } else {
         let fallbackText = `${bodyText}\n\n`;
         if (activeGroupList.length > 0) {
-          fallbackText += `–  *G R U P  A K T I F* (${activeGroupList.length})\n\n`;
+          fallbackText += `–  *L I S T  G R U P*\n\n`;
           activeGroupList.slice(0, 15).forEach((g, idx) => {
-            fallbackText += `┌  ◦  *${idx + 1}.* ${g.title}\n└  ◦  *Perintah* : \`${g.id}\`\n\n`;
+            fallbackText += `  ◦  *${idx + 1}.* ${g.title}\n  ◦  *Perintah* : \`${g.id}\`\n\n`;
           });
         }
         await ctx.reply(fallbackText.trimEnd(), {

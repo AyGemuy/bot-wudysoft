@@ -58,6 +58,12 @@ const GROUP_FEATURES = {
     key: "antitoxic",
     aliases: ["toxic", "antibadword", "badword"]
   },
+  autolevelup: {
+    name: "Auto Level Up",
+    desc: "Notifikasi & banner kenaikan level RPG otomatis saat EXP mencukupi",
+    key: "autolevelup",
+    aliases: ["levelup", "autolevel", "lvlup", "level"]
+  },
   nsfw: {
     name: "NSFW (+18 Mode)",
     desc: "Izinkan perintah dan konten dewasa (+18) di dalam grup ini",
@@ -112,12 +118,12 @@ function parseFlags(input = "") {
 }
 export default {
   name: "setgroup",
-  aliases: ["groupsetting", "gcset", "gcsetting", "groupconfig", "welcome", "leave", "detect", "antidelete", "antilink", "antibot", "antitoxic", "nsfw", "mute", "setwelcome", "setleave"],
+  aliases: ["groupsetting", "gcset", "gcsetting", "groupconfig", "welcome", "leave", "detect", "antidelete", "antilink", "antibot", "antitoxic", "nsfw", "mute", "setwelcome", "setleave", "autolevelup", "levelup", "autolevel", "lvlup", "level"],
   description: "Kelola seluruh setelan fitur dan proteksi otomatisasi grup",
   category: "Group",
   admin: true,
   group: true,
-  example: "setgroup | welcome on | setwelcome Halo @user | leave off | detect on",
+  example: "setgroup | autolevelup on | welcome on | setwelcome Halo @user | leave off | detect on",
   execute: async (sock, ctx, msg) => {
     try {
       if (!ctx.isGroup) {
@@ -152,6 +158,7 @@ export default {
             antidelete: false,
             antibot: false,
             antitoxic: false,
+            autolevelup: true,
             nsfw: false
           };
         }
@@ -162,7 +169,7 @@ export default {
       if (!rawText && ctx.text) {
         const raw = ctx.text.trim();
         const firstWord = raw.split(/\s+/)[0].toLowerCase();
-        const allCmds = ["setgroup", "groupsetting", "gcset", "gcsetting", "groupconfig", "welcome", "leave", "detect", "antidelete", "antilink", "antibot", "antitoxic", "nsfw", "mute", "setwelcome", "setleave"];
+        const allCmds = ["setgroup", "groupsetting", "gcset", "gcsetting", "groupconfig", "welcome", "leave", "detect", "antidelete", "antilink", "antibot", "antitoxic", "nsfw", "mute", "setwelcome", "setleave", "autolevelup", "levelup", "autolevel", "lvlup", "level"];
         if (allCmds.some(a => firstWord.endsWith(a))) {
           rawText = raw.slice(firstWord.length).trim();
         }
@@ -275,7 +282,7 @@ ${allKeys}`);
             desc_title: "Core mission",
             desc: (groupMetadata.desc || "Keamanan dan manajemen otomatis grup WhatsApp.").slice(0, 160),
             tag_a: groupData.antilink ? "ANTI_LINK" : "NO_ADS",
-            tag_b: groupData.nsfw ? "NSFW_ON" : "PRO_VIBES",
+            tag_b: groupData.autolevelup !== false ? "LEVELUP_ON" : "PRO_VIBES",
             tag_c: groupData.welcome ? "WELCOME_ON" : "CLEAN_JOIN",
             adm_title: "Security Admins",
             adm_name: adm1,
@@ -308,7 +315,7 @@ ${allKeys}`);
         for (const [, item] of Object.entries(GROUP_FEATURES)) {
           const val = groupData[item.key];
           const isCustom = typeof val === "string";
-          const isActive = Boolean(val);
+          const isActive = item.key === "autolevelup" ? val !== false : Boolean(val);
           const badge = isActive ? isCustom ? "🟢 [CUSTOM]" : "🟢 [ON]" : "🔴 [OFF]";
           featureStatusText += `│  ◦  ${item.name} : ${badge}\n`;
         }
@@ -326,7 +333,7 @@ ${featureStatusText.trimEnd()}
 
 Silakan klik tombol di bawah untuk mengubah setelan fitur grup secara instan.`;
         const actionRows = Object.entries(GROUP_FEATURES).map(([k, item]) => {
-          const isActive = Boolean(groupData[item.key]);
+          const isActive = item.key === "autolevelup" ? groupData[item.key] !== false : Boolean(groupData[item.key]);
           const nextAction = isActive ? "off" : "on";
           return {
             title: `${isActive ? "🟢" : "🔴"} ${item.name}`,
@@ -386,15 +393,21 @@ Silakan klik tombol di bawah untuk mengubah setelan fitur grup secara instan.`;
       }
       if (directKey) {
         targetKey = directKey;
-        if (targetVal === null) targetVal = !Boolean(groupData[targetKey]);
+        if (targetVal === null) {
+          const current = targetKey === "autolevelup" ? groupData[targetKey] !== false : Boolean(groupData[targetKey]);
+          targetVal = !current;
+        }
       } else {
         targetKey = targetKey || findFeatureKey(freeTokens[0] || "");
-        if (targetKey && targetVal === null) targetVal = !Boolean(groupData[targetKey]);
+        if (targetKey && targetVal === null) {
+          const current = targetKey === "autolevelup" ? groupData[targetKey] !== false : Boolean(groupData[targetKey]);
+          targetVal = !current;
+        }
       }
       if (!targetKey || !GROUP_FEATURES[targetKey]) {
         const listKeys = Object.keys(GROUP_FEATURES).map(k => `\`${k}\``).join(", ");
         if (typeof ctx.react === "function") await ctx.react("❌");
-        return ctx.reply(`–  *S E T  G R O U P*\n\nFitur pengaturan tidak ditemukan.\n\n┌  ◦  *Pilihan* : ${listKeys}\n└  ◦  *Example* : ${prefix}welcome on atau ${prefix}antilink off`);
+        return ctx.reply(`–  *S E T  G R O U P*\n\nFitur pengaturan tidak ditemukan.\n\n┌  ◦  *Pilihan* : ${listKeys}\n└  ◦  *Example* : ${prefix}autolevelup on atau ${prefix}welcome on`);
       }
       const item = GROUP_FEATURES[targetKey];
       groupData[item.key] = targetVal;

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Syne:wght@800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    body {
+      width: 1200px;
+      height: 630px;
+      background: #05070d;
+      font-family: 'Space Grotesk', sans-serif;
+      color: #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: center
+    }
+
+    .card {
+      width: 100%;
+      height: 100%;
+      padding: 70px 90px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: linear-gradient(rgba(0, 240, 255, .05) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 240, 255, .05) 1px, transparent 1px), radial-gradient(circle at 90% 10%, rgba(0, 240, 255, .15) 0, transparent 50%), #05070d;
+      background-size: 40px 40px, 40px 40px, 100% 100%, 100% 100%;
+      border: 2px solid rgba(0, 240, 255, .2);
+      position: relative
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      width: 30px;
+      height: 30px;
+      border-top: 4px solid #00f0ff;
+      border-left: 4px solid #00f0ff
+    }
+
+    .card::after {
+      content: "";
+      position: absolute;
+      bottom: -2px;
+      right: -2px;
+      width: 30px;
+      height: 30px;
+      border-bottom: 4px solid #00f0ff;
+      border-right: 4px solid #00f0ff
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center
+    }
+
+    .status {
+      color: #00f0ff;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      background: #00f0ff;
+      border-radius: 50%;
+      box-shadow: 0 0 10px #00f0ff
+    }
+
+    .category-pill {
+      padding: 8px 18px;
+      background: rgba(0, 240, 255, .1);
+      border: 1px solid rgba(0, 240, 255, .3);
+      color: #fff;
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: 1px;
+      border-radius: 6px
+    }
+
+    .quote-container {
+      margin: auto 0
+    }
+
+    .quote-text {
+      font-family: Syne, sans-serif;
+      font-size: 50px;
+      font-weight: 800;
+      line-height: 1.25;
+      letter-spacing: -1px;
+      color: #fff;
+      text-transform: uppercase
+    }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid rgba(0, 240, 255, .15);
+      padding-top: 24px
+    }
+
+    .bot-tag {
+      font-weight: 700;
+      font-size: 16px;
+      color: #00f0ff;
+      letter-spacing: 2px
+    }
+
+    .sys-id {
+      font-size: 13px;
+      color: rgba(255, 255, 255, .4);
+      letter-spacing: 2px
+    }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    <div class="header">
+      <div class="status">
+        <div class="status-dot"></div>TRANSMISSION: QUOTE_MODULE
+      </div>
+      <div class="category-pill">{{EMOJI}} {{CATEGORY}}</div>
+    </div>
+    <div class="quote-container">
+      <div class="quote-text">“{{QUOTE}}”</div>
+    </div>
+    <div class="footer">
+      <div class="bot-tag">// {{BOT_NAME}} PROTOCOL</div>
+      <div class="sys-id">SYSTEM.ID_9901X</div>
+    </div>
+  </div>
+</body>
+
+</html>

@@ -3,7 +3,11 @@ import db from "../../data/db.js";
 import {
   simpleQuoted
 } from "../../lib/quoted.js";
-const API_URL = `${global.bot?.api?.wudysoft}/api/game/ludo`;
+const getApiUrl = () => {
+  const rawApi = global.bot?.api?.wudysoft || "https://api.wudysoft.com";
+  const cleanApi = rawApi.replace(/^https?:\/\//i, "").replace(/\/+$/, "");
+  return `https://${cleanApi}/api/game/ludo`;
+};
 const PLAYER_COLORS = [{
   name: "Merah",
   emoji: "🔴",
@@ -27,7 +31,7 @@ function initDB(jid = null, name = "") {
   if (!global.db) global.db = {};
   if (!global.db.user) global.db.user = {};
   if (!global.db.ludo) global.db.ludo = {};
-  if (jid && !global.db.user[jid]) {
+  if (jid && !jid.includes("BOT") && !global.db.user[jid]) {
     global.db.user[jid] = {
       name: name || "",
       money: 1e4,
@@ -43,7 +47,7 @@ function saveDB() {
 }
 async function callLudoApi(payload) {
   try {
-    const res = await axios.post(API_URL, payload, {
+    const res = await axios.post(getApiUrl(), payload, {
       headers: {
         "Content-Type": "application/json"
       },
@@ -77,12 +81,14 @@ function formatPlayerList(players) {
   return players.map((p, idx) => {
     const isLast = idx === players.length - 1;
     const branch = isLast ? "└" : "│";
-    return `${branch}  ◦  ${p.color.emoji} ${p.name} (${p.color.name})`;
+    const botTag = p.isBot ? " 🤖" : "";
+    return `${branch}  ◦  ${p.color.emoji} ${p.name}${botTag} (${p.color.name})`;
   }).join("\n");
 }
 async function sendLudoBoard(sock, ctx, chatId, session, textCaption, quotedMsg) {
   const currentPlayer = session.players[session.turnIndex];
   const prefix = ctx?.prefix || ".";
+  const botName = global.bot?.name || "WudysoftBot";
   const buttons = [];
   if (session.status === "waiting") {
     buttons.push({
@@ -92,6 +98,15 @@ async function sendLudoBoard(sock, ctx, chatId, session, textCaption, quotedMsg)
         id: `${prefix}ludo join`
       })
     });
+    if (session.players.length < session.totalPlayers) {
+      buttons.push({
+        name: "quick_reply",
+        buttonParamsJson: JSON.stringify({
+          display_text: "🤖 Tambah Bot",
+          id: `${prefix}ludo addbot`
+        })
+      });
+    }
     if (session.players.length >= 2) {
       buttons.push({
         name: "quick_reply",
@@ -110,13 +125,15 @@ async function sendLudoBoard(sock, ctx, chatId, session, textCaption, quotedMsg)
     });
   }
   if (session.status === "playing" && session.lastDice === null) {
-    buttons.push({
-      name: "quick_reply",
-      buttonParamsJson: JSON.stringify({
-        display_text: `🎲 Kocok Dadu (${currentPlayer.name})`,
-        id: `${prefix}ludo roll`
-      })
-    });
+    if (!currentPlayer.isBot) {
+      buttons.push({
+        name: "quick_reply",
+        buttonParamsJson: JSON.stringify({
+          display_text: `🎲 Kocok Dadu (${currentPlayer.name})`,
+          id: `${prefix}ludo roll`
+        })
+      });
+    }
     buttons.push({
       name: "quick_reply",
       buttonParamsJson: JSON.stringify({
@@ -125,7 +142,7 @@ async function sendLudoBoard(sock, ctx, chatId, session, textCaption, quotedMsg)
       })
     });
   }
-  if (session.status === "playing" && session.lastDice !== null && session.movablePieces?.length > 1) {
+  if (session.status === "playing" && session.lastDice !== null && session.movablePieces?.length > 1 && !currentPlayer.isBot) {
     const pieceRows = session.movablePieces.map(p => {
       const pos = session.state[`p${currentPlayer.playerNum}`]?.[p] || 0;
       return {
@@ -152,7 +169,7 @@ async function sendLudoBoard(sock, ctx, chatId, session, textCaption, quotedMsg)
       })
     });
   }
-  const footerText = `${global.bot?.footer || global.bot?.name || "WudysoftBot"} • Ludo (${session.totalPlayers}P)`;
+  const footerText = `${global.bot?.footer || botName} • Ludo (${session.totalPlayers}P)`;
   if (typeof ctx?.sendCta === "function") {
     await ctx.sendCta(textCaption, footerText, buttons, {
       title: `✦ Ludo Arena • ${session.totalPlayers} Players ✦`,
@@ -195,20 +212,119 @@ function resetTurnTimer(sock, ctx, chatId) {
 Waktu giliran habis (AFK).
 
 ┌  ◦  *Player* : ${afkPlayer.color.emoji} ${afkPlayer.name}
-└  ◦  *Next Turn* : ${nextPlayer.color.emoji} ${nextPlayer.name}`;
+└  ◦  *Next Turn* : ${nextPlayer.color.emoji} ${nextPlayer.name}${nextPlayer.isBot ? " 🤖" : ""}`;
       resetTurnTimer(sock, ctx, chatId);
       await sendLudoBoard(sock, ctx, chatId, session, timeoutCaption, null);
+      if (nextPlayer.isBot) {
+        handleBotTurn(sock, ctx, chatId, session);
+      }
     }
   }, 60 * 1e3);
+}
+async function handleBotTurn(sock, ctx, chatId, session) {
+  setTimeout(async () => {
+    try {
+      const active = global.db.ludo[chatId];
+      if (!active || active.status !== "playing") return;
+      const botPlayer = active.players[active.turnIndex];
+      if (!botPlayer || !botPlayer.isBot) return;
+      const dice = Math.floor(Math.random() * 6) + 1;
+      active.lastDice = dice;
+      const playerKey = `p${botPlayer.playerNum}`;
+      const movable = getMovablePieces(active.state[playerKey], dice);
+      if (movable.length === 0) {
+        active.lastDice = null;
+        active.movablePieces = [];
+        active.turnIndex = (active.turnIndex + 1) % active.players.length;
+        active.expireTime = Date.now() + 60 * 1e3;
+        saveDB();
+        const nextPlayer = active.players[active.turnIndex];
+        const noMoveCaption = `–  *R O L L  D I C E  ( B O T )*
+
+┌  ◦  *Player* : ${botPlayer.color.emoji} 🤖 ${botPlayer.name}
+│  ◦  *Dice* : ${DICE_EMOJIS[dice]}
+└  ◦  *Result* : Tidak ada bidak yang dapat bergerak
+
+–  *N E X T  T U R N*
+
+┌  ◦  *Player* : ${nextPlayer.color.emoji} ${nextPlayer.name}${nextPlayer.isBot ? " 🤖" : ""}
+└  ◦  *Action* : ${nextPlayer.isBot ? "Bot sedang berpikir..." : "Silakan kocok dadu"}`;
+        resetTurnTimer(sock, ctx, chatId);
+        await sendLudoBoard(sock, ctx, chatId, active, noMoveCaption, null);
+        if (nextPlayer.isBot) {
+          handleBotTurn(sock, ctx, chatId, active);
+        }
+        return;
+      }
+      let chosenPiece = movable[0];
+      const homePiece = movable.find(p => active.state[playerKey][p] === 0);
+      if (dice === 6 && homePiece) {
+        chosenPiece = homePiece;
+      } else {
+        chosenPiece = movable.reduce((prev, curr) => {
+          const prevPos = active.state[playerKey][prev] || 0;
+          const currPos = active.state[playerKey][curr] || 0;
+          return currPos > prevPos ? curr : prev;
+        }, movable[0]);
+      }
+      const currentPos = active.state[playerKey][chosenPiece] || 0;
+      const newPos = currentPos === 0 ? 1 : currentPos + dice;
+      const data = await callLudoApi({
+        action: "move",
+        id: active.id,
+        player: String(botPlayer.playerNum),
+        [chosenPiece]: newPos
+      });
+      if (data?.game?.boardUrl) {
+        active.boardUrl = data.game.boardUrl;
+        active.state = data.game.state;
+      }
+      const pState = active.state[playerKey];
+      if (pState.a === 57 && pState.b === 57 && pState.c === 57 && pState.d === 57) {
+        delete global.db.ludo[chatId];
+        saveDB();
+        const winMsg = `–  *W I N N E R*
+
+🤖 ${botPlayer.color.emoji} *${botPlayer.name}* (Bot) berhasil memenangkan permainan Ludo! Tetap semangat dan coba lagi.`;
+        return ctx.reply(winMsg);
+      }
+      const rolledSix = dice === 6;
+      active.lastDice = null;
+      active.movablePieces = [];
+      if (!rolledSix) {
+        active.turnIndex = (active.turnIndex + 1) % active.players.length;
+      }
+      active.expireTime = Date.now() + 60 * 1e3;
+      saveDB();
+      const activePlayer = active.players[active.turnIndex];
+      const moveCaption = `–  *B O T  M O V E*
+
+┌  ◦  *Player* : ${botPlayer.color.emoji} 🤖 ${botPlayer.name}
+│  ◦  *Dice* : ${DICE_EMOJIS[dice]}
+│  ◦  *Piece* : Bidak [${chosenPiece.toUpperCase()}] ➔ Posisi ${newPos}
+└  ◦  *Bonus Roll* : ${rolledSix ? "Ya (Dadu 6)" : "Tidak"}
+
+–  *T U R N*
+
+┌  ◦  *Player* : ${activePlayer.color.emoji} ${activePlayer.name}${activePlayer.isBot ? " 🤖" : ""}
+└  ◦  *Action* : ${activePlayer.isBot ? "Bot sedang bersiap..." : "Silakan kocok dadu"}`;
+      resetTurnTimer(sock, ctx, chatId);
+      await sendLudoBoard(sock, ctx, chatId, active, moveCaption, null);
+      if (activePlayer.isBot) {
+        handleBotTurn(sock, ctx, chatId, active);
+      }
+    } catch (e) {
+      console.error("[Ludo Bot Turn Error]:", e);
+    }
+  }, 1800);
 }
 export default {
   name: "ludo",
   aliases: ["ludoking", "mainludo"],
-  description: "Game papan Ludo multiplayer interaktif (2, 3, atau 4 Pemain) Full CTA (Full DB)",
+  description: "Game papan Ludo multiplayer interaktif (Lawan Bot atau Pemain) Full CTA (Full DB)",
   category: "Game",
-  group: true,
   limit: true,
-  example: "ludo create 2 atau ludo create 4 atau ludo join",
+  example: "ludo create 2 atau ludo bot (langsung main lawan bot)",
   before: async (msg, {
     sock,
     ctx
@@ -235,7 +351,8 @@ export default {
           jid: senderJid,
           name: ctx?.pushname || `Pemain ${playerNum}`,
           playerNum: playerNum,
-          color: color
+          color: color,
+          isBot: false
         });
         if (session.players.length === session.totalPlayers) {
           session.status = "playing";
@@ -261,7 +378,7 @@ ${formatPlayerList(session.players)}
           return true;
         }
         saveDB();
-        await ctx.reply(`✅ *${ctx?.pushname || "Pemain"}* bergabung (${color.emoji} ${color.name})!\n` + `Slot: *${session.players.length}/${session.totalPlayers}* pemain.`);
+        await ctx.reply(`✅ *${ctx?.pushname || "Pemain"}* bergabung (${color.emoji} ${color.name})!\nSlot: *${session.players.length}/${session.totalPlayers}* pemain.`);
         return true;
       }
       if (session.status === "waiting" && ["start", "mulai", "gas"].includes(text)) {
@@ -270,7 +387,7 @@ ${formatPlayerList(session.players)}
           return true;
         }
         if (session.players.length < 2) {
-          await ctx.reply("❌ Minimal dibutuhkan 2 pemain untuk memulai Ludo.");
+          await ctx.reply("❌ Minimal dibutuhkan 2 pemain (bisa ketik `.ludo addbot` untuk tambah bot).");
           return true;
         }
         session.totalPlayers = session.players.length;
@@ -282,7 +399,7 @@ ${formatPlayerList(session.players)}
         const firstPlayer = session.players[0];
         const startCaption = `–  *L U D O  S T A R T*
 
-Permainan Ludo telah dimulai oleh Host!
+Permainan Ludo telah dimulai!
 
 –  *P L A Y E R S*
 
@@ -298,6 +415,10 @@ ${formatPlayerList(session.players)}
       }
       if (session.status === "playing" && ["roll", "kocok", "dadu", "putar"].includes(text)) {
         const currentPlayer = session.players[session.turnIndex];
+        if (currentPlayer.isBot) {
+          await ctx.reply(`⚠️ Sekarang giliran 🤖 *${currentPlayer.name}* (Bot). Harap tunggu!`);
+          return true;
+        }
         if (currentPlayer.jid !== senderJid) return;
         if (session.lastDice !== null) {
           await ctx.reply(`⚠️ Anda sudah mengocok dadu (${DICE_EMOJIS[session.lastDice]}). Silakan tentukan bidak!`);
@@ -323,10 +444,13 @@ ${formatPlayerList(session.players)}
 
 –  *N E X T  T U R N*
 
-┌  ◦  *Player* : ${nextPlayer.color.emoji} ${nextPlayer.name}
-└  ◦  *Action* : Silakan kocok dadu`;
+┌  ◦  *Player* : ${nextPlayer.color.emoji} ${nextPlayer.name}${nextPlayer.isBot ? " 🤖" : ""}
+└  ◦  *Action* : ${nextPlayer.isBot ? "Bot sedang bersiap..." : "Silakan kocok dadu"}`;
           resetTurnTimer(sock, ctx, chatId);
           await sendLudoBoard(sock, ctx, chatId, session, noMoveCaption, msg);
+          if (nextPlayer.isBot) {
+            handleBotTurn(sock, ctx, chatId, session);
+          }
           return true;
         }
         if (movable.length === 1) {
@@ -349,9 +473,7 @@ ${formatPlayerList(session.players)}
             initDB(currentPlayer.jid, currentPlayer.name);
             global.db.user[currentPlayer.jid].exp = (global.db.user[currentPlayer.jid].exp || 0) + 500;
             saveDB();
-            const winMsg = `–  *W I N N E R*
-
-Selamat! ${currentPlayer.color.emoji} ${currentPlayer.name} berhasil memenangkan permainan Ludo! (+500 EXP)`;
+            const winMsg = `–  *W I N N E R*\n\nSelamat! ${currentPlayer.color.emoji} ${currentPlayer.name} berhasil memenangkan permainan Ludo! (+500 EXP) 🏆`;
             await ctx.reply(winMsg);
             return true;
           }
@@ -371,10 +493,13 @@ Selamat! ${currentPlayer.color.emoji} ${currentPlayer.name} berhasil memenangkan
 
 –  *T U R N*
 
-┌  ◦  *Player* : ${activePlayer.color.emoji} ${activePlayer.name}
-└  ◦  *Action* : Silakan kocok dadu`;
+┌  ◦  *Player* : ${activePlayer.color.emoji} ${activePlayer.name}${activePlayer.isBot ? " 🤖" : ""}
+└  ◦  *Action* : ${activePlayer.isBot ? "Bot sedang bersiap..." : "Silakan kocok dadu"}`;
           resetTurnTimer(sock, ctx, chatId);
           await sendLudoBoard(sock, ctx, chatId, session, autoCaption, msg);
+          if (activePlayer.isBot) {
+            handleBotTurn(sock, ctx, chatId, session);
+          }
           return true;
         }
         session.expireTime = Date.now() + 60 * 1e3;
@@ -391,7 +516,7 @@ Pilih bidak dari tombol menu di bawah atau balas dengan huruf a/b/c/d.`;
       }
       if (session.status === "playing" && ["a", "b", "c", "d"].includes(text)) {
         const currentPlayer = session.players[session.turnIndex];
-        if (currentPlayer.jid !== senderJid || session.lastDice === null) return;
+        if (currentPlayer.isBot || currentPlayer.jid !== senderJid || session.lastDice === null) return;
         const piece = text;
         if (!session.movablePieces?.includes(piece)) {
           await ctx.reply(`❌ Bidak [${piece.toUpperCase()}] tidak dapat bergerak dengan dadu ${session.lastDice}.`);
@@ -416,9 +541,7 @@ Pilih bidak dari tombol menu di bawah atau balas dengan huruf a/b/c/d.`;
           initDB(currentPlayer.jid, currentPlayer.name);
           global.db.user[currentPlayer.jid].exp = (global.db.user[currentPlayer.jid].exp || 0) + 500;
           saveDB();
-          const winMsg = `–  *W I N N E R*
-
-Selamat! ${currentPlayer.color.emoji} ${currentPlayer.name} berhasil memenangkan permainan Ludo! (+500 EXP)`;
+          const winMsg = `–  *W I N N E R*\n\nSelamat! ${currentPlayer.color.emoji} ${currentPlayer.name} berhasil memenangkan permainan Ludo! (+500 EXP) 🏆`;
           await ctx.reply(winMsg);
           return true;
         }
@@ -437,10 +560,13 @@ Selamat! ${currentPlayer.color.emoji} ${currentPlayer.name} berhasil memenangkan
 
 –  *T U R N*
 
-┌  ◦  *Player* : ${activePlayer.color.emoji} ${activePlayer.name}
-└  ◦  *Action* : Silakan kocok dadu`;
+┌  ◦  *Player* : ${activePlayer.color.emoji} ${activePlayer.name}${activePlayer.isBot ? " 🤖" : ""}
+└  ◦  *Action* : ${activePlayer.isBot ? "Bot sedang bersiap..." : "Silakan kocok dadu"}`;
         resetTurnTimer(sock, ctx, chatId);
         await sendLudoBoard(sock, ctx, chatId, session, moveCaption, msg);
+        if (activePlayer.isBot) {
+          handleBotTurn(sock, ctx, chatId, session);
+        }
         return true;
       }
     } catch (e) {
@@ -454,6 +580,7 @@ Selamat! ${currentPlayer.color.emoji} ${currentPlayer.name} berhasil memenangkan
       const quotedMsg = typeof simpleQuoted === "function" ? simpleQuoted(ctx) : msg;
       const chatId = ctx.id;
       const senderJid = ctx.sender;
+      const botName = global.bot?.name || "WudysoftBot";
       initDB(senderJid, ctx.pushname || "Pemain");
       if (rawText.includes("cancel") || rawText.includes("keluar") || rawText.includes("batal")) {
         if (global.db.ludo[chatId]) {
@@ -464,11 +591,116 @@ Selamat! ${currentPlayer.color.emoji} ${currentPlayer.name} berhasil memenangkan
             action: "delete",
             id: session.id
           });
-          return ctx.reply(`–  *C A N C E L L E D*
-
-Room permainan Ludo di grup ini telah dibatalkan.`);
+          return ctx.reply(`–  *C A N C E L L E D*\n\nRoom permainan Ludo telah dibatalkan.`);
         }
         return ctx.reply("❌ Tidak ada sesi Ludo yang sedang berjalan.");
+      }
+      if (rawText.includes("addbot")) {
+        if (!global.db.ludo[chatId]) return ctx.reply(`❌ Belum ada room. Buat terlebih dahulu dengan *${prefix}ludo*`);
+        const session = global.db.ludo[chatId];
+        if (session.status !== "waiting") return ctx.reply("⚠️ Permainan Ludo sudah dimulai!");
+        if (session.players.length >= session.totalPlayers) return ctx.reply("❌ Slot pemain sudah penuh!");
+        const playerNum = session.players.length + 1;
+        const color = PLAYER_COLORS[playerNum - 1];
+        session.players.push({
+          jid: `BOT_${playerNum}@s.whatsapp.net`,
+          name: `${botName} AI ${playerNum - 1}`,
+          playerNum: playerNum,
+          color: color,
+          isBot: true
+        });
+        if (session.players.length === session.totalPlayers) {
+          session.status = "playing";
+          session.turnIndex = 0;
+          session.lastDice = null;
+          session.expireTime = Date.now() + 60 * 1e3;
+          saveDB();
+          const firstPlayer = session.players[0];
+          const startCaption = `–  *L U D O  S T A R T*
+
+Slot pemain telah lengkap, permainan dimulai!
+
+–  *P L A Y E R S*
+
+${formatPlayerList(session.players)}
+
+–  *T U R N*
+
+┌  ◦  *Player* : ${firstPlayer.color.emoji} ${firstPlayer.name}
+└  ◦  *Action* : Silakan kocok dadu untuk melangkah`;
+          resetTurnTimer(sock, ctx, chatId);
+          await sendLudoBoard(sock, ctx, chatId, session, startCaption, quotedMsg);
+          if (firstPlayer.isBot) {
+            handleBotTurn(sock, ctx, chatId, session);
+          }
+          return;
+        }
+        saveDB();
+        return ctx.reply(`🤖 *${botName} AI* berhasil ditambahkan (${color.emoji} ${color.name})!\nSlot Pemain: *${session.players.length}/${session.totalPlayers}*`);
+      }
+      if (rawText.includes("bot") || rawText.includes("solo") || rawText.includes("ai")) {
+        if (global.db.ludo[chatId]) {
+          return ctx.reply(`⚠️ Masih ada game Ludo aktif!\nKetik *${prefix}ludo cancel* untuk membatalkan.`);
+        }
+        let totalPlayers = 2;
+        const countMatch = rawText.match(/\b([234])\b/);
+        if (countMatch) totalPlayers = parseInt(countMatch[1], 10);
+        await ctx.react("⏳");
+        const data = await callLudoApi({
+          action: "create",
+          total: totalPlayers
+        });
+        if (!data?.success || !data?.game) {
+          await ctx.react("❌");
+          return ctx.reply("❌ Gagal membuat room Ludo dari server.");
+        }
+        const game = data.game;
+        const hostColor = PLAYER_COLORS[0];
+        const hostName = ctx.pushname || "Player 1";
+        const players = [{
+          jid: senderJid,
+          name: hostName,
+          playerNum: 1,
+          color: hostColor,
+          isBot: false
+        }];
+        for (let i = 2; i <= totalPlayers; i++) {
+          players.push({
+            jid: `BOT_${i}@s.whatsapp.net`,
+            name: `${botName} AI ${i - 1}`,
+            playerNum: i,
+            color: PLAYER_COLORS[i - 1],
+            isBot: true
+          });
+        }
+        global.db.ludo[chatId] = {
+          id: game.id,
+          totalPlayers: totalPlayers,
+          status: "playing",
+          boardUrl: game.boardUrl,
+          state: game.state,
+          turnIndex: 0,
+          lastDice: null,
+          movablePieces: [],
+          expireTime: Date.now() + 60 * 1e3,
+          players: players
+        };
+        saveDB();
+        const startCaption = `–  *L U D O  V S  B O T*
+
+Permainan Ludo melawan Bot resmi dimulai!
+
+–  *P L A Y E R S*
+
+${formatPlayerList(players)}
+
+–  *T U R N*
+
+┌  ◦  *Player* : ${hostColor.emoji} ${hostName}
+└  ◦  *Action* : Silakan kocok dadu untuk melangkah`;
+        resetTurnTimer(sock, ctx, chatId);
+        await ctx.react("🎲");
+        return await sendLudoBoard(sock, ctx, chatId, global.db.ludo[chatId], startCaption, quotedMsg);
       }
       if (rawText.includes("join") || rawText.includes("masuk")) {
         if (!global.db.ludo[chatId]) {
@@ -483,7 +715,8 @@ Room permainan Ludo di grup ini telah dibatalkan.`);
           jid: senderJid,
           name: ctx.pushname || `Pemain ${playerNum}`,
           playerNum: playerNum,
-          color: color
+          color: color,
+          isBot: false
         });
         if (session.players.length === session.totalPlayers) {
           session.status = "playing";
@@ -517,7 +750,7 @@ ${formatPlayerList(session.players)}
           return ctx.reply("⚠️ Hanya pembuat room (Host) yang dapat memulai permainan.");
         }
         if (session.players.length < 2) {
-          return ctx.reply("❌ Minimal dibutuhkan 2 pemain untuk memulai Ludo.");
+          return ctx.reply(`❌ Minimal dibutuhkan 2 pemain (bisa tambah dengan *${prefix}ludo addbot*).`);
         }
         session.totalPlayers = session.players.length;
         session.status = "playing";
@@ -528,7 +761,7 @@ ${formatPlayerList(session.players)}
         const firstPlayer = session.players[0];
         const startCaption = `–  *L U D O  S T A R T*
 
-Permainan Ludo telah dimulai oleh Host!
+Permainan Ludo telah dimulai!
 
 –  *P L A Y E R S*
 
@@ -545,6 +778,9 @@ ${formatPlayerList(session.players)}
         if (!global.db.ludo[chatId]) return ctx.reply("❌ Tidak ada game Ludo aktif.");
         const session = global.db.ludo[chatId];
         const currentPlayer = session.players[session.turnIndex];
+        if (currentPlayer.isBot) {
+          return ctx.reply(`⚠️ Sekarang giliran 🤖 *${currentPlayer.name}* (Bot). Harap tunggu!`);
+        }
         if (currentPlayer.jid !== senderJid) {
           return ctx.reply(`⚠️ Sekarang giliran ${currentPlayer.color.emoji} *${currentPlayer.name}*!`);
         }
@@ -568,10 +804,14 @@ ${formatPlayerList(session.players)}
 
 –  *N E X T  T U R N*
 
-┌  ◦  *Player* : ${nextPlayer.color.emoji} ${nextPlayer.name}
-└  ◦  *Action* : Silakan kocok dadu`;
+┌  ◦  *Player* : ${nextPlayer.color.emoji} ${nextPlayer.name}${nextPlayer.isBot ? " 🤖" : ""}
+└  ◦  *Action* : ${nextPlayer.isBot ? "Bot sedang bersiap..." : "Silakan kocok dadu"}`;
           resetTurnTimer(sock, ctx, chatId);
-          return await sendLudoBoard(sock, ctx, chatId, session, noMoveCaption, quotedMsg);
+          await sendLudoBoard(sock, ctx, chatId, session, noMoveCaption, quotedMsg);
+          if (nextPlayer.isBot) {
+            handleBotTurn(sock, ctx, chatId, session);
+          }
+          return;
         }
         if (movable.length === 1) {
           const piece = movable[0];
@@ -593,9 +833,7 @@ ${formatPlayerList(session.players)}
             initDB(currentPlayer.jid, currentPlayer.name);
             global.db.user[currentPlayer.jid].exp = (global.db.user[currentPlayer.jid].exp || 0) + 500;
             saveDB();
-            const winMsg = `–  *W I N N E R*
-
-Selamat! ${currentPlayer.color.emoji} ${currentPlayer.name} berhasil memenangkan permainan Ludo! (+500 EXP)`;
+            const winMsg = `–  *W I N N E R*\n\nSelamat! ${currentPlayer.color.emoji} ${currentPlayer.name} berhasil memenangkan permainan Ludo! (+500 EXP) 🏆`;
             return ctx.reply(winMsg);
           }
           const rolledSix = dice === 6;
@@ -614,10 +852,14 @@ Selamat! ${currentPlayer.color.emoji} ${currentPlayer.name} berhasil memenangkan
 
 –  *T U R N*
 
-┌  ◦  *Player* : ${activePlayer.color.emoji} ${activePlayer.name}
-└  ◦  *Action* : Silakan kocok dadu`;
+┌  ◦  *Player* : ${activePlayer.color.emoji} ${activePlayer.name}${activePlayer.isBot ? " 🤖" : ""}
+└  ◦  *Action* : ${activePlayer.isBot ? "Bot sedang bersiap..." : "Silakan kocok dadu"}`;
           resetTurnTimer(sock, ctx, chatId);
-          return await sendLudoBoard(sock, ctx, chatId, session, autoCaption, quotedMsg);
+          await sendLudoBoard(sock, ctx, chatId, session, autoCaption, quotedMsg);
+          if (activePlayer.isBot) {
+            handleBotTurn(sock, ctx, chatId, session);
+          }
+          return;
         }
         session.expireTime = Date.now() + 60 * 1e3;
         saveDB();
@@ -634,6 +876,9 @@ Pilih bidak dari tombol menu di bawah atau balas dengan huruf a/b/c/d.`;
         if (!global.db.ludo[chatId]) return ctx.reply("❌ Tidak ada game Ludo aktif.");
         const session = global.db.ludo[chatId];
         const currentPlayer = session.players[session.turnIndex];
+        if (currentPlayer.isBot) {
+          return ctx.reply(`⚠️ Sekarang giliran 🤖 *${currentPlayer.name}* (Bot). Harap tunggu!`);
+        }
         if (currentPlayer.jid !== senderJid || session.lastDice === null) {
           return ctx.reply("⚠️ Bukan giliranmu atau kamu belum mengocok dadu!");
         }
@@ -660,9 +905,7 @@ Pilih bidak dari tombol menu di bawah atau balas dengan huruf a/b/c/d.`;
           initDB(currentPlayer.jid, currentPlayer.name);
           global.db.user[currentPlayer.jid].exp = (global.db.user[currentPlayer.jid].exp || 0) + 500;
           saveDB();
-          const winMsg = `–  *W I N N E R*
-
-Selamat! ${currentPlayer.color.emoji} ${currentPlayer.name} berhasil memenangkan permainan Ludo! (+500 EXP)`;
+          const winMsg = `–  *W I N N E R*\n\nSelamat! ${currentPlayer.color.emoji} ${currentPlayer.name} berhasil memenangkan permainan Ludo! (+500 EXP) 🏆`;
           return ctx.reply(winMsg);
         }
         const rolledSix = session.lastDice === 6;
@@ -680,19 +923,21 @@ Selamat! ${currentPlayer.color.emoji} ${currentPlayer.name} berhasil memenangkan
 
 –  *T U R N*
 
-┌  ◦  *Player* : ${activePlayer.color.emoji} ${activePlayer.name}
-└  ◦  *Action* : Silakan kocok dadu`;
+┌  ◦  *Player* : ${activePlayer.color.emoji} ${activePlayer.name}${activePlayer.isBot ? " 🤖" : ""}
+└  ◦  *Action* : ${activePlayer.isBot ? "Bot sedang bersiap..." : "Silakan kocok dadu"}`;
         resetTurnTimer(sock, ctx, chatId);
-        return await sendLudoBoard(sock, ctx, chatId, session, moveCaption, quotedMsg);
+        await sendLudoBoard(sock, ctx, chatId, session, moveCaption, quotedMsg);
+        if (activePlayer.isBot) {
+          handleBotTurn(sock, ctx, chatId, session);
+        }
+        return;
       }
       if (global.db.ludo[chatId]) {
-        return ctx.reply(`⚠️ Masih ada game Ludo aktif di grup ini!\nKetik *${prefix}ludo cancel* untuk membatalkan.`);
+        return ctx.reply(`⚠️ Masih ada game Ludo aktif!\nKetik *${prefix}ludo cancel* untuk membatalkan.`);
       }
       let totalPlayers = 4;
       const countMatch = rawText.match(/\b([234])\b/);
-      if (countMatch) {
-        totalPlayers = parseInt(countMatch[1], 10);
-      }
+      if (countMatch) totalPlayers = parseInt(countMatch[1], 10);
       await ctx.react("⏳");
       const data = await callLudoApi({
         action: "create",
@@ -719,7 +964,8 @@ Selamat! ${currentPlayer.color.emoji} ${currentPlayer.name} berhasil memenangkan
           jid: senderJid,
           name: hostName,
           playerNum: 1,
-          color: hostColor
+          color: hostColor,
+          isBot: false
         }]
       };
       saveDB();
@@ -736,7 +982,7 @@ Room Ludo Multiplayer telah dibuka.
 
 └  ◦  ${hostColor.emoji} ${hostName} (${hostColor.name})
 
-Gunakan tombol di bawah untuk bergabung ke dalam permainan.`;
+_Gunakan tombol di bawah untuk bergabung atau ketik \`${prefix}ludo addbot\` untuk bermain dengan Bot._`;
       await sendLudoBoard(sock, ctx, chatId, global.db.ludo[chatId], lobbyCaption, quotedMsg);
       await ctx.react("🎲");
     } catch (error) {

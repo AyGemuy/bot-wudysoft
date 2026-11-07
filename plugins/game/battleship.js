@@ -54,12 +54,20 @@ async function renderHtmlToImage(htmlContent) {
 function buildBattleshipCanvasHtml(game, statusText = "RADAR SCANNING") {
   const botName = global.bot?.name || "WudysoftBot";
   const p1 = game.player1;
-  const p2 = game.player2;
+  const p2 = game.player2 || {
+    name: "Menunggu Lawan...",
+    ships: Array.from({
+      length: GRID_SIZE
+    }, () => Array(GRID_SIZE).fill(false)),
+    shots: Array.from({
+      length: GRID_SIZE
+    }, () => Array(GRID_SIZE).fill(null))
+  };
   const renderGridCells = (targetGrid, shots) => {
     let cells = "";
     for (let r = 0; r < GRID_SIZE; r++) {
       for (let c = 0; c < GRID_SIZE; c++) {
-        const shotState = shots[r][c];
+        const shotState = shots ? shots[r][c] : null;
         let content = "";
         let cellClass = "sea";
         if (shotState === "HIT") {
@@ -76,8 +84,8 @@ function buildBattleshipCanvasHtml(game, statusText = "RADAR SCANNING") {
   };
   const p1TargetCells = renderGridCells(p2.ships, p1.shots);
   const p2TargetCells = renderGridCells(p1.ships, p2.shots);
-  const p1Hp = p2.ships.flat().filter(Boolean).length - p1.shots.flat().filter(s => s === "HIT").length;
-  const p2Hp = p1.ships.flat().filter(Boolean).length - p2.shots.flat().filter(s => s === "HIT").length;
+  const p1Hp = p2.ships.flat().filter(Boolean).length - (p1.shots ? p1.shots.flat().filter(s => s === "HIT").length : 0);
+  const p2Hp = p1.ships.flat().filter(Boolean).length - (p2.shots ? p2.shots.flat().filter(s => s === "HIT").length : 0);
   return `
   <!DOCTYPE html>
   <html>

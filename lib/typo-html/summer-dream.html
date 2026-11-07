@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Summer Dream - Refined Editorial</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Italianno&family=Montserrat:wght@800;900&family=Noto+Serif+JP:wght@400;700;900&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    body {
+      background-color: #060709;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      overflow: hidden
+    }
+
+    .poster-canvas {
+      position: relative;
+      width: 440px;
+      height: 720px;
+      background: #0d0e12;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 40px 90px rgba(0, 0, 0, .95), 0 0 0 1px rgba(255, 255, 255, .08)
+    }
+
+    .art-frame-wrap {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80%;
+      height: 82%;
+      padding: 6px;
+      border: 1px solid rgba(255, 255, 255, .08);
+      z-index: 1
+    }
+
+    .art-frame {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, .2);
+      position: relative;
+      display: flex;
+      background: #000
+    }
+
+    .art-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: brightness(.92) contrast(1.1);
+      flex: 1
+    }
+
+    .art-frame .scrim {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(13, 14, 18, .1) 0, rgba(13, 14, 18, .7) 100%);
+      pointer-events: none
+    }
+
+    .layer {
+      position: absolute;
+      user-select: none;
+      pointer-events: none
+    }
+
+    .kanji-top {
+      top: 13%;
+      left: 14%;
+      font-family: 'Noto Serif JP', serif;
+      font-size: 74px;
+      font-weight: 900;
+      color: rgba(255, 255, 255, .75);
+      line-height: 1;
+      z-index: 5;
+      text-shadow: 0 4px 20px rgba(0, 0, 0, .6)
+    }
+
+    .script-sum {
+      top: 9%;
+      left: 23%;
+      font-family: Italianno, cursive;
+      font-size: 110px;
+      color: #fff;
+      line-height: .9;
+      transform: rotate(-8deg);
+      z-index: 8;
+      text-shadow: 0 4px 20px rgba(0, 0, 0, .85)
+    }
+
+    .jp-vertical-left {
+      top: 27%;
+      left: 17%;
+      writing-mode: vertical-rl;
+      text-orientation: upright;
+      font-family: 'Noto Serif JP', serif;
+      font-size: 8.5px;
+      letter-spacing: 3px;
+      color: rgba(255, 255, 255, .65);
+      z-index: 6
+    }
+
+    .vertical-outline {
+      top: 15%;
+      right: 14%;
+      display: flex;
+      flex-direction: column;
+      font-family: Montserrat, sans-serif;
+      font-size: 92px;
+      font-weight: 900;
+      line-height: .82;
+      letter-spacing: -2px;
+      color: transparent;
+      -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.88);
+      z-index: 5
+    }
+
+    .accent-tag {
+      top: 41%;
+      right: 19%;
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -.5px;
+      color: #fff;
+      z-index: 9;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, .95)
+    }
+
+    .kanji-mid {
+      top: 46%;
+      right: 15%;
+      font-family: 'Noto Serif JP', serif;
+      font-size: 60px;
+      font-weight: 900;
+      color: rgba(255, 255, 255, .85);
+      z-index: 6
+    }
+
+    .bottom-title-group {
+      bottom: 20%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      text-align: center;
+      z-index: 10
+    }
+
+    .title-solid {
+      font-family: Montserrat, sans-serif;
+      font-size: 46px;
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: -1.5px;
+      line-height: 1;
+      text-shadow: 0 8px 30px rgba(0, 0, 0, .9)
+    }
+
+    .title-stroke {
+      font-family: Montserrat, sans-serif;
+      font-size: 46px;
+      font-weight: 900;
+      color: transparent;
+      -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.88);
+      letter-spacing: -1.5px;
+      line-height: 1;
+      margin-top: -6px
+    }
+
+    .bottom-desc {
+      bottom: 11%;
+      left: 15%;
+      right: 15%;
+      font-family: 'Noto Serif JP', serif;
+      font-size: 8.5px;
+      line-height: 1.5;
+      color: rgba(255, 255, 255, .6);
+      z-index: 7
+    }
+  </style>
+</head>
+
+<body>
+  <div class="poster-canvas">
+    <div class="art-frame-wrap">
+      <div class="art-frame">{{IMAGE}}
+        <div class="scrim"></div>
+      </div>
+    </div>
+    <div class="layer kanji-top">{{KANJI_TOP}}</div>
+    <div class="layer script-sum">{{TOP}}</div>
+    <div class="layer jp-vertical-left">{{SIDE_TEXT}}</div>
+    <div class="layer vertical-outline">{{VERTICAL}}</div>
+    <div class="layer accent-tag">{{ACCENT}}</div>
+    <div class="layer kanji-mid">{{KANJI_MID}}</div>
+    <div class="layer bottom-title-group">
+      <div class="title-solid">“{{BOTTOM}}”</div>
+      <div class="title-stroke">“{{BOTTOM}}”</div>
+    </div>
+    <div class="layer bottom-desc">{{FOOTER}}</div>
+  </div>
+</body>
+
+</html>

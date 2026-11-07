@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Zenith Futurism</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=Space+Grotesk:wght@400;500;700&family=Syne:wght@700;800;900&family=Noto+Serif+JP:wght@700;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    body {
+      background: #060709;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: 'Space Grotesk', sans-serif;
+      overflow: hidden
+    }
+
+    .poster-canvas {
+      position: relative;
+      width: 440px;
+      height: 720px;
+      background: #0b0c10;
+      border: 1px solid rgba(255, 255, 255, .08);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 40px 90px rgba(0, 0, 0, .95)
+    }
+
+    .canvas-grid {
+      position: absolute;
+      inset: 0;
+      background-image: linear-gradient(rgba(255, 255, 255, .02) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, .02) 1px, transparent 1px);
+      background-size: 28px 28px;
+      z-index: 0
+    }
+
+    .tech-header {
+      position: absolute;
+      top: 24px;
+      left: 28px;
+      right: 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, .08);
+      padding-bottom: 12px;
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: rgba(255, 255, 255, .5);
+      text-transform: uppercase;
+      z-index: 10
+    }
+
+    .tech-header .badge {
+      color: #fff;
+      font-weight: 700;
+      background: rgba(255, 255, 255, .06);
+      padding: 2px 6px;
+      border-radius: 3px;
+      border: 1px solid rgba(255, 255, 255, .12)
+    }
+
+    .center-visual {
+      position: absolute;
+      top: 52%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 78%;
+      height: 64%;
+      overflow: hidden;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, .12);
+      display: flex;
+      background: #000;
+      z-index: 2
+    }
+
+    .center-visual img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: contrast(1.15) brightness(.9);
+      flex: 1
+    }
+
+    .center-visual::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, transparent 40%, rgba(11, 12, 16, .85) 100%)
+    }
+
+    .watermark-top {
+      position: absolute;
+      top: 10%;
+      left: 20px;
+      font-family: Syne, sans-serif;
+      font-size: 80px;
+      font-weight: 900;
+      line-height: .8;
+      letter-spacing: -2px;
+      color: rgba(255, 255, 255, .05);
+      z-index: 1;
+      text-transform: uppercase
+    }
+
+    .kanji-float {
+      position: absolute;
+      top: 16%;
+      left: 36px;
+      font-family: 'Noto Serif JP', serif;
+      font-size: 52px;
+      font-weight: 900;
+      color: rgba(255, 255, 255, .85);
+      z-index: 5;
+      line-height: 1;
+      text-shadow: 0 4px 20px rgba(0, 0, 0, .8)
+    }
+
+    .vertical-stack {
+      position: absolute;
+      top: 20%;
+      right: 32px;
+      display: flex;
+      flex-direction: column;
+      font-family: Syne, sans-serif;
+      font-size: 74px;
+      font-weight: 900;
+      line-height: .82;
+      letter-spacing: -3px;
+      color: transparent;
+      -webkit-text-stroke: 1.2px rgba(255, 255, 255, 0.9);
+      z-index: 5
+    }
+
+    .accent-card {
+      position: absolute;
+      top: 50%;
+      right: 28px;
+      background: rgba(18, 20, 26, .75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, .15);
+      border-radius: 6px;
+      padding: 6px 14px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #fff;
+      text-transform: uppercase;
+      z-index: 6;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, .5)
+    }
+
+    .bottom-layout {
+      position: absolute;
+      bottom: 24px;
+      left: 28px;
+      right: 28px;
+      z-index: 6
+    }
+
+    .main-hero-title {
+      font-family: Syne, sans-serif;
+      font-size: 42px;
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: -1.5px;
+      line-height: .95;
+      text-transform: uppercase;
+      margin-bottom: 10px
+    }
+
+    .hero-title-stroke {
+      font-family: Syne, sans-serif;
+      font-size: 42px;
+      font-weight: 900;
+      color: transparent;
+      -webkit-text-stroke: 1px rgba(255, 255, 255, 0.5);
+      letter-spacing: -1.5px;
+      line-height: .95;
+      text-transform: uppercase;
+      margin-top: -8px;
+      margin-bottom: 14px
+    }
+
+    .tech-footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      border-top: 1px solid rgba(255, 255, 255, .08);
+      padding-top: 12px
+    }
+
+    .tech-footer .desc {
+      font-size: 9px;
+      line-height: 1.5;
+      color: rgba(255, 255, 255, .55);
+      font-weight: 400;
+      flex: 1
+    }
+
+    .tech-footer .meta {
+      font-size: 8.5px;
+      color: rgba(255, 255, 255, .35);
+      letter-spacing: 1px;
+      text-align: right;
+      white-space: nowrap
+    }
+  </style>
+</head>
+
+<body>
+  <div class="poster-canvas">
+    <div class="canvas-grid"></div>
+    <div class="tech-header"><span>REF. {{TOP}}</span> <span class="badge">SPEC // 2025</span> <span>INDEX 01</span></div>
+    <div class="watermark-top">{{TOP}}</div>
+    <div class="center-visual">{{IMAGE}}</div>
+    <div class="kanji-float">{{KANJI_TOP}}</div>
+    <div class="vertical-stack">{{VERTICAL}}</div>
+    <div class="accent-card">{{ACCENT}}</div>
+    <div class="bottom-layout">
+      <div class="main-hero-title">{{BOTTOM}}</div>
+      <div class="hero-title-stroke">{{BOTTOM}}</div>
+      <div class="tech-footer">
+        <p class="desc">{{FOOTER}}</p>
+        <div class="meta">LAT 35.6762° N<br>TYPO.CORE</div>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>

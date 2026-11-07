@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    body {
+      width: 1200px;
+      height: 630px;
+      background: #000;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center
+    }
+
+    .card {
+      width: 100%;
+      height: 100%;
+      padding: 60px 80px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: radial-gradient(circle at 50% -20%, #1e1b4b 0, #000 65%);
+      position: relative
+    }
+
+    .bento-surface {
+      position: absolute;
+      inset: 40px;
+      background: rgba(255, 255, 255, .02);
+      border: 1px solid rgba(255, 255, 255, .08);
+      border-radius: 36px;
+      backdrop-filter: blur(30px);
+      pointer-events: none;
+      box-shadow: inset 0 1px 1px rgba(255, 255, 255, .15)
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 2
+    }
+
+    .badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #fff;
+      color: #000;
+      padding: 10px 20px;
+      border-radius: 999px;
+      font-size: 15px;
+      font-weight: 800
+    }
+
+    .corner-tag {
+      color: #6366f1;
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: 2px
+    }
+
+    .quote-box {
+      z-index: 2;
+      margin: auto 0
+    }
+
+    .quote-text {
+      font-size: 52px;
+      font-weight: 800;
+      line-height: 1.28;
+      letter-spacing: -1.2px;
+      color: #f8fafc
+    }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 2
+    }
+
+    .brand {
+      font-size: 17px;
+      font-weight: 800;
+      color: #94a3b8
+    }
+
+    .brand b {
+      color: #fff
+    }
+
+    .dots {
+      display: flex;
+      gap: 6px
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, .2)
+    }
+
+    .dot.active {
+      background: #6366f1
+    }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    <div class="bento-surface"></div>
+    <div class="header">
+      <div class="badge">{{EMOJI}} {{CATEGORY}}</div>
+      <div class="corner-tag">DAILY REFLECTION</div>
+    </div>
+    <div class="quote-box">
+      <div class="quote-text">“{{QUOTE}}”</div>
+    </div>
+    <div class="footer">
+      <div class="brand">BY <b>{{BOT_NAME}}</b></div>
+      <div class="dots">
+        <div class="dot active"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>

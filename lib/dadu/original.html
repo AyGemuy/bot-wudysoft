@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>3D Dice - {{theme}}</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    body,
+    html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: 0 0 !important
+    }
+
+    #canvas-container {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/geometries/RoundedBoxGeometry.js"></script>
+</head>
+
+<body>
+  <div id="canvas-container"></div>
+  <script>
+    ! function() {
+      "use strict";
+      const e = parseInt("{{number}}", 10) || 1,
+        t = { baseColors: ["#ffffff", "#f7f2ea", "#ebe0d2"], pipAce: ["#ff3b30", "#c8101e", "#780309"], pipNormal: ["#2c2d33", "#141416", "#050507"], roughness: .15, metalness: .05, clearcoat: .85 },
+        a = document.getElementById("canvas-container"),
+        o = new THREE.Scene,
+        n = new THREE.PerspectiveCamera(36, window.innerWidth / window.innerHeight, .1, 100);
+      n.position.set(0, 3.8, 7.8), n.lookAt(0, .3, 0);
+      const i = new THREE.WebGLRenderer({ antialias: !0, alpha: !0 });
+      i.setClearColor(0, 0), i.setSize(window.innerWidth, window.innerHeight), i.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)), i.shadowMap.enabled = !0, i.shadowMap.type = THREE.PCFSoftShadowMap, i.toneMapping = THREE.ACESFilmicToneMapping, i.toneMappingExposure = 1.15, a.appendChild(i.domElement);
+      const r = new THREE.AmbientLight(16777215, .9);
+      o.add(r);
+      const s = new THREE.SpotLight(16777215, 3.5);
+      s.position.set(4, 9, 5), s.angle = Math.PI / 4.5, s.penumbra = .6, s.castShadow = !0, s.shadow.mapSize.width = 1024, s.shadow.mapSize.height = 1024, o.add(s);
+      const d = new THREE.DirectionalLight(7377151, 2);
+      d.position.set(-6, 5, -5), o.add(d);
+      const l = new THREE.DirectionalLight(16762255, 1.2);
+      l.position.set(6, 2, -3), o.add(l);
+      const c = new THREE.Mesh(new THREE.RoundedBoxGeometry(1.9, 1.9, 1.9, 14, .32), function() {
+        const e = {
+            1: [
+              [0, 0]
+            ],
+            2: [
+              [-.5, -.5],
+              [.5, .5]
+            ],
+            3: [
+              [-.55, -.55],
+              [0, 0],
+              [.55, .55]
+            ],
+            4: [
+              [-.52, -.52],
+              [.52, -.52],
+              [-.52, .52],
+              [.52, .52]
+            ],
+            5: [
+              [-.55, -.55],
+              [.55, -.55],
+              [0, 0],
+              [-.55, .55],
+              [.55, .55]
+            ],
+            6: [
+              [-.52, -.62],
+              [.52, -.62],
+              [-.52, 0],
+              [.52, 0],
+              [-.52, .62],
+              [.52, .62]
+            ]
+          },
+          a = [3, 4, 2, 5, 1, 6],
+          o = [],
+          n = 1024;
+        for (let i = 0; i < 6; i++) {
+          const r = a[i],
+            s = document.createElement("canvas");
+          s.width = n, s.height = n;
+          const d = s.getContext("2d"),
+            l = document.createElement("canvas");
+          l.width = n, l.height = n;
+          const c = l.getContext("2d"),
+            h = d.createRadialGradient(512, 512, 50, 512, 512, 716.8);
+          h.addColorStop(0, t.baseColors[0]), h.addColorStop(.7, t.baseColors[1]), h.addColorStop(1, t.baseColors[2]), d.fillStyle = h, d.fillRect(0, 0, n, n), c.fillStyle = "#808080", c.fillRect(0, 0, n, n);
+          const p = e[r],
+            w = 1 === r,
+            E = w ? 135 : 70,
+            m = 280,
+            M = w ? t.pipAce : t.pipNormal;
+          for (const [e, t] of p) {
+            const a = 512 + e * m,
+              o = 512 + t * m;
+            d.save(), d.beginPath(), d.arc(a, o, E + 3, 0, 2 * Math.PI), d.fillStyle = "rgba(0,0,0,0.25)", d.fill(), d.beginPath(), d.arc(a, o, E, 0, 2 * Math.PI);
+            const n = d.createRadialGradient(a - .25 * E, o - .25 * E, .1 * E, a, o, E);
+            n.addColorStop(0, M[0]), n.addColorStop(.7, M[1]), n.addColorStop(1, M[2]), d.fillStyle = n, d.fill(), d.beginPath(), d.arc(a, o, E - 3, 0, 2 * Math.PI), d.lineWidth = 4, d.strokeStyle = "rgba(255,255,255,0.35)", d.stroke(), d.restore();
+            const i = c.createRadialGradient(a, o, .1 * E, a, o, 1.05 * E);
+            i.addColorStop(0, "#101010"), i.addColorStop(.85, "#252525"), i.addColorStop(1, "#808080"), c.fillStyle = i, c.beginPath(), c.arc(a, o, 1.05 * E, 0, 2 * Math.PI), c.fill()
+          }
+          o.push(new THREE.MeshPhysicalMaterial({ map: new THREE.CanvasTexture(s), bumpMap: new THREE.CanvasTexture(l), bumpScale: -.04, roughness: t.roughness, metalness: t.metalness, clearcoat: t.clearcoat, clearcoatRoughness: .1 }))
+        }
+        return o
+      }());
+      c.castShadow = !0, c.receiveShadow = !0, o.add(c);
+      const h = document.createElement("canvas");
+      h.width = 256, h.height = 256;
+      const p = h.getContext("2d"),
+        w = p.createRadialGradient(128, 128, 10, 128, 128, 120);
+      w.addColorStop(0, "rgba(0,0,0,0.75)"), w.addColorStop(.35, "rgba(0,0,0,0.35)"), w.addColorStop(1, "rgba(0,0,0,0)"), p.fillStyle = w, p.fillRect(0, 0, 256, 256);
+      const E = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 3.6), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(h), transparent: !0, opacity: .85, depthWrite: !1 }));
+      E.rotation.x = -Math.PI / 2, E.position.y = -.99, o.add(E);
+      const m = { 1: { x: 0, y: 0, z: 0 }, 2: { x: -Math.PI / 2, y: 0, z: 0 }, 3: { x: 0, y: Math.PI / 2, z: 0 }, 4: { x: 0, y: -Math.PI / 2, z: 0 }, 5: { x: Math.PI / 2, y: 0, z: 0 }, 6: { x: 0, y: Math.PI, z: 0 } },
+        M = m[e] || m[1],
+        g = 2 * Math.PI,
+        S = 3 * g,
+        f = 4 * g,
+        R = 2 * g,
+        y = { x: M.x + S + Math.random(), y: M.y + f + Math.random(), z: M.z + R + Math.random() },
+        C = performance.now(),
+        u = y,
+        P = M;
+      window.addEventListener("resize", () => { n.aspect = window.innerWidth / window.innerHeight, n.updateProjectionMatrix(), i.setSize(window.innerWidth, window.innerHeight) }), requestAnimationFrame(function e(t) {
+        requestAnimationFrame(e);
+        const a = Math.min(1, (t - C) / 2200),
+          r = 1 - Math.pow(1 - a, 3.8);
+        c.rotation.x = u.x + (P.x - u.x) * r, c.rotation.y = u.y + (P.y - u.y) * r, c.rotation.z = u.z + (P.z - u.z) * r;
+        let s = 0;
+        a < .52 ? s = 2.3 * Math.sin(a / .52 * Math.PI) : a < .76 ? s = .65 * Math.sin((a - .52) / .24 * Math.PI) : a < .91 && (s = .18 * Math.sin((a - .76) / .15 * Math.PI)), c.position.y = s, E.scale.setScalar(1 - Math.min(.6, .22 * s)), E.material.opacity = Math.max(.15, .85 - .35 * s), i.render(o, n)
+      })
+    }()
+  </script>
+</body>
+
+</html>

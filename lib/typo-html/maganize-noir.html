@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Magazine Noir - High Fashion</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,700;0,6..96,900;1,6..96,400&family=Cinzel:wght@600;800;900&family=Plus+Jakarta+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    body {
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      overflow: hidden
+    }
+
+    .poster-canvas {
+      position: relative;
+      width: 440px;
+      height: 720px;
+      background: #08080a;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 4px;
+      overflow: hidden;
+      box-shadow: 0 45px 100px rgba(0, 0, 0, .98)
+    }
+
+    .mag-masthead {
+      position: absolute;
+      top: 18px;
+      left: 24px;
+      right: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, .2);
+      padding-bottom: 8px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      color: rgba(255, 255, 255, .85);
+      text-transform: uppercase;
+      z-index: 10
+    }
+
+    .giant-brand {
+      position: absolute;
+      top: 36px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: Cinzel, serif;
+      font-size: 78px;
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: 12px;
+      text-transform: uppercase;
+      line-height: 1;
+      white-space: nowrap;
+      z-index: 8;
+      text-shadow: 0 10px 30px rgba(0, 0, 0, .8)
+    }
+
+    .visual-container {
+      position: absolute;
+      top: 14%;
+      left: 8%;
+      width: 84%;
+      height: 65%;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, .15);
+      display: flex;
+      background: #000;
+      z-index: 1
+    }
+
+    .visual-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: grayscale(15%) contrast(1.15) brightness(.92);
+      flex: 1
+    }
+
+    .visual-container::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, transparent 55%, rgba(8, 8, 10, .9) 100%)
+    }
+
+    .side-badge {
+      position: absolute;
+      top: 30%;
+      right: 18px;
+      writing-mode: vertical-rl;
+      font-family: 'Bodoni Moda', serif;
+      font-style: italic;
+      font-size: 14px;
+      letter-spacing: 4px;
+      color: rgba(255, 255, 255, .7);
+      text-transform: uppercase;
+      z-index: 9
+    }
+
+    .left-vertical-meta {
+      position: absolute;
+      top: 35%;
+      left: 18px;
+      writing-mode: vertical-rl;
+      transform: rotate(180deg);
+      font-size: 8px;
+      letter-spacing: 2.5px;
+      color: rgba(255, 255, 255, .35);
+      z-index: 9
+    }
+
+    .editorial-bottom {
+      position: absolute;
+      bottom: 22px;
+      left: 24px;
+      right: 24px;
+      z-index: 10
+    }
+
+    .issue-sub {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: rgba(255, 255, 255, .45);
+      text-transform: uppercase;
+      margin-bottom: 4px
+    }
+
+    .cover-story-headline {
+      font-family: 'Bodoni Moda', serif;
+      font-size: 42px;
+      font-weight: 900;
+      line-height: .95;
+      color: #fff;
+      letter-spacing: -1px;
+      text-transform: uppercase;
+      margin-bottom: 10px
+    }
+
+    .editorial-columns {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      border-top: 1px solid rgba(255, 255, 255, .15);
+      padding-top: 10px
+    }
+
+    .editorial-columns p {
+      font-size: 8.5px;
+      line-height: 1.5;
+      color: rgba(255, 255, 255, .55);
+      flex: 1
+    }
+
+    .barcode-mock {
+      display: flex;
+      gap: 2px;
+      align-items: flex-end;
+      height: 20px
+    }
+
+    .barcode-mock span {
+      background: rgba(255, 255, 255, .5);
+      width: 2px;
+      height: 100%
+    }
+
+    .barcode-mock span:nth-child(2n) {
+      width: 1px;
+      height: 75%
+    }
+
+    .barcode-mock span:nth-child(3n) {
+      width: 3px;
+      height: 90%
+    }
+  </style>
+</head>
+
+<body>
+  <div class="poster-canvas">
+    <div class="mag-masthead"><span>NOIR // {{ACCENT}}</span> <span>PARIS • TOKYO • NEW YORK</span> <span>ED. 2025</span></div>
+    <div class="giant-brand">{{TOP}}</div>
+    <div class="visual-container">{{IMAGE}}</div>
+    <div class="left-vertical-meta">ISSUE SPEC // VOL 04</div>
+    <div class="side-badge">{{VERTICAL}}</div>
+    <div class="editorial-bottom">
+      <div class="issue-sub">FEATURING // {{KANJI_TOP}}</div>
+      <div class="cover-story-headline">“{{BOTTOM}}”</div>
+      <div class="editorial-columns">
+        <p>{{FOOTER}}</p>
+        <div class="barcode-mock"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>

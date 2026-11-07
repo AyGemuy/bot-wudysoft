@@ -1,5 +1,4 @@
 import chalk from "chalk";
-import axios from "axios";
 import {
   jidNormalizedUser,
   areJidsSameUser,
@@ -77,7 +76,6 @@ setInterval(() => {
   }
 }, 5 * 60 * 1e3);
 const userSpamMap = new Map();
-let isMigratingLid = false;
 
 function sanitizeMentions(list = []) {
   if (!Array.isArray(list)) return [];
@@ -338,7 +336,8 @@ async function normalizeLidCtx(ctx, sock = null) {
     }
   }
 }
-async function generateLevelUpCard({
+
+function generateLevelUpCard({
   avatar,
   username = "Player",
   currentLevel = 1,
@@ -347,11 +346,12 @@ async function generateLevelUpCard({
   model
 }) {
   try {
-    const baseApi = (global.bot?.api?.wudysoft || "").replace(/\/+$/, "");
+    const baseApi = (global.bot?.api?.wudysoft || "https://api.wudysoft.com").replace(/\/+$/, "");
     const now = new Date();
     const estDate = `EST. ${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, "0")}.${String(now.getDate()).padStart(2, "0")}`;
     const selectedModel = model ?? Math.floor(Math.random() * 5) + 1;
-    const payload = {
+    const cleanUsername = String(username).replace(/\s+/g, "_").slice(0, 10);
+    const params = new URLSearchParams({
       sub_title: "PROTOCOL: LEVEL_UP_EVOLUTION",
       title_l: "LEVEL",
       title_r: `.${nextLevel}`,
@@ -365,7 +365,7 @@ async function generateLevelUpCard({
       tag_b: "EXP_BOOST",
       tag_c: "RANK_UP",
       adm_title: "Player Profile",
-      adm_name: `@${username.replace(/\s+/g, "_").slice(0, 10)}`,
+      adm_name: `@${cleanUsername}`,
       adm_stat: "ACTIVE",
       cr_name: "HP +20",
       cr_stat: "BUFF",
@@ -379,45 +379,11 @@ async function generateLevelUpCard({
       file_title: "DEF",
       file_count: String(userData.def || 7),
       avatar: avatar || "https://picsum.photos/seed/cyber/200/200",
-      model: Number(selectedModel)
-    };
-    const response = await axios.post(`${baseApi}/api/maker/grup/v1`, payload, {
-      responseType: "arraybuffer",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "image/*, application/json, text/plain, */*",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-      },
-      timeout: 6e4,
-      validateStatus: status => status >= 200 && status < 400
+      model: String(selectedModel)
     });
-    if (!response?.data) return null;
-    const buf = Buffer.isBuffer(response.data) ? response.data : Buffer.from(response.data);
-    try {
-      const textPreview = buf.toString("utf-8", 0, Math.min(buf.length, 500)).trim();
-      if (textPreview.startsWith("{") && textPreview.includes("}")) {
-        const json = JSON.parse(buf.toString("utf-8"));
-        const imgUrl = json.url || json.result?.url || json.data?.url || (typeof json.result === "string" && json.result.startsWith("http") ? json.result : null);
-        if (imgUrl) {
-          const fetchImg = await axios.get(imgUrl, {
-            responseType: "arraybuffer",
-            timeout: 4e3
-          });
-          return Buffer.from(fetchImg.data);
-        }
-        const base64Data = json.base64 || json.result?.base64 || json.data?.base64;
-        if (base64Data) {
-          return Buffer.from(base64Data.replace(/^data:image\/\w+;base64,/, ""), "base64");
-        }
-        return null;
-      }
-    } catch (_) {}
-    if (buf.length > 512 && [137, 255, 82, 71].includes(buf[0])) {
-      return buf;
-    }
-    return null;
+    return `${baseApi}/api/maker/grup/v1?${params.toString()}`;
   } catch (err) {
-    return null;
+    return "https://picsum.photos/seed/cyber/800/400";
   }
 }
 const LID_TIMEOUT = 2e3;
@@ -1055,7 +1021,6 @@ export async function UpsertMsgHandle(sock, msg, ctx, {
         const rankName = getRankTitle(newLevel);
         const botName = global.bot?.name || "Neoxr Bot";
         const prefix = ctx.prefix || ".";
-        const channelUrl = global.bot?.link || "https://whatsapp.com/channel/0029VaF5pWj59PwcGj4F4v2w";
         const bodyText = `“ Selamat kepada @${senderNumber}, level karakter kamu berhasil meningkat! ”\n\n` + `┌  ◦  *User* : @${senderNumber}\n` + `│  ◦  *Level* : Lv. ${oldLevel} ➔ *Lv. ${newLevel}*\n` + `│  ◦  *Role/Rank* : \`${rankName}\`\n` + `└  ◦  *Progress* : +${needed} EXP\n\n` + `–  *A T T R I B U T E S*\n\n` + `┌  ◦  *Max HP* : +20 (${userData.hpMax})\n` + `│  ◦  *Max Mana* : +10 (${userData.manaMax})\n` + `│  ◦  *Attack* : +3 (${userData.atk})\n` + `└  ◦  *Defense* : +2 (${userData.def})\n\n` + `_Gunakan tombol di bawah untuk memeriksa profil status atau petualangan kamu._`;
         const listSections = [{
           title: `– MENU RPG (${rankName.toUpperCase()})`,
@@ -1104,14 +1069,13 @@ export async function UpsertMsgHandle(sock, msg, ctx, {
           })
         }];
         const userPic = await getCachedAvatar(sock, userPhoneJid, null);
-        const cardBuffer = await generateLevelUpCard({
+        const bannerImageUrl = generateLevelUpCard({
           avatar: userPic,
           username: userName,
           currentLevel: oldLevel,
           nextLevel: newLevel,
           userData: userData
-        }).catch(() => null);
-        const bannerImageUrl = typeof bannerImage === "string" && bannerImage.startsWith("http") ? bannerImage : "https://picsum.photos/seed/cyber/800/400";
+        });
         const a2ui = new A2UI(sock);
         const imgId = a2ui.raw("Image", {
           url: bannerImageUrl,
@@ -1125,26 +1089,16 @@ export async function UpsertMsgHandle(sock, msg, ctx, {
         }));
         a2ui.root([centeredCard]);
         const a2uiButtons = [{
-          name: "",
-          params: {}
-        }, {
           name: "single_select",
           params: {
-            title: "\0",
-            sections: listSections,
-            icon: "DEFAULT"
+            title: `📂 DAFTAR AKSI (LV. ${newLevel})`,
+            sections: listSections
           }
         }, {
           name: "quick_reply",
           params: {
             display_text: "👤 Profile",
             id: `${prefix}profile`
-          }
-        }, {
-          name: "quick_reply",
-          params: {
-            display_text: "🎒 Inventory",
-            id: `${prefix}inv`
           }
         }];
         try {
@@ -1165,7 +1119,7 @@ export async function UpsertMsgHandle(sock, msg, ctx, {
             title: `– ${botName} • Level Up (Lv. ${newLevel})`,
             body: bodyText,
             footer: `${botName} • RPG System`,
-            media: bannerImage,
+            media: bannerImageUrl,
             buttons: buttons,
             mentions: [userPhoneJid]
           }, quotedMsg);

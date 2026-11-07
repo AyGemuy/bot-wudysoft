@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Dice - Gold</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    body,
+    html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: 0 0 !important
+    }
+
+    #canvas-container {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/geometries/RoundedBoxGeometry.js"></script>
+</head>
+
+<body>
+  <div id="canvas-container"></div>
+  <script>
+    ! function() {
+      "use strict";
+      const t = parseInt("{{number}}", 10) || 1,
+        e = { base: ["#ffe57f", "#d4af37", "#8a6e14"], pipAce: ["#b30000", "#800000", "#470000"], pipNormal: ["#231f18", "#110f0c", "#000000"], roughness: .22, metalness: .88, clearcoat: .7 },
+        a = new THREE.Scene,
+        n = new THREE.PerspectiveCamera(36, window.innerWidth / window.innerHeight, .1, 100);
+      n.position.set(0, 3.8, 7.8), n.lookAt(0, .3, 0);
+      const o = new THREE.WebGLRenderer({ antialias: !0, alpha: !0 });
+      o.setClearColor(0, 0), o.setSize(window.innerWidth, window.innerHeight), o.shadowMap.enabled = !0, document.getElementById("canvas-container").appendChild(o.domElement), a.add(new THREE.AmbientLight(16774614, .8));
+      const i = new THREE.SpotLight(16777215, 4);
+      i.position.set(4, 9, 5), i.castShadow = !0, a.add(i);
+      const r = new THREE.DirectionalLight(16766720, 2.5);
+      r.position.set(-6, 5, -5), a.add(r);
+      const s = new THREE.Mesh(new THREE.RoundedBoxGeometry(1.9, 1.9, 1.9, 14, .32), function() {
+        const t = {
+            1: [
+              [0, 0]
+            ],
+            2: [
+              [-.5, -.5],
+              [.5, .5]
+            ],
+            3: [
+              [-.55, -.55],
+              [0, 0],
+              [.55, .55]
+            ],
+            4: [
+              [-.52, -.52],
+              [.52, -.52],
+              [-.52, .52],
+              [.52, .52]
+            ],
+            5: [
+              [-.55, -.55],
+              [.55, -.55],
+              [0, 0],
+              [-.55, .55],
+              [.55, .55]
+            ],
+            6: [
+              [-.52, -.62],
+              [.52, -.62],
+              [-.52, 0],
+              [.52, 0],
+              [-.52, .62],
+              [.52, .62]
+            ]
+          },
+          a = [3, 4, 2, 5, 1, 6],
+          n = [],
+          o = 1024;
+        for (let i = 0; i < 6; i++) {
+          const r = a[i],
+            s = document.createElement("canvas");
+          s.width = o, s.height = o;
+          const l = s.getContext("2d"),
+            d = document.createElement("canvas");
+          d.width = o, d.height = o;
+          const c = d.getContext("2d"),
+            h = l.createRadialGradient(512, 512, 50, 512, 512, 716.8);
+          h.addColorStop(0, e.base[0]), h.addColorStop(.7, e.base[1]), h.addColorStop(1, e.base[2]), l.fillStyle = h, l.fillRect(0, 0, o, o), c.fillStyle = "#808080", c.fillRect(0, 0, o, o);
+          const p = t[r],
+            E = 1 === r,
+            m = E ? 135 : 70,
+            w = E ? e.pipAce : e.pipNormal;
+          for (const [t, e] of p) {
+            const a = 512 + 280 * t,
+              n = 512 + 280 * e;
+            l.save(), l.beginPath(), l.arc(a, n, m + 3, 0, 2 * Math.PI), l.fillStyle = "rgba(0,0,0,0.5)", l.fill(), l.beginPath(), l.arc(a, n, m, 0, 2 * Math.PI);
+            const o = l.createRadialGradient(a - .25 * m, n - .25 * m, .1 * m, a, n, m);
+            o.addColorStop(0, w[0]), o.addColorStop(.7, w[1]), o.addColorStop(1, w[2]), l.fillStyle = o, l.fill(), l.restore();
+            const i = c.createRadialGradient(a, n, .1 * m, a, n, 1.05 * m);
+            i.addColorStop(0, "#0a0a0a"), i.addColorStop(.85, "#202020"), i.addColorStop(1, "#808080"), c.fillStyle = i, c.beginPath(), c.arc(a, n, 1.05 * m, 0, 2 * Math.PI), c.fill()
+          }
+          n.push(new THREE.MeshPhysicalMaterial({ map: new THREE.CanvasTexture(s), bumpMap: new THREE.CanvasTexture(d), bumpScale: -.04, roughness: e.roughness, metalness: e.metalness, clearcoat: e.clearcoat }))
+        }
+        return n
+      }());
+      s.castShadow = !0, a.add(s);
+      const l = document.createElement("canvas");
+      l.width = 256, l.height = 256;
+      const d = l.getContext("2d"),
+        c = d.createRadialGradient(128, 128, 10, 128, 128, 120);
+      c.addColorStop(0, "rgba(0,0,0,0.75)"), c.addColorStop(.35, "rgba(0,0,0,0.35)"), c.addColorStop(1, "rgba(0,0,0,0)"), d.fillStyle = c, d.fillRect(0, 0, 256, 256);
+      const h = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 3.6), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(l), transparent: !0, opacity: .85, depthWrite: !1 }));
+      h.rotation.x = -Math.PI / 2, h.position.y = -.99, a.add(h);
+      const p = { 1: { x: 0, y: 0, z: 0 }, 2: { x: -Math.PI / 2, y: 0, z: 0 }, 3: { x: 0, y: Math.PI / 2, z: 0 }, 4: { x: 0, y: -Math.PI / 2, z: 0 }, 5: { x: Math.PI / 2, y: 0, z: 0 }, 6: { x: 0, y: Math.PI, z: 0 } },
+        E = p[t] || p[1],
+        m = performance.now(),
+        w = E.x + 6 * Math.PI,
+        M = E.y + 8 * Math.PI,
+        f = E.z + 4 * Math.PI,
+        S = E;
+      requestAnimationFrame(function t(e) {
+        requestAnimationFrame(t);
+        const i = Math.min(1, (e - m) / 2200),
+          r = 1 - Math.pow(1 - i, 3.8);
+        s.rotation.x = w + (S.x - w) * r, s.rotation.y = M + (S.y - M) * r, s.rotation.z = f + (S.z - f) * r;
+        let l = 0;
+        i < .52 ? l = 2.3 * Math.sin(i / .52 * Math.PI) : i < .76 ? l = .65 * Math.sin((i - .52) / .24 * Math.PI) : i < .91 && (l = .18 * Math.sin((i - .76) / .15 * Math.PI)), s.position.y = l, h.scale.setScalar(1 - Math.min(.6, .22 * l)), o.render(a, n)
+      })
+    }()
+  </script>
+</body>
+
+</html>

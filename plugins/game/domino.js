@@ -3,6 +3,18 @@ import db from "../../data/db.js";
 import {
   simpleQuoted
 } from "../../lib/quoted.js";
+const processedMsgIds = new Set();
+
+function isDuplicateMessage(msgId) {
+  if (!msgId) return false;
+  if (processedMsgIds.has(msgId)) return true;
+  processedMsgIds.add(msgId);
+  if (processedMsgIds.size > 200) {
+    const firstItem = processedMsgIds.values().next().value;
+    processedMsgIds.delete(firstItem);
+  }
+  return false;
+}
 
 function initDB(jid = null, name = "") {
   if (!global.db) global.db = {};
@@ -31,7 +43,7 @@ function clearSession(chatId) {
 }
 
 function rewardWinner(jid, name = "", prizeMoney = 1e4, prizeExp = 300) {
-  if (!jid || jid === "BOT") return;
+  if (!jid || jid.includes("BOT")) return;
   initDB(jid, name);
   global.db.user[jid].money = (Number(global.db.user[jid].money) || 0) + prizeMoney;
   global.db.user[jid].exp = (Number(global.db.user[jid].exp) || 0) + prizeExp;
@@ -61,7 +73,7 @@ function checkAndCleanExpiredSessions(currentChatId = null) {
 }
 
 function purgePlayerFromOtherSessions(playerJid) {
-  if (!global.db?.domino || !playerJid) return;
+  if (!global.db?.domino || !playerJid || playerJid.includes("BOT")) return;
   let changed = false;
   for (const [cId, session] of Object.entries(global.db.domino)) {
     if (session.state === "LOBBY") {
@@ -155,7 +167,54 @@ async function sendCTA(sock, ctx, targetId, {
     },
     quoted: quoted || undefined
   };
-  return await ctx.sendCta(text, finalFooter, formattedButtons, options);
+  if (typeof ctx?.sendCta === "function" && (!targetId || targetId === ctx?.id)) {
+    try {
+      return await ctx.sendCta(text, finalFooter, formattedButtons, options);
+    } catch (e) {}
+  }
+  try {
+    return await sock.sendMessage(destJid, {
+      ...image ? {
+        image: image
+      } : {},
+      caption: text,
+      footer: finalFooter,
+      viewOnceMessage: {
+        message: {
+          interactiveMessage: {
+            body: {
+              text: text
+            },
+            footer: {
+              text: finalFooter
+            },
+            nativeFlowMessage: {
+              buttons: formattedButtons
+            },
+            contextInfo: options.contextInfo
+          }
+        }
+      }
+    }, {
+      quoted: quoted || undefined
+    });
+  } catch (e) {
+    if (image) {
+      return await sock.sendMessage(destJid, {
+        image: image,
+        caption: `${text}\n\n_${finalFooter}_`,
+        mentions: mentions
+      }, {
+        quoted: quoted || undefined
+      });
+    }
+    return await sock.sendMessage(destJid, {
+      text: `${text}\n\n_${finalFooter}_`,
+      mentions: mentions
+    }, {
+      quoted: quoted || undefined
+    });
+  }
 }
 
 function generateDominoHTML(cardsArray) {
@@ -182,22 +241,21 @@ function generateDominoHTML(cardsArray) {
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body {
       width: 960px;
-      height: auto;
-      min-height: 440px;
+      height: 440px;
       background: #0d131a;
       display: flex;
       justify-content: center;
       align-items: center;
       font-family: 'Segoe UI', Arial, sans-serif;
+      overflow: hidden;
     }
     .wrapper-canvas {
       width: 100%;
-      min-height: 440px;
+      height: 440px;
       display: flex;
       flex-direction: column;
       justify-content: flex-end;
@@ -289,8 +347,9 @@ function generateDominoBoardHTML(boardArray = [], leftEnd = null, rightEnd = nul
   }
   let playersHTML = "";
   players.forEach(p => {
-    const isBot = p.id === "BOT";
-    const rawName = isBot ? "Bot Gaple" : global.db?.user?.[p.id]?.name || p.id.split("@")[0];
+    const isBot = p.id.includes("BOT");
+    const botName = global.bot?.name || "WudysoftBot";
+    const rawName = isBot ? `🤖 ${botName}` : global.db?.user?.[p.id]?.name || p.id.split("@")[0];
     const cleanName = rawName.length > 13 ? rawName.slice(0, 11) + ".." : rawName;
     const isTurn = p.id === currentTurn;
     const cardCount = p.cards ? p.cards.length : 0;
@@ -310,27 +369,26 @@ function generateDominoBoardHTML(boardArray = [], leftEnd = null, rightEnd = nul
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body {
       width: 1080px;
-      height: auto;
+      height: 560px;
       background: #061f0f;
       font-family: 'Segoe UI', Arial, sans-serif;
+      overflow: hidden;
     }
     .board-frame {
       width: 100%;
-      height: auto;
-      min-height: 560px;
+      height: 560px;
       display: flex;
       flex-direction: column;
       justify-content: flex-start;
       align-items: center;
       background: radial-gradient(circle at 50% 50%, #175e33 0%, #0c381c 70%, #061f0f 100%);
-      border: 16px solid #2b1708;
-      border-radius: 28px;
-      padding: 24px;
+      border: 14px solid #2b1708;
+      border-radius: 24px;
+      padding: 20px;
       box-shadow: inset 0 0 60px rgba(0,0,0,0.9), 0 10px 30px rgba(0,0,0,0.7);
     }
     .header-bar {
@@ -338,7 +396,7 @@ function generateDominoBoardHTML(boardArray = [], leftEnd = null, rightEnd = nul
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 0 10px 16px 10px;
+      padding: 0 10px 14px 10px;
       border-bottom: 2px solid rgba(226, 186, 85, 0.25);
     }
     .end-tag {
@@ -347,14 +405,14 @@ function generateDominoBoardHTML(boardArray = [], leftEnd = null, rightEnd = nul
       border-radius: 12px;
       padding: 6px 18px;
       color: #fff;
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 800;
       letter-spacing: 1px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     }
     .table-title {
       color: #f6e27a;
-      font-size: 24px;
+      font-size: 22px;
       font-weight: 900;
       letter-spacing: 3px;
       text-transform: uppercase;
@@ -364,21 +422,21 @@ function generateDominoBoardHTML(boardArray = [], leftEnd = null, rightEnd = nul
       display: flex;
       justify-content: center;
       align-items: center;
-      gap: 16px;
+      gap: 14px;
       width: 100%;
-      margin: 20px 0;
+      margin: 16px 0;
       flex-wrap: wrap;
     }
     .player-pod {
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 8px 16px;
+      padding: 6px 14px;
       background: rgba(8, 24, 14, 0.75);
       border: 2px solid rgba(226, 186, 85, 0.35);
       border-radius: 14px;
       color: #fff;
-      min-width: 180px;
+      min-width: 170px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.4);
       position: relative;
     }
@@ -389,28 +447,28 @@ function generateDominoBoardHTML(boardArray = [], leftEnd = null, rightEnd = nul
       transform: translateY(-2px);
     }
     .player-avatar {
-      font-size: 22px;
+      font-size: 20px;
       background: rgba(0,0,0,0.35);
       border-radius: 50%;
-      width: 36px;
-      height: 36px;
+      width: 34px;
+      height: 34px;
       display: flex;
       align-items: center;
       justify-content: center;
       border: 1px solid rgba(255,255,255,0.2);
     }
     .player-meta { display: flex; flex-direction: column; }
-    .player-name { font-size: 14px; font-weight: 700; color: #f7eed2; }
-    .player-cards { font-size: 12px; color: #d1c5a5; margin-top: 2px; }
+    .player-name { font-size: 13px; font-weight: 700; color: #f7eed2; }
+    .player-cards { font-size: 11px; color: #d1c5a5; margin-top: 1px; }
     .turn-chip {
       position: absolute;
-      top: -10px;
-      right: 12px;
+      top: -9px;
+      right: 10px;
       background: #ffb703;
       color: #000;
-      font-size: 10px;
+      font-size: 9px;
       font-weight: 900;
-      padding: 2px 8px;
+      padding: 2px 7px;
       border-radius: 8px;
       letter-spacing: 0.5px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.6);
@@ -420,23 +478,23 @@ function generateDominoBoardHTML(boardArray = [], leftEnd = null, rightEnd = nul
       flex-wrap: wrap;
       justify-content: center;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       width: 100%;
       min-height: 250px;
-      padding: 24px 20px;
+      padding: 20px;
       background: rgba(0, 0, 0, 0.32);
-      border-radius: 20px;
+      border-radius: 18px;
       box-shadow: inset 0 0 30px rgba(0,0,0,0.7);
       border: 1px solid rgba(226, 186, 85, 0.2);
-      margin-top: 6px;
+      margin-top: 4px;
     }
     .empty-board { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
-    .empty-icon { font-size: 40px; }
-    .empty-title { color: #f6e27a; font-size: 20px; font-weight: 800; letter-spacing: 1px; }
-    .empty-sub { color: #d0c4a4; font-size: 14px; font-style: italic; }
+    .empty-icon { font-size: 38px; }
+    .empty-title { color: #f6e27a; font-size: 19px; font-weight: 800; letter-spacing: 1px; }
+    .empty-sub { color: #d0c4a4; font-size: 13px; font-style: italic; }
     .domino-tile-h {
-      width: 96px;
-      height: 52px;
+      width: 90px;
+      height: 48px;
       border-radius: 8px;
       background: linear-gradient(145deg, #ffffff 0%, #f7f3e8 60%, #e2d9c4 100%);
       border: 1px solid #c2b598;
@@ -444,12 +502,12 @@ function generateDominoBoardHTML(boardArray = [], leftEnd = null, rightEnd = nul
       align-items: center;
       justify-content: space-between;
       padding: 4px;
-      box-shadow: 3px 5px 10px rgba(0,0,0,0.5), inset 1px 1px 1px #fff;
+      box-shadow: 3px 5px 10px rgba(0,0,0,0.5);
       position: relative;
     }
     .domino-tile-v {
-      width: 52px;
-      height: 96px;
+      width: 48px;
+      height: 90px;
       border-radius: 8px;
       background: linear-gradient(145deg, #ffffff 0%, #f7f3e8 60%, #e2d9c4 100%);
       border: 1px solid #c2b598;
@@ -458,16 +516,16 @@ function generateDominoBoardHTML(boardArray = [], leftEnd = null, rightEnd = nul
       align-items: center;
       justify-content: space-between;
       padding: 4px;
-      box-shadow: 3px 5px 10px rgba(0,0,0,0.5), inset 1px 1px 1px #fff;
+      box-shadow: 3px 5px 10px rgba(0,0,0,0.5);
       position: relative;
     }
-    .divider-v { width: 2.5px; height: 82%; background: #735404; border-radius: 1px; }
-    .divider-h { width: 82%; height: 2.5px; background: #735404; border-radius: 1px; }
-    .half-box-h, .half-box-v { width: 42px; height: 42px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 2px; }
+    .divider-v { width: 2.5px; height: 80%; background: #735404; border-radius: 1px; }
+    .divider-h { width: 80%; height: 2.5px; background: #735404; border-radius: 1px; }
+    .half-box-h, .half-box-v { width: 38px; height: 38px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 2px; }
     .slot { display: flex; justify-content: center; align-items: center; }
-    .pip { width: 8px; height: 8px; border-radius: 50%; background: radial-gradient(circle at 60% 60%, #ff3b30 0%, #c41c14 70%, #680904 100%); box-shadow: inset 1px 1px 1.5px rgba(0,0,0,0.9); }
-    .tile-tag { position: absolute; bottom: 1px; right: 3px; font-size: 9px; font-weight: 800; color: #680904; opacity: 0.55; }
-    .chain-dot { width: 6px; height: 6px; border-radius: 50%; background: #e2ba55; box-shadow: 0 0 6px #e2ba55; }
+    .pip { width: 7.5px; height: 7.5px; border-radius: 50%; background: radial-gradient(circle at 60% 60%, #ff3b30 0%, #c41c14 70%, #680904 100%); }
+    .tile-tag { position: absolute; bottom: 1px; right: 3px; font-size: 8.5px; font-weight: 800; color: #680904; opacity: 0.55; }
+    .chain-dot { width: 5px; height: 5px; border-radius: 50%; background: #e2ba55; box-shadow: 0 0 5px #e2ba55; }
   </style>
 </head>
 <body>
@@ -477,29 +535,23 @@ function generateDominoBoardHTML(boardArray = [], leftEnd = null, rightEnd = nul
       <div class="table-title">🎲 MEJA DOMINO GAPLE 🎲</div>
       <div class="end-tag">KANAN: [ ${rightEnd ?? "Bebas"} ] ▶</div>
     </div>
-
-    <div class="players-bar">
-      ${playersHTML}
-    </div>
-
-    <div class="board-container">
-      ${tilesHTML}
-    </div>
+    <div class="players-bar">${playersHTML}</div>
+    <div class="board-container">${tilesHTML}</div>
   </div>
 </body>
 </html>`;
 }
 async function renderHtmlToImage(htmlContent) {
-  const rawApi = global.bot?.api?.wudysoft || "";
+  const rawApi = global.bot?.api?.wudysoft || "https://api.wudysoft.com";
   const cleanApi = rawApi.replace(/^https?:\/\//i, "").replace(/\/+$/, "");
   const baseUrl = `https://${cleanApi}/api/tools/html2img/`;
   const headers = {
     "Content-Type": "application/json",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
   };
   const payload = {
     html: htmlContent,
-    fullPage: true,
+    fullPage: false,
     quality: 100
   };
   const versions = ["v5", "v1", "v2", "v3", "v4", "v6", "v7", "v8", "v9", "v10"];
@@ -598,7 +650,7 @@ function countTotalPips(cards) {
 }
 async function sendPrivateHandWithCTA(sock, ctx, playerJid, session, gameChatId, prefix = ".") {
   try {
-    if (!playerJid || playerJid === "BOT") return;
+    if (!playerJid || playerJid.includes("BOT")) return;
     const player = session.players.find(p => p.id === playerJid);
     if (!player) return;
     const cards = player.cards;
@@ -656,9 +708,10 @@ async function announceGameState(sock, ctx, chatId, session, extraNote = "", pre
   const boardStr = session.board.map(c => `[${c}]`).join("-");
   let playersListStr = "";
   const mentions = [];
+  const botName = global.bot?.name || "WudysoftBot";
   session.players.forEach((p, idx) => {
-    const isBot = p.id === "BOT";
-    const nameStr = isBot ? "🤖 Bot" : `@${p.id.split("@")[0]}`;
+    const isBot = p.id.includes("BOT");
+    const nameStr = isBot ? `🤖 ${botName}` : `@${p.id.split("@")[0]}`;
     const turnIndicator = p.id === session.turn ? " 👈 *[GILIRAN BERJALAN]*" : "";
     playersListStr += `${idx + 1}. ${nameStr} (${p.cards.length} kartu)${turnIndicator}\n`;
     if (!isBot) mentions.push(p.id);
@@ -702,19 +755,168 @@ async function announceGameState(sock, ctx, chatId, session, extraNote = "", pre
     mentions: mentions
   });
 }
+async function handleBotTurn(sock, ctx, chatId, session) {
+  const currentSessionId = session?.sessionId;
+  setTimeout(async () => {
+    try {
+      const active = global.db.domino?.[chatId];
+      if (!active || active.sessionId !== currentSessionId || active.state !== "PLAYING") {
+        return;
+      }
+      const bot = active.players.find(p => p.id.includes("BOT"));
+      if (!bot) return;
+      let validIndex = -1;
+      let placeSide = null;
+      if (active.board.length === 0) {
+        let bestIdx = 0;
+        let bestScore = -1;
+        for (let i = 0; i < bot.cards.length; i++) {
+          const [a, b] = bot.cards[i].split("/").map(Number);
+          const score = (a === b ? 100 : 0) + (a + b);
+          if (score > bestScore) {
+            bestScore = score;
+            bestIdx = i;
+          }
+        }
+        validIndex = bestIdx;
+      } else {
+        for (let i = 0; i < bot.cards.length; i++) {
+          const [a, b] = bot.cards[i].split("/").map(Number);
+          if (a === active.leftEnd || b === active.leftEnd) {
+            validIndex = i;
+            placeSide = "left";
+            break;
+          }
+          if (a === active.rightEnd || b === active.rightEnd) {
+            validIndex = i;
+            placeSide = "right";
+            break;
+          }
+        }
+      }
+      const prefix = ctx?.prefix || ".";
+      if (validIndex === -1) {
+        active.consecutivePasses = (active.consecutivePasses || 0) + 1;
+        if (active.consecutivePasses >= active.players.length) {
+          const p1 = active.players.find(p => !p.id.includes("BOT")) || active.players[0];
+          const p1Total = countTotalPips(p1.cards);
+          const botTotal = countTotalPips(bot.cards);
+          clearSession(chatId);
+          let buntuText = `🛑 *PERMAINAN BUNTU (GAPLE DEADLOCK)!* 🛑\n\n` + `• Titik @${p1.id.split("@")[0]}: *${p1Total} titik*\n` + `• Titik 🤖 Bot: *${botTotal} titik*\n\n`;
+          if (p1Total < botTotal) {
+            rewardWinner(p1.id, "", 8e3, 200);
+            buntuText += `🏆 *Pemenang:* @${p1.id.split("@")[0]}!\n🎁 *Hadiah:* +Rp 8.000 Money & +200 EXP!`;
+          } else if (botTotal < p1Total) {
+            buntuText += `🤖 *Bot Menang!*`;
+          } else {
+            buntuText += `🤝 *Hasil Seri!*`;
+          }
+          const overButtons = [{
+            name: "quick_reply",
+            buttonParamsJson: JSON.stringify({
+              display_text: "🎮 Main Lagi",
+              id: `${prefix}domino`
+            })
+          }, {
+            name: "quick_reply",
+            buttonParamsJson: JSON.stringify({
+              display_text: "🤖 Lawan Bot",
+              id: `${prefix}domino bot`
+            })
+          }];
+          return await sendCTA(sock, ctx, chatId, {
+            text: buntuText,
+            buttons: overButtons,
+            mentions: [p1.id]
+          });
+        }
+        const nextPlayer = getNextPlayer(active.players, bot.id);
+        active.turn = nextPlayer.id;
+        saveDB();
+        if (!nextPlayer.id.includes("BOT")) {
+          await sendPrivateHandWithCTA(sock, ctx, active.turn, active, chatId, prefix);
+        }
+        await announceGameState(sock, ctx, chatId, active, "🤖 *Bot memilih PASS* karena tidak memiliki kartu cocok.", prefix);
+        if (nextPlayer.id.includes("BOT")) {
+          await handleBotTurn(sock, ctx, chatId, active);
+        }
+        return;
+      }
+      const card = bot.cards.splice(validIndex, 1)[0];
+      const [a, b] = card.split("/").map(Number);
+      if (active.board.length === 0) {
+        active.board.push(card);
+        active.leftEnd = a;
+        active.rightEnd = b;
+      } else if (placeSide === "left") {
+        if (b === active.leftEnd) {
+          active.board.unshift(card);
+          active.leftEnd = a;
+        } else {
+          active.board.unshift(`${b}/${a}`);
+          active.leftEnd = b;
+        }
+      } else {
+        if (a === active.rightEnd) {
+          active.board.push(card);
+          active.rightEnd = b;
+        } else {
+          active.board.push(`${b}/${a}`);
+          active.rightEnd = a;
+        }
+      }
+      active.consecutivePasses = 0;
+      if (bot.cards.length === 0) {
+        clearSession(chatId);
+        const retryButtons = [{
+          name: "quick_reply",
+          buttonParamsJson: JSON.stringify({
+            display_text: "🎮 Main Lagi",
+            id: `${prefix}domino`
+          })
+        }, {
+          name: "quick_reply",
+          buttonParamsJson: JSON.stringify({
+            display_text: "🤖 Tantang Balik",
+            id: `${prefix}domino bot`
+          })
+        }];
+        return await sendCTA(sock, ctx, chatId, {
+          text: "🤖 *Bot berhasil menghabiskan kartu dan menang!* Tetap semangat dan coba lagi.",
+          buttons: retryButtons
+        });
+      }
+      const nextPlayer = getNextPlayer(active.players, bot.id);
+      active.turn = nextPlayer.id;
+      saveDB();
+      if (!nextPlayer.id.includes("BOT")) {
+        await sendPrivateHandWithCTA(sock, ctx, active.turn, active, chatId, prefix);
+      }
+      await announceGameState(sock, ctx, chatId, active, `🤖 Bot memainkan kartu: *[ ${card} ]*`, prefix);
+      if (nextPlayer.id.includes("BOT")) {
+        await handleBotTurn(sock, ctx, chatId, active);
+      }
+    } catch (e) {
+      console.error("[BOT TURN ERROR]:", e);
+    }
+  }, 1600);
+}
 async function handleDominoAction(sock, ctx, msg, sender, rawText) {
   initDB(sender, ctx?.pushName || "");
   checkAndCleanExpiredSessions();
   const parts = rawText.split(/\s+/);
   const action = (parts[1] || "").toLowerCase();
   let targetChatId = parts[3] || parts[2];
-  if (!targetChatId || !targetChatId.endsWith("@g.us") || !global.db.domino[targetChatId]) {
+  if (!targetChatId || !global.db.domino[targetChatId]) {
     for (const [cId, sess] of Object.entries(global.db.domino)) {
       if (sess.players?.some(p => p.id === sender)) {
         targetChatId = cId;
         break;
       }
     }
+  }
+  if (!targetChatId && global.db.domino[ctx?.id]) {
+    targetChatId = ctx?.id;
   }
   const session = global.db.domino[targetChatId];
   if (!session) {
@@ -737,11 +939,11 @@ async function handleDominoAction(sock, ctx, msg, sender, rawText) {
       })
     }];
     await sendCTA(sock, ctx, targetChatId, {
-      text: `🏳️ Permainan Domino dihentikan karena @${sender.split("@")[0]} menyerah / membatalkan sesi. Meja telah dibersihkan!`,
+      text: `🏳️ Permainan Domino dihentikan oleh @${sender.split("@")[0]}. Meja telah dibersihkan!`,
       buttons: restartButtons,
       mentions: [sender]
     });
-    return ctx.reply("🚪 Sesi permainan Domino telah dihentikan dan dibersihkan.");
+    return ctx.reply("🚪 Sesi permainan Domino telah dihentikan.");
   }
   if (session.state !== "PLAYING") {
     return ctx.reply("⏳ Permainan belum dimulai. Masih menunggu di lobi!");
@@ -761,14 +963,14 @@ async function handleDominoAction(sock, ctx, msg, sender, rawText) {
     if (session.consecutivePasses >= session.players.length) {
       const scores = session.players.map(p => ({
         id: p.id,
-        name: p.id === "BOT" ? "🤖 Bot" : `@${p.id.split("@")[0]}`,
+        name: p.id.includes("BOT") ? "🤖 Bot" : `@${p.id.split("@")[0]}`,
         pips: countTotalPips(p.cards),
         cardsCount: p.cards.length
       }));
       scores.sort((a, b) => a.pips - b.pips);
       const winner = scores[0];
       clearSession(targetChatId);
-      if (winner.id !== "BOT") {
+      if (!winner.id.includes("BOT")) {
         rewardWinner(winner.id, "", 8e3, 200);
       }
       let buntuText = `🛑 *PERMAINAN BUNTU (GAPLE DEADLOCK)!* 🛑\n\nSemua pemain tidak dapat melangkah lagi.\n\n*Rekapitulasi Titik:* \n`;
@@ -776,7 +978,7 @@ async function handleDominoAction(sock, ctx, msg, sender, rawText) {
         buntuText += `${idx + 1}. ${s.name}: *${s.pips} titik* (${s.cardsCount} kartu)\n`;
       });
       buntuText += `\n🏆 *Pemenang:* ${winner.name} (Titik kartu terendah)!\n🎁 *Hadiah:* +Rp 8.000 Money & +200 EXP!`;
-      const mentions = session.players.filter(p => p.id !== "BOT").map(p => p.id);
+      const mentions = session.players.filter(p => !p.id.includes("BOT")).map(p => p.id);
       const endButtons = [{
         name: "quick_reply",
         buttonParamsJson: JSON.stringify({
@@ -801,7 +1003,8 @@ async function handleDominoAction(sock, ctx, msg, sender, rawText) {
     session.turn = nextPlayer.id;
     saveDB();
     const note = `@${sender.split("@")[0]} memilih *PASS/LEWAT*.`;
-    if (session.isBot && session.turn === "BOT") {
+    if (session.isBot && session.turn.includes("BOT")) {
+      await announceGameState(sock, ctx, targetChatId, session, note, prefix);
       await handleBotTurn(sock, ctx, targetChatId, session);
     } else {
       await sendPrivateHandWithCTA(sock, ctx, session.turn, session, targetChatId, prefix);
@@ -880,7 +1083,8 @@ async function handleDominoAction(sock, ctx, msg, sender, rawText) {
     saveDB();
     const note = `@${sender.split("@")[0]} memainkan kartu: *[ ${selectedCard} ]*`;
     await sendPrivateHandWithCTA(sock, ctx, sender, session, targetChatId, prefix);
-    if (session.isBot && session.turn === "BOT") {
+    if (session.isBot && session.turn.includes("BOT")) {
+      await announceGameState(sock, ctx, targetChatId, session, note, prefix);
       await handleBotTurn(sock, ctx, targetChatId, session);
     } else {
       await sendPrivateHandWithCTA(sock, ctx, nextPlayer.id, session, targetChatId, prefix);
@@ -889,139 +1093,15 @@ async function handleDominoAction(sock, ctx, msg, sender, rawText) {
     return true;
   }
 }
-async function handleBotTurn(sock, ctx, chatId, session) {
-  const currentSessionId = session?.sessionId;
-  setTimeout(async () => {
-    try {
-      const active = global.db.domino?.[chatId];
-      if (!active || active.sessionId !== currentSessionId || active.state !== "PLAYING") {
-        return;
-      }
-      const bot = active.players.find(p => p.id === "BOT");
-      if (!bot) return;
-      let validIndex = -1;
-      let placeSide = null;
-      if (active.board.length === 0) {
-        validIndex = 0;
-      } else {
-        for (let i = 0; i < bot.cards.length; i++) {
-          const [a, b] = bot.cards[i].split("/").map(Number);
-          if (a === active.leftEnd || b === active.leftEnd) {
-            validIndex = i;
-            placeSide = "left";
-            break;
-          }
-          if (a === active.rightEnd || b === active.rightEnd) {
-            validIndex = i;
-            placeSide = "right";
-            break;
-          }
-        }
-      }
-      const prefix = ctx?.prefix || ".";
-      if (validIndex === -1) {
-        active.consecutivePasses = (active.consecutivePasses || 0) + 1;
-        if (active.consecutivePasses >= active.players.length) {
-          const p1 = active.players[0];
-          const p1Total = countTotalPips(p1.cards);
-          const botTotal = countTotalPips(bot.cards);
-          clearSession(chatId);
-          let buntuText = `🛑 *PERMAINAN BUNTU (GAPLE DEADLOCK)!* 🛑\n\n` + `• Titik @${p1.id.split("@")[0]}: *${p1Total} titik*\n` + `• Titik 🤖 Bot: *${botTotal} titik*\n\n`;
-          if (p1Total < botTotal) {
-            rewardWinner(p1.id, "", 8e3, 200);
-            buntuText += `🏆 *Pemenang:* @${p1.id.split("@")[0]}!\n🎁 *Hadiah:* +Rp 8.000 Money & +200 EXP!`;
-          } else if (botTotal < p1Total) {
-            buntuText += `🤖 *Bot Menang!*`;
-          } else {
-            buntuText += `🤝 *Hasil Seri!*`;
-          }
-          const overButtons = [{
-            name: "quick_reply",
-            buttonParamsJson: JSON.stringify({
-              display_text: "🎮 Main Lagi",
-              id: `${prefix}domino`
-            })
-          }, {
-            name: "quick_reply",
-            buttonParamsJson: JSON.stringify({
-              display_text: "🤖 Lawan Bot",
-              id: `${prefix}domino bot`
-            })
-          }];
-          return await sendCTA(sock, ctx, chatId, {
-            text: buntuText,
-            buttons: overButtons,
-            mentions: [p1.id]
-          });
-        }
-        const nextPlayer = getNextPlayer(active.players, "BOT");
-        active.turn = nextPlayer.id;
-        saveDB();
-        await sendPrivateHandWithCTA(sock, ctx, active.turn, active, chatId, prefix);
-        await announceGameState(sock, ctx, chatId, active, "🤖 *Bot memilih PASS* karena tidak memiliki kartu cocok.", prefix);
-        return;
-      }
-      const card = bot.cards.splice(validIndex, 1)[0];
-      const [a, b] = card.split("/").map(Number);
-      if (active.board.length === 0) {
-        active.board.push(card);
-        active.leftEnd = a;
-        active.rightEnd = b;
-      } else if (placeSide === "left") {
-        if (b === active.leftEnd) {
-          active.board.unshift(card);
-          active.leftEnd = a;
-        } else {
-          active.board.unshift(`${b}/${a}`);
-          active.leftEnd = b;
-        }
-      } else {
-        if (a === active.rightEnd) {
-          active.board.push(card);
-          active.rightEnd = b;
-        } else {
-          active.board.push(`${b}/${a}`);
-          active.rightEnd = a;
-        }
-      }
-      active.consecutivePasses = 0;
-      if (bot.cards.length === 0) {
-        clearSession(chatId);
-        const retryButtons = [{
-          name: "quick_reply",
-          buttonParamsJson: JSON.stringify({
-            display_text: "🎮 Main Lagi",
-            id: `${prefix}domino`
-          })
-        }, {
-          name: "quick_reply",
-          buttonParamsJson: JSON.stringify({
-            display_text: "🤖 Tantang Balik",
-            id: `${prefix}domino bot`
-          })
-        }];
-        return await sendCTA(sock, ctx, chatId, {
-          text: "🤖 *Bot berhasil menghabiskan kartu dan menang!* Tetap semangat dan coba lagi.",
-          buttons: retryButtons
-        });
-      }
-      const nextPlayer = getNextPlayer(active.players, "BOT");
-      active.turn = nextPlayer.id;
-      saveDB();
-      await sendPrivateHandWithCTA(sock, ctx, active.turn, active, chatId, prefix);
-      await announceGameState(sock, ctx, chatId, active, `🤖 Bot memainkan kartu: *[ ${card} ]*`, prefix);
-    } catch (e) {
-      console.error("[BOT TURN ERROR]:", e);
-    }
-  }, 1800);
-}
 async function startMultiplayerGame(sock, ctx, chatId, playerIds, isBot = false, prefix = ".") {
   clearSession(chatId);
   const deck = generateFullDeck();
   const players = [];
   for (const pId of playerIds) {
-    initDB(pId);
-    purgePlayerFromOtherSessions(pId);
+    if (!pId.includes("BOT")) {
+      initDB(pId);
+      purgePlayerFromOtherSessions(pId);
+    }
     players.push({
       id: pId,
       cards: deck.splice(0, 7)
@@ -1045,24 +1125,24 @@ async function startMultiplayerGame(sock, ctx, chatId, playerIds, isBot = false,
   };
   saveDB();
   for (const p of players) {
-    if (p.id !== "BOT") {
+    if (!p.id.includes("BOT")) {
       await sendPrivateHandWithCTA(sock, ctx, p.id, global.db.domino[chatId], chatId, prefix);
     }
   }
-  const startNote = `🎯 Giliran Pertama: ${firstTurn === "BOT" ? "🤖 Bot" : `@${firstTurn.split("@")[0]}`}`;
-  if (firstTurn === "BOT") {
+  const botName = global.bot?.name || "WudysoftBot";
+  const startNote = `🎯 Giliran Pertama: ${firstTurn.includes("BOT") ? `🤖 ${botName}` : `@${firstTurn.split("@")[0]}`}`;
+  await announceGameState(sock, ctx, chatId, global.db.domino[chatId], startNote, prefix);
+  if (firstTurn.includes("BOT")) {
     await handleBotTurn(sock, ctx, chatId, global.db.domino[chatId]);
-  } else {
-    await announceGameState(sock, ctx, chatId, global.db.domino[chatId], startNote, prefix);
   }
 }
 export default {
   name: "domino",
   aliases: ["gaple", "balak"],
-  description: "Bermain Domino Gaple Full CTA (Pure DB Timestamp & Zero Memory Leak)",
+  description: "Bermain Domino Gaple Full CTA: Solo lawan Bot atau Multiplayer",
   category: "Game",
   limit: true,
-  example: ".domino",
+  example: ".domino atau .domino bot",
   before: async (msg, {
     sock,
     ctx
@@ -1070,10 +1150,11 @@ export default {
     try {
       const isFromMe = Boolean(msg?.key?.fromMe || ctx?.isFromMe);
       if (isFromMe) return;
-      checkAndCleanExpiredSessions();
       const sender = ctx?.sender || msg?.key?.participant || msg?.key?.remoteJid;
       const text = (ctx?.text || ctx?.query || msg?.message?.conversation || msg?.message?.extendedTextMessage?.text || "").trim();
       if (/^[.#/!]?domino\s+(play|pass|stop|nyerah|batal)/i.test(text)) {
+        const msgId = msg?.key?.id;
+        if (isDuplicateMessage(msgId)) return;
         return await handleDominoAction(sock, ctx, msg, sender, text);
       }
     } catch (e) {
@@ -1083,9 +1164,6 @@ export default {
   execute: async (sock, ctx, msg) => {
     try {
       const isGroup = Boolean(ctx?.isGroup || ctx?.id?.endsWith("@g.us"));
-      if (!isGroup) {
-        return ctx.reply("❌ *Permainan Domino Meja hanya dapat dimainkan di dalam Grup!*");
-      }
       const chatId = ctx.id;
       const sender = ctx.sender;
       const senderName = ctx.pushName || "Player";
@@ -1093,15 +1171,19 @@ export default {
       const prefix = ctx.prefix || ".";
       const quotedMsg = typeof simpleQuoted === "function" ? simpleQuoted(ctx) : msg;
       const bannerImage = global.bot?.media?.banner1 || "https://files.catbox.moe/g2e6i5.jpg";
+      const rawBotJid = sock?.user?.id || sock?.user?.jid || "";
+      const botJid = rawBotJid.includes(":") ? `${rawBotJid.split(":")[0]}@s.whatsapp.net` : rawBotJid;
       initDB(sender, senderName);
       checkAndCleanExpiredSessions(chatId);
+      const msgId = msg?.key?.id;
       if (/^(play|pass|stop|nyerah|batal)/i.test(rawText)) {
+        if (isDuplicateMessage(msgId)) return;
         return await handleDominoAction(sock, ctx, msg, sender, `${prefix}domino ${rawText}`);
       }
       if (rawText.toLowerCase() === "board" || rawText.toLowerCase() === "meja") {
         const session = global.db.domino[chatId];
         if (!session || session.state !== "PLAYING") {
-          return ctx.reply("❌ Tidak ada permainan domino aktif di grup ini.");
+          return ctx.reply("❌ Tidak ada permainan domino aktif di room ini.");
         }
         return await announceGameState(sock, ctx, chatId, session, "", prefix);
       }
@@ -1122,7 +1204,7 @@ export default {
             })
           }];
           return await sendCTA(sock, ctx, chatId, {
-            text: "🚪 Sesi permainan / lobby domino di grup ini telah dibersihkan secara tuntas.",
+            text: "🚪 Sesi permainan / lobby domino telah dibersihkan secara tuntas.",
             buttons: newButtons,
             quoted: quotedMsg
           });
@@ -1132,11 +1214,60 @@ export default {
       if (rawText.toLowerCase() === "bot" || rawText.toLowerCase() === "solo") {
         const existing = global.db.domino[chatId];
         if (existing && existing.state === "PLAYING") {
-          return ctx.reply("⚠️ Masih ada sesi domino aktif di grup ini. Ketik `.domino stop` untuk menghentikan terlebih dahulu.");
+          return ctx.reply("⚠️ Masih ada sesi domino aktif. Ketik `.domino stop` untuk menghentikan terlebih dahulu.");
         }
         return await startMultiplayerGame(sock, ctx, chatId, [sender, "BOT"], true, prefix);
       }
-      const mentioned = (ctx.mentionedJid || []).filter(id => id !== sender && !id.includes("bot"));
+      if (rawText.toLowerCase() === "addbot") {
+        const activeSession = global.db.domino[chatId];
+        if (!activeSession || activeSession.state !== "LOBBY") {
+          return ctx.reply("❌ Tidak ada lobi yang sedang terbuka.");
+        }
+        if (activeSession.players.includes("BOT")) {
+          return ctx.reply("⚠️ Bot sudah ada di dalam lobi ini!");
+        }
+        if (activeSession.players.length >= 4) {
+          return ctx.reply("❌ Lobi sudah penuh (Maksimal 4 pemain)!");
+        }
+        activeSession.players.push("BOT");
+        activeSession.isBot = true;
+        saveDB();
+        let addBotText = `🤖 Bot berhasil ditambahkan ke lobi!\n\n*Pemain Terkumpul (${activeSession.players.length}/4):*\n`;
+        activeSession.players.forEach((p, idx) => {
+          addBotText += `${idx + 1}. ${p.includes("BOT") ? "🤖 Bot Gaple" : `@${p.split("@")[0]}`}\n`;
+        });
+        const lobbyButtons = [{
+          name: "quick_reply",
+          buttonParamsJson: JSON.stringify({
+            display_text: "🤝 Gabung (Join)",
+            id: `${prefix}domino join`
+          })
+        }, {
+          name: "quick_reply",
+          buttonParamsJson: JSON.stringify({
+            display_text: "🎮 Mulai Game",
+            id: `${prefix}domino start`
+          })
+        }, {
+          name: "quick_reply",
+          buttonParamsJson: JSON.stringify({
+            display_text: "🚪 Batal",
+            id: `${prefix}domino stop`
+          })
+        }];
+        return await sendCTA(sock, ctx, chatId, {
+          text: addBotText,
+          buttons: lobbyButtons,
+          mentions: activeSession.players.filter(p => !p.includes("BOT"))
+        });
+      }
+      const mentioned = (ctx.mentionedJid || []).filter(id => id !== sender);
+      if (mentioned.length > 0 && mentioned.includes(botJid)) {
+        return await startMultiplayerGame(sock, ctx, chatId, [sender, "BOT"], true, prefix);
+      }
+      if (!isGroup) {
+        return await startMultiplayerGame(sock, ctx, chatId, [sender, "BOT"], true, prefix);
+      }
       if (mentioned.length > 0) {
         const existing = global.db.domino[chatId];
         if (existing && existing.state === "PLAYING") {
@@ -1164,7 +1295,7 @@ export default {
         saveDB();
         let joinText = `🤝 @${sender.split("@")[0]} bergabung ke lobi!\n\n*Pemain Terkumpul (${activeSession.players.length}/4):*\n`;
         activeSession.players.forEach((p, idx) => {
-          joinText += `${idx + 1}. @${p.split("@")[0]}\n`;
+          joinText += `${idx + 1}. ${p.includes("BOT") ? "🤖 Bot Gaple" : `@${p.split("@")[0]}`}\n`;
         });
         const lobbyButtons = [{
           name: "quick_reply",
@@ -1181,6 +1312,12 @@ export default {
         }, {
           name: "quick_reply",
           buttonParamsJson: JSON.stringify({
+            display_text: "🤖 Tambah Bot",
+            id: `${prefix}domino addbot`
+          })
+        }, {
+          name: "quick_reply",
+          buttonParamsJson: JSON.stringify({
             display_text: "🚪 Batal",
             id: `${prefix}domino stop`
           })
@@ -1188,7 +1325,7 @@ export default {
         return await sendCTA(sock, ctx, chatId, {
           text: joinText,
           buttons: lobbyButtons,
-          mentions: activeSession.players
+          mentions: activeSession.players.filter(p => !p.includes("BOT"))
         });
       }
       if (rawText.toLowerCase() === "start" || rawText.toLowerCase() === "mulai") {
@@ -1201,9 +1338,9 @@ export default {
           });
         }
         if (activeSession.players.length < 2) {
-          return ctx.reply(`❌ Minimal butuh 2 pemain untuk mulai! Saat ini baru ada ${activeSession.players.length} orang.`);
+          return ctx.reply(`❌ Minimal butuh 2 pemain untuk mulai! Saat ini baru ada ${activeSession.players.length} orang (bisa tambah dengan \`${prefix}domino addbot\`).`);
         }
-        return await startMultiplayerGame(sock, ctx, chatId, activeSession.players, false, prefix);
+        return await startMultiplayerGame(sock, ctx, chatId, activeSession.players, activeSession.isBot || false, prefix);
       }
       if (activeSession) {
         if (activeSession.state === "PLAYING") {
@@ -1211,7 +1348,7 @@ export default {
         }
         let lobbyText = `📢 *LOBBY DOMINO MASIH TERBUKA!*\n👑 Host: @${activeSession.host.split("@")[0]}\n\n*Daftar Pemain (${activeSession.players.length}/4):*\n`;
         activeSession.players.forEach((p, idx) => {
-          lobbyText += `${idx + 1}. @${p.split("@")[0]}\n`;
+          lobbyText += `${idx + 1}. ${p.includes("BOT") ? "🤖 Bot Gaple" : `@${p.split("@")[0]}`}\n`;
         });
         lobbyText += `\n_Klik tombol di bawah untuk bergabung atau mulai!_`;
         const existingButtons = [{
@@ -1229,6 +1366,12 @@ export default {
         }, {
           name: "quick_reply",
           buttonParamsJson: JSON.stringify({
+            display_text: "🤖 Tambah Bot",
+            id: `${prefix}domino addbot`
+          })
+        }, {
+          name: "quick_reply",
+          buttonParamsJson: JSON.stringify({
             display_text: "🚪 Batal",
             id: `${prefix}domino stop`
           })
@@ -1236,7 +1379,7 @@ export default {
         return await sendCTA(sock, ctx, chatId, {
           text: lobbyText,
           buttons: existingButtons,
-          mentions: activeSession.players
+          mentions: activeSession.players.filter(p => !p.includes("BOT"))
         });
       }
       clearSession(chatId);
@@ -1246,11 +1389,12 @@ export default {
         state: "LOBBY",
         host: sender,
         players: [sender],
+        isBot: false,
         createdAt: Date.now(),
         expireTime: Date.now() + 12e4
       };
       saveDB();
-      const lobbyBody = `🎴 *LOBBY DOMINO GAPLE (2 - 4 PEMAIN)* 🎴\n\n` + `• 👑 *Host:* @${sender.split("@")[0]}\n` + `• 👥 *Pemain:* 1/4 Terkumpul\n\n` + `Silakan klik tombol di bawah untuk bergabung, bermain 1v1 lawan Bot, atau langsung mulai saat teman sudah berkumpul!\n` + `_Batas waktu persiapan: 2 Menit._`;
+      const lobbyBody = `🎴 *LOBBY DOMINO GAPLE (2 - 4 PEMAIN)* 🎴\n\n` + `• 👑 *Host:* @${sender.split("@")[0]}\n` + `• 👥 *Pemain:* 1/4 Terkumpul\n\n` + `Silakan klik tombol di bawah untuk bergabung, bermain 1v1 lawan Bot, atau tambah Bot ke lobi!\n` + `_Batas waktu persiapan: 2 Menit._`;
       const lobbyButtons = [{
         name: "quick_reply",
         buttonParamsJson: JSON.stringify({

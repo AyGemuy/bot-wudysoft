@@ -40,6 +40,7 @@ const WA_DEFAULT_EPHEMERAL = 7 * 24 * 60 * 60;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 global.lidPhoneCache = global.lidPhoneCache || new Map();
 global.msgStore = global.msgStore || new Map();
+global.albumStore = global.albumStore || new Map();
 const inFlightLidLookups = new Map();
 if (!Button.prototype.setHeader) {
   Button.prototype.setHeader = function(title = "", subtitle = "") {
@@ -517,8 +518,43 @@ export async function processThumbnails(obj, depth = 0) {
 export async function safeRelayInteractive(sock, jid, message, options = {}, retries = 2) {
   const targetJid = decodeJid(jid);
   try {
+    let msgPayload = message;
+    if (msgPayload?.message) {
+      msgPayload = msgPayload.message;
+    }
+    const hasBloks = Boolean(msgPayload?.bloksWidget || msgPayload?.interactiveMessage?.bloksWidget || msgPayload?.viewOnceMessage?.message?.interactiveMessage?.bloksWidget);
+    const isInteractive = Boolean(hasBloks || msgPayload?.interactiveMessage || msgPayload?.viewOnceMessage?.message?.interactiveMessage || msgPayload?.carouselMessage || msgPayload?.interactiveMessage?.carouselMessage);
+    if (msgPayload?.bloksWidget && !msgPayload.interactiveMessage) {
+      msgPayload = {
+        interactiveMessage: {
+          header: {
+            hasMediaAttachment: false
+          },
+          body: {
+            text: options.text || options.body || ""
+          },
+          bloksWidget: msgPayload.bloksWidget,
+          contextInfo: options.contextInfo || {}
+        }
+      };
+    }
+    const needsViewOnce = Boolean(options.viewOnce !== false && isInteractive && !msgPayload.viewOnceMessage && !msgPayload.viewOnceMessageV2);
+    let finalMessage = msgPayload;
+    if (needsViewOnce) {
+      finalMessage = {
+        viewOnceMessage: {
+          message: {
+            messageContextInfo: {
+              deviceListMetadata: {},
+              deviceListMetadataVersion: 2
+            },
+            ...msgPayload
+          }
+        }
+      };
+    }
     const duration = options.duration ?? options.afterReadDuration;
-    if (duration && message && typeof message === "object") {
+    if (duration && finalMessage && typeof finalMessage === "object") {
       const injectDuration = obj => {
         if (!obj || typeof obj !== "object") return;
         if (obj.contextInfo) {
@@ -536,18 +572,36 @@ export async function safeRelayInteractive(sock, jid, message, options = {}, ret
           }
         }
       };
-      injectDuration(message);
+      injectDuration(finalMessage);
     }
     const messageId = options.messageId || (typeof generateMessageID === "function" ? generateMessageID() : undefined);
+    const defaultBizNodes = [{
+      tag: "biz",
+      attrs: {},
+      content: [{
+        tag: "interactive",
+        attrs: {
+          type: "native_flow",
+          v: "1"
+        },
+        content: [{
+          tag: "native_flow",
+          attrs: {
+            v: "9",
+            name: "mixed"
+          }
+        }]
+      }]
+    }];
     const relayOpts = {
       messageId: messageId,
       useCachedGroupMetadata: options.useCachedGroupMetadata,
       statusJidList: options.statusJidList,
-      additionalNodes: options.additionalNodes,
+      additionalNodes: options.additionalNodes || (isInteractive ? defaultBizNodes : undefined),
       ...options
     };
-    const result = await sock.relayMessage(targetJid, message, relayOpts);
-    const hasRich = !!message?.botForwardedMessage?.message?.richResponseMessage || !!message?.interactiveMessage?.bloksWidget;
+    const result = await sock.relayMessage(targetJid, finalMessage, relayOpts);
+    const hasRich = Boolean(message?.botForwardedMessage?.message?.richResponseMessage || message?.richResponseMessage || finalMessage?.botForwardedMessage?.message?.richResponseMessage);
     if (options.bypassDownload !== false && (options.forceRichEdit || hasRich)) {
       try {
         const editContent = proto.Message.fromObject({
@@ -560,7 +614,7 @@ export async function safeRelayInteractive(sock, jid, message, options = {}, ret
                   id: messageId
                 },
                 type: proto.Message.ProtocolMessage.Type.MESSAGE_EDIT,
-                editedMessage: message
+                editedMessage: finalMessage
               }
             }
           }
@@ -583,6 +637,199 @@ export async function safeRelayInteractive(sock, jid, message, options = {}, ret
     if (retries > 0 && (statusCode === 428 || statusCode === 499 || statusCode === 515 || errorMsg.includes("closed") || errorMsg.includes("precondition"))) {
       await sleep(500);
       return await safeRelayInteractive(sock, targetJid, message, options, retries - 1);
+    }
+    throw err;
+  }
+}
+export async function safeSendMessage(sock, jid, content, options = {}, retries = 2) {
+  const targetJid = decodeJid(jid);
+  try {
+    if (typeof content === "string") content = {
+      text: content
+    };
+    if (!content || typeof content !== "object") return null;
+    const isImagePoll = Boolean(content?.poll && Array.isArray(content.poll.values) && content.poll.values.some(v => v && typeof v === "object" && (v.image || v.imageMessage)));
+    if (isImagePoll && typeof sock.sendImagePoll === "function") {
+      return await sock.sendImagePoll(targetJid, content.poll, options);
+    }
+    if (content.album || content.albumMessage || Array.isArray(content.images) && content.images.length > 1) {
+      if (typeof sock.album === "function") {
+        return await sock.album(targetJid, content.images || content.album, options);
+      }
+    }
+    const isImage = Boolean(content.image || content.imageMessage);
+    const isVideo = Boolean(content.video || content.videoMessage);
+    if (isImage || isVideo) {
+      const musicData = content.music || options.music || content.musicSidecar || options.musicSidecar || null;
+      const musicAnnotation = buildMusicAnnotation(typeof musicData === "object" ? musicData : {});
+      const targetAnnotations = content.annotations || options.annotations || [musicAnnotation];
+      content.annotations = targetAnnotations;
+      options.annotations = targetAnnotations;
+      if (content.imageMessage) content.imageMessage.annotations = targetAnnotations;
+      if (content.videoMessage) content.videoMessage.annotations = targetAnnotations;
+      const rawSidecar = content.musicSidecar || options.musicSidecar || musicData?.sidecar || musicData?.audio;
+      const sidecarBuffer = resolveMusicSidecar(rawSidecar);
+      content.musicSidecar = sidecarBuffer;
+      options.musicSidecar = sidecarBuffer;
+      if (content.imageMessage) content.imageMessage.musicSidecar = sidecarBuffer;
+      if (content.videoMessage) content.videoMessage.musicSidecar = sidecarBuffer;
+    }
+    const isSticker = Boolean(content.sticker || content.stickerMessage);
+    if (isSticker) {
+      content.isAiSticker = true;
+      options.isAiSticker = true;
+      if (content.stickerMessage) content.stickerMessage.isAiSticker = true;
+    }
+    await processThumbnails(content);
+    if (options && typeof options === "object") await processThumbnails(options);
+    const rawText = String(content?.text || content?.caption || content?.conversation || content?.image?.caption || content?.video?.caption || content?.document?.caption || content?.extendedTextMessage?.text || "");
+    const parsedTextMentions = typeof parseMention === "function" ? parseMention(rawText) : [];
+    const rawMentions = [...Array.isArray(options.mentions) ? options.mentions : [], ...Array.isArray(options.mentionedJid) ? options.mentionedJid : [], ...Array.isArray(options.contextInfo?.mentionedJid) ? options.contextInfo.mentionedJid : [], ...Array.isArray(content?.mentions) ? content.mentions : [], ...Array.isArray(content?.mentionedJid) ? content.mentionedJid : [], ...Array.isArray(content?.contextInfo?.mentionedJid) ? content.contextInfo.mentionedJid : [], ...parsedTextMentions].filter(Boolean);
+    const finalMentions = [...new Set(rawMentions.map(item => {
+      let clean = decodeJid(String(item).trim());
+      if (clean.endsWith("@lid")) {
+        if (typeof resolveLidToJid === "function") clean = resolveLidToJid(clean, sock);
+        else if (global.lidPhoneCache?.has(clean)) clean = global.lidPhoneCache.get(clean);
+      }
+      if (clean.endsWith("@s.whatsapp.net") || clean.endsWith("@lid")) return clean;
+      const num = clean.replace(/\D/g, "");
+      return num.length >= 7 ? `${num}@s.whatsapp.net` : null;
+    }).filter(Boolean))];
+    const isControl = content && typeof content === "object" && Object.keys(content).some(k => NON_CONTENT_KEYS.has(k));
+    if (!isControl && content && typeof content === "object") {
+      const botCfg = global.bot || {};
+      const botUtils = botCfg.utils || {};
+      if (content.title === undefined && botUtils.title) content.title = botUtils.title;
+      if (content.subtitle === undefined && botUtils.subtitle) content.subtitle = botUtils.subtitle;
+      if (content.footer === undefined && (botUtils.footer || botCfg.footer || botCfg.watermark)) {
+        content.footer = botUtils.footer || botCfg.footer || botCfg.watermark;
+      }
+      const customButtons = content.interactiveButtons || options.interactiveButtons || botUtils.interactiveButtons || null;
+      if (customButtons && Array.isArray(customButtons) && customButtons.length > 0) {
+        content.interactiveButtons = customButtons;
+      }
+      content.contextInfo = {
+        ...botUtils.contextInfo || {},
+        ...content.contextInfo || {},
+        ...options.contextInfo || {},
+        mentionedJid: finalMentions
+      };
+      content.mentions = finalMentions;
+      options.mentions = finalMentions;
+      const interactiveKeys = ["interactiveMessage", "buttonsMessage", "templateMessage", "listMessage"];
+      for (const key of interactiveKeys) {
+        if (content[key] && typeof content[key] === "object") {
+          content[key].contextInfo = {
+            ...content[key].contextInfo || {},
+            ...content.contextInfo,
+            mentionedJid: finalMentions
+          };
+        }
+      }
+      const duration = options.duration ?? options.afterReadDuration ?? content.duration ?? content.afterReadDuration;
+      if (duration) {
+        Object.assign(content.contextInfo, {
+          expiration: 0,
+          ephemeralSettingTimestamp: Date.now(),
+          disappearingMode: {
+            initiator: 0,
+            trigger: 1
+          },
+          afterReadDuration: Number(duration)
+        });
+        if (content.text && content.previewType === undefined) {
+          content.previewType = 0;
+        }
+      }
+    } else if (finalMentions.length > 0 && content && typeof content === "object") {
+      content.mentions = finalMentions;
+      options.mentions = finalMentions;
+      content.contextInfo = {
+        ...content.contextInfo || {},
+        mentionedJid: finalMentions
+      };
+    }
+    if (finalMentions.length > 0) {
+      options.mentions = finalMentions;
+      if (!options.contextInfo) options.contextInfo = {};
+      options.contextInfo.mentionedJid = finalMentions;
+    }
+    if (options.quoted && typeof options.quoted === "object") {
+      let q = options.quoted;
+      if (!q.message || typeof q.message !== "object" || Object.keys(q.message).length === 0) {
+        q = {
+          key: q.key || {
+            remoteJid: targetJid,
+            id: "3EB0" + crypto.randomBytes(8).toString("hex")
+          },
+          message: {
+            conversation: q.text || q.body || " "
+          },
+          messageTimestamp: Math.floor(Date.now() / 1e3)
+        };
+      }
+      options.quoted = cleanQuotedForTarget(q, targetJid);
+    }
+    const isInteractiveContent = Boolean(content.interactiveMessage || content.bloksWidget || content.carouselMessage || content.cards || content.a2uiMessage || content.interactiveButtons || content.viewOnceMessage && content.viewOnceMessage.message?.interactiveMessage);
+    if (isInteractiveContent) {
+      let interactivePayload = null;
+      if (content.interactiveButtons && !content.interactiveMessage) {
+        const btnBuilder = new Button(sock);
+        if (content.text) btnBuilder.setBody(content.text);
+        if (content.footer) btnBuilder.setFooter(content.footer);
+        if (content.title) btnBuilder.setTitle(content.title);
+        if (content.subtitle) btnBuilder.setSubtitle(content.subtitle);
+        if (content.image) btnBuilder.setImage(content.image);
+        if (content.video) btnBuilder.setVideo(content.video);
+        if (content.document) btnBuilder.setDocument(content.document);
+        if (content.contextInfo) btnBuilder.setContextInfo(content.contextInfo);
+        applyButtonsToBuilder(btnBuilder, content.interactiveButtons);
+        return await btnBuilder.send(targetJid, {
+          quoted: options.quoted,
+          ...options
+        });
+      }
+      if (content.bloksWidget && !content.interactiveMessage) {
+        interactivePayload = {
+          interactiveMessage: {
+            header: {
+              hasMediaAttachment: false
+            },
+            body: {
+              text: content.text || content.caption || ""
+            },
+            bloksWidget: content.bloksWidget,
+            contextInfo: content.contextInfo || options.contextInfo || {}
+          }
+        };
+      } else {
+        interactivePayload = content;
+      }
+      const generated = await generateWAMessageFromContent(targetJid, interactivePayload, {
+        userJid: sock.user?.id ? decodeJid(sock.user.id) : sock.user?.jid,
+        quoted: options.quoted,
+        ephemeralExpiration: options.ephemeralExpiration || WA_DEFAULT_EPHEMERAL,
+        ...options
+      });
+      return await safeRelayInteractive(sock, targetJid, generated.message, {
+        messageId: generated.key.id,
+        ...options
+      });
+    }
+    return await sock.sendMessage(targetJid, content, options);
+  } catch (err) {
+    const statusCode = err?.output?.statusCode || err?.status;
+    const errorText = String(err?.message || "").toLowerCase();
+    const isStaleSession = statusCode === 479 || errorText.includes("479") || errorText.includes("stale") || errorText.includes("malformed") || errorText.includes("session");
+    if (isStaleSession && targetJid.endsWith("@g.us") && retries > 0) {
+      console.log(chalk.yellow(`[AUTO-RECOVERY] Error 479 terdeteksi di ${targetJid}. Memperbaiki sesi & kirim ulang...`));
+      await autoFixGroupSession(sock, targetJid);
+      await sleep(500);
+      return await safeSendMessage(sock, targetJid, content, options, retries - 1);
+    }
+    if (retries > 0 && (statusCode === 428 || statusCode === 499 || statusCode === 515 || errorText.includes("precondition") || errorText.includes("closed") || errorText.includes("timed out"))) {
+      await sleep(500);
+      return await safeSendMessage(sock, targetJid, content, options, retries - 1);
     }
     throw err;
   }
@@ -688,157 +935,6 @@ function resolveMusicSidecar(sidecarInput) {
     } catch {}
   }
   return crypto.randomBytes(32);
-}
-export async function safeSendMessage(sock, jid, content, options = {}, retries = 2) {
-  const targetJid = decodeJid(jid);
-  try {
-    if (typeof content === "string") content = {
-      text: content
-    };
-    if (content && typeof content === "object") {
-      const isImage = Boolean(content.image || content.imageMessage);
-      const isVideo = Boolean(content.video || content.videoMessage);
-      if (isImage || isVideo) {
-        const musicData = content.music || options.music || content.musicSidecar || options.musicSidecar || null;
-        const musicAnnotation = buildMusicAnnotation(typeof musicData === "object" ? musicData : {});
-        const targetAnnotations = content.annotations || options.annotations || [musicAnnotation];
-        content.annotations = targetAnnotations;
-        options.annotations = targetAnnotations;
-        if (content.imageMessage) content.imageMessage.annotations = targetAnnotations;
-        if (content.videoMessage) content.videoMessage.annotations = targetAnnotations;
-        const rawSidecar = content.musicSidecar || options.musicSidecar || musicData?.sidecar || musicData?.audio;
-        const sidecarBuffer = resolveMusicSidecar(rawSidecar);
-        content.musicSidecar = sidecarBuffer;
-        options.musicSidecar = sidecarBuffer;
-        if (content.imageMessage) content.imageMessage.musicSidecar = sidecarBuffer;
-        if (content.videoMessage) content.videoMessage.musicSidecar = sidecarBuffer;
-      }
-      const isSticker = Boolean(content.sticker || content.stickerMessage);
-      if (isSticker) {
-        content.isAiSticker = true;
-        options.isAiSticker = true;
-        if (content.stickerMessage) content.stickerMessage.isAiSticker = true;
-      }
-    }
-    if (content && typeof content === "object") await processThumbnails(content);
-    if (options && typeof options === "object") await processThumbnails(options);
-    const rawText = String(content?.text || content?.caption || content?.conversation || content?.image?.caption || content?.video?.caption || content?.document?.caption || content?.extendedTextMessage?.text || "");
-    const parsedTextMentions = typeof parseMention === "function" ? parseMention(rawText) : [];
-    const rawMentions = [...Array.isArray(options.mentions) ? options.mentions : [], ...Array.isArray(options.mentionedJid) ? options.mentionedJid : [], ...Array.isArray(options.contextInfo?.mentionedJid) ? options.contextInfo.mentionedJid : [], ...Array.isArray(content?.mentions) ? content.mentions : [], ...Array.isArray(content?.mentionedJid) ? content.mentionedJid : [], ...Array.isArray(content?.contextInfo?.mentionedJid) ? content.contextInfo.mentionedJid : [], ...parsedTextMentions].filter(Boolean);
-    const finalMentions = [...new Set(rawMentions.map(item => {
-      let clean = decodeJid(String(item).trim());
-      if (clean.endsWith("@lid")) {
-        if (typeof resolveLidToJid === "function") clean = resolveLidToJid(clean, sock);
-        else if (global.lidPhoneCache?.has(clean)) clean = global.lidPhoneCache.get(clean);
-      }
-      if (clean.endsWith("@s.whatsapp.net") || clean.endsWith("@lid")) {
-        return clean;
-      }
-      const num = clean.replace(/\D/g, "");
-      return num.length >= 7 ? `${num}@s.whatsapp.net` : null;
-    }).filter(Boolean))];
-    if (content && typeof content === "object") {
-      if (!content.contextInfo) content.contextInfo = {};
-      content.contextInfo.mentionedJid = finalMentions;
-      content.mentions = finalMentions;
-    }
-    if (options && typeof options === "object") {
-      if (!options.contextInfo) options.contextInfo = {};
-      options.contextInfo.mentionedJid = finalMentions;
-      options.mentions = finalMentions;
-    }
-    const isControl = content && typeof content === "object" && Object.keys(content).some(k => NON_CONTENT_KEYS.has(k));
-    if (!isControl && content && typeof content === "object") {
-      const botCfg = global.bot || {};
-      const botUtils = botCfg.utils || {};
-      if (content.title === undefined && botUtils.title) content.title = botUtils.title;
-      if (content.subtitle === undefined && botUtils.subtitle) content.subtitle = botUtils.subtitle;
-      if (content.footer === undefined && (botUtils.footer || botCfg.footer || botCfg.watermark)) {
-        content.footer = botUtils.footer || botCfg.footer || botCfg.watermark;
-      }
-      const customButtons = content.interactiveButtons || options.interactiveButtons || botUtils.interactiveButtons || null;
-      if (customButtons && Array.isArray(customButtons) && customButtons.length > 0) {
-        content.interactiveButtons = customButtons;
-      }
-      content.contextInfo = {
-        ...botUtils.contextInfo || {},
-        ...content.contextInfo || {},
-        ...options.contextInfo || {},
-        mentionedJid: finalMentions
-      };
-      content.mentions = finalMentions;
-      options.mentions = finalMentions;
-      const interactiveKeys = ["interactiveMessage", "buttonsMessage", "templateMessage", "listMessage"];
-      for (const key of interactiveKeys) {
-        if (content[key] && typeof content[key] === "object") {
-          content[key].contextInfo = {
-            ...content[key].contextInfo || {},
-            ...content.contextInfo,
-            mentionedJid: finalMentions
-          };
-        }
-      }
-      const duration = options.duration ?? options.afterReadDuration ?? content.duration ?? content.afterReadDuration;
-      if (duration) {
-        Object.assign(content.contextInfo, {
-          expiration: 0,
-          ephemeralSettingTimestamp: Date.now(),
-          disappearingMode: {
-            initiator: 0,
-            trigger: 1
-          },
-          afterReadDuration: Number(duration)
-        });
-        if (content.text && content.previewType === undefined) {
-          content.previewType = 0;
-        }
-      }
-    } else if (finalMentions.length > 0 && content && typeof content === "object") {
-      content.mentions = finalMentions;
-      options.mentions = finalMentions;
-      content.contextInfo = {
-        ...content.contextInfo || {},
-        mentionedJid: finalMentions
-      };
-    }
-    if (finalMentions.length > 0) {
-      options.mentions = finalMentions;
-      if (!options.contextInfo) options.contextInfo = {};
-      options.contextInfo.mentionedJid = finalMentions;
-    }
-    if (options.quoted && typeof options.quoted === "object") {
-      let q = options.quoted;
-      if (!q.message || typeof q.message !== "object" || Object.keys(q.message).length === 0) {
-        q = {
-          key: q.key || {
-            remoteJid: targetJid,
-            id: "3EB0" + crypto.randomBytes(8).toString("hex")
-          },
-          message: {
-            conversation: q.text || q.body || " "
-          },
-          messageTimestamp: Math.floor(Date.now() / 1e3)
-        };
-      }
-      options.quoted = cleanQuotedForTarget(q, targetJid);
-    }
-    return await sock.sendMessage(targetJid, content, options);
-  } catch (err) {
-    const statusCode = err?.output?.statusCode || err?.status;
-    const errorText = String(err?.message || "").toLowerCase();
-    const isStaleSession = statusCode === 479 || errorText.includes("479") || errorText.includes("stale") || errorText.includes("malformed") || errorText.includes("session");
-    if (isStaleSession && targetJid.endsWith("@g.us") && retries > 0) {
-      console.log(chalk.yellow(`[AUTO-RECOVERY] Error 479 terdeteksi di ${targetJid}. Memperbaiki sesi & kirim ulang...`));
-      await autoFixGroupSession(sock, targetJid);
-      await sleep(500);
-      return await safeSendMessage(sock, targetJid, content, options, retries - 1);
-    }
-    if (retries > 0 && (statusCode === 428 || statusCode === 499 || statusCode === 515 || errorText.includes("precondition") || errorText.includes("closed") || errorText.includes("timed out"))) {
-      await sleep(500);
-      return await safeSendMessage(sock, targetJid, content, options, retries - 1);
-    }
-    throw err;
-  }
 }
 const PROTOCOL_KEYS = new Set(["messageContextInfo", "senderKeyDistributionMessage", "contextInfo", "botMetadata", "key"]);
 export const unwrapMessage = msg => {
@@ -1129,6 +1225,18 @@ export function applyButtonsToBuilder(builder, buttons = []) {
 function findMediaNode(obj, depth = 0) {
   if (!obj || typeof obj !== "object" || depth > 12) return null;
   if (Buffer.isBuffer(obj)) return obj;
+  const albumCards = obj?.albumMessage?.messages || obj?.albumMessage?.cards || obj?.verticalAlbumMessage?.messages || obj?.verticalAlbumMessage?.cards || obj?.interactiveMessage?.carouselMessage?.cards || obj?.carouselMessage?.cards || obj?.cards;
+  if (Array.isArray(albumCards) && albumCards.length > 0) {
+    const list = [];
+    for (const card of albumCards) {
+      const res = findMediaNode(card, depth + 1);
+      if (res) {
+        if (Array.isArray(res)) list.push(...res);
+        else list.push(res);
+      }
+    }
+    if (list.length > 0) return list;
+  }
   if (obj.mediaKey && (obj.directPath || obj.url || obj.fileSha256 || obj.mimetype)) {
     return obj;
   }
@@ -1140,16 +1248,6 @@ function findMediaNode(obj, depth = 0) {
       if (found) return found;
     }
   }
-  const carouselCards = obj?.interactiveMessage?.carouselMessage?.cards || obj?.carouselMessage?.cards || obj?.cards;
-  if (Array.isArray(carouselCards) && carouselCards.length > 0) {
-    for (const card of carouselCards) {
-      const cardMedia = card?.header?.imageMessage || card?.header?.videoMessage || card?.header?.documentMessage || card?.header;
-      if (cardMedia) {
-        const found = findMediaNode(cardMedia, depth + 1);
-        if (found) return found;
-      }
-    }
-  }
   const mediaKeys = ["imageMessage", "videoMessage", "audioMessage", "stickerMessage", "documentMessage", "ptvMessage", "documentWithCaptionMessage", "locationMessage"];
   for (const key of mediaKeys) {
     if (obj[key]) {
@@ -1157,7 +1255,7 @@ function findMediaNode(obj, depth = 0) {
       if (res) return res;
     }
   }
-  const wrappers = ["viewOnceMessage", "viewOnceMessageV2", "viewOnceMessageV2Extension", "viewOnceMessageV3", "ephemeralMessage", "interactiveMessage", "botForwardedMessage", "groupMentionedMessage", "header", "message", "rawMessage", "msg", "media", "fakeObj"];
+  const wrappers = ["associatedChildMessage", "viewOnceMessage", "viewOnceMessageV2", "viewOnceMessageV2Extension", "viewOnceMessageV3", "ephemeralMessage", "interactiveMessage", "botForwardedMessage", "groupMentionedMessage", "header", "message", "rawMessage", "msg", "media", "fakeObj"];
   for (const w of wrappers) {
     if (obj[w]) {
       const res = findMediaNode(obj[w], depth + 1);
@@ -1189,6 +1287,12 @@ export const downloadMediaNode = async (target, customType = null) => {
     let mediaNode = target;
     if (typeof unwrapMessage === "function") mediaNode = unwrapMessage(mediaNode) || mediaNode;
     if (typeof findMediaNode === "function") mediaNode = findMediaNode(mediaNode) || mediaNode;
+    if (Array.isArray(mediaNode)) {
+      const downloadTasks = mediaNode.map(node => downloadMediaNode(node, customType));
+      const results = (await Promise.all(downloadTasks)).filter(Boolean);
+      if (results.length === 0) return null;
+      return results.length === 1 ? results[0] : results;
+    }
     if (mediaNode?.ephemeralMessage?.message) mediaNode = mediaNode.ephemeralMessage.message;
     if (mediaNode?.viewOnceMessage?.message) mediaNode = mediaNode.viewOnceMessage.message;
     if (mediaNode?.viewOnceMessageV2?.message) mediaNode = mediaNode.viewOnceMessageV2.message;
@@ -1376,9 +1480,25 @@ export async function SerializeMessage(sock, msg) {
       sender: msg.key?.participant || msg.participant || msg.key?.remoteJid,
       timestamp: Date.now()
     });
-    if (global.msgStore.size > 2500) {
-      const oldestKey = global.msgStore.keys().next().value;
-      global.msgStore.delete(oldestKey);
+    const rawMsg = msg.message || {};
+    if (rawMsg.albumMessage) {
+      if (!global.albumStore.has(msg.key.id)) {
+        global.albumStore.set(msg.key.id, {
+          expectedCount: (rawMsg.albumMessage.expectedImageCount || 0) + (rawMsg.albumMessage.expectedVideoCount || 0),
+          items: []
+        });
+      }
+    }
+    const assoc = rawMsg.associatedChildMessage?.messageContextInfo?.messageAssociation || rawMsg[Object.keys(rawMsg)[0]]?.contextInfo?.messageAssociation;
+    if (assoc && assoc.associationType === 1 && assoc.parentMessageKey?.id) {
+      const parentId = assoc.parentMessageKey.id;
+      if (!global.albumStore.has(parentId)) {
+        global.albumStore.set(parentId, {
+          expectedCount: 0,
+          items: []
+        });
+      }
+      global.albumStore.get(parentId).items.push(rawMsg);
     }
   }
   if (typeof sock.appendTextMessage !== "function") {
@@ -1696,7 +1816,7 @@ export async function SerializeMessage(sock, msg) {
           fileName: nMedia?.fileName || null,
           fileSize: nMedia?.fileLength ? Number(nMedia.fileLength) : null,
           key: nestedKey,
-          download: async () => downloadMediaNode(nMedia || nestedMsg, nMediaType || "image"),
+          download: async () => downloadMediaNode(nestedMsg || nestedRaw || nMedia, nMediaType),
           copyNForward: async (jid = ctx.chat, forwardingScore = true, options = {}) => copyNForward(sock, jid, nestedFakeObj, forwardingScore, options),
           delete: async () => safeSendMessage(sock, ctx.chat, {
             delete: nestedKey
@@ -1761,7 +1881,7 @@ export async function SerializeMessage(sock, msg) {
       fileName: qMedia?.fileName || null,
       fileSize: qMedia?.fileLength ? Number(qMedia.fileLength) : null,
       key: quotedKey,
-      download: async () => downloadMediaNode(qMedia || qMsg, qMediaType || "image"),
+      download: async () => downloadMediaNode(qMsg || rawQuoted || qMedia, qMediaType),
       copyNForward: async (jid = ctx.chat, forwardingScore = true, options = {}) => copyNForward(sock, jid, fakeObj, forwardingScore, options),
       delete: async () => safeSendMessage(sock, ctx.chat, {
         delete: quotedKey
@@ -1771,11 +1891,16 @@ export async function SerializeMessage(sock, msg) {
   }
   const mediaContent = ctx.msg;
   const directMime = mediaContent?.mimetype || "";
-  const directIsMedia = Boolean(mediaContent && (/image|video|sticker|audio|document|webp/.test(directMime) || ["imageMessage", "videoMessage", "stickerMessage", "audioMessage", "documentMessage", "ptvMessage"].includes(ctx.msgType)));
+  const isAlbumParent = Boolean(ctx.msgType === "albumMessage" || m?.albumMessage);
+  const isAlbumChild = Boolean(contextInfo?.messageAssociation?.associationType === 1);
+  const isAlbum = isAlbumParent || isAlbumChild;
+  const directIsMedia = Boolean(isAlbum || mediaContent && (/image|video|sticker|audio|document|webp/.test(directMime) || ["imageMessage", "videoMessage", "stickerMessage", "audioMessage", "documentMessage", "ptvMessage", "albumMessage"].includes(ctx.msgType)));
+  ctx.isAlbum = isAlbum;
+  ctx.albumParentId = isAlbumChild ? contextInfo?.messageAssociation?.parentMessageKey?.id : isAlbumParent ? ctx.key?.id : null;
   const isViewOnce = Boolean(rawMessage?.viewOnceMessage || rawMessage?.viewOnceMessageV2 || rawMessage?.viewOnceMessageV2Extension || rawMessage?.viewOnceMessageV3 || m?.viewOnceMessage || m?.viewOnceMessageV2 || m?.viewOnceMessageV2Extension || mediaContent?.viewOnce || false);
   ctx.mimetype = directMime || ctx.quoted?.mimetype || null;
   ctx.isMedia = directIsMedia || (ctx.quoted?.isMedia ?? false);
-  ctx.mediaType = directIsMedia ? ctx.msgType?.replace(/Message/gi, "").toLowerCase() : ctx.quoted?.mediaType || null;
+  ctx.mediaType = isAlbum ? "album" : directIsMedia ? ctx.msgType?.replace(/Message/gi, "").toLowerCase() : ctx.quoted?.mediaType || null;
   ctx.fileName = mediaContent?.fileName || ctx.quoted?.fileName || null;
   ctx.fileSize = mediaContent?.fileLength ? Number(mediaContent.fileLength) : ctx.quoted?.fileSize || null;
   ctx.isViewOnce = isViewOnce;
@@ -1805,9 +1930,27 @@ export async function SerializeMessage(sock, msg) {
     ctx.args = parts.slice(1);
     ctx.query = text.slice((parts[0] || "").length).trim();
   }
+  global.groupMetadataCache = global.groupMetadataCache || new Map();
   ctx.groupMetadata = async () => {
     if (!ctx.isGroup) return null;
-    return await sock.groupMetadata(ctx.chat).catch(() => ({}));
+    const now = Date.now();
+    if (global.groupMetadataCache.has(ctx.chat)) {
+      const cached = global.groupMetadataCache.get(ctx.chat);
+      if (now - cached.time < 1e4) return cached.data;
+    }
+    try {
+      const metadata = await sock.groupMetadata(ctx.chat);
+      if (metadata) {
+        global.groupMetadataCache.set(ctx.chat, {
+          data: metadata,
+          time: now
+        });
+        return metadata;
+      }
+    } catch {
+      return null;
+    }
+    return null;
   };
   ctx.getAdminStatus = async () => {
     if (!ctx.isGroup) {
@@ -1821,22 +1964,29 @@ export async function SerializeMessage(sock, msg) {
     const meta = await ctx.groupMetadata();
     const participants = meta?.participants || [];
     const adminParticipants = participants.filter(p => p.admin === "admin" || p.admin === "superadmin");
-    const adminJidSet = new Set();
+    const rawBotLid = botLid || (sock?.authState?.creds?.me?.lid ? decodeJid(sock.authState.creds.me.lid) : null);
+    const botIdentities = new Set([decodeJid(botId), rawBotLid, botNumber ? `${botNumber}@s.whatsapp.net` : null, sock?.user?.id ? decodeJid(sock.user.id) : null, sock?.user?.lid ? decodeJid(sock.user.lid) : null].filter(Boolean));
+    const senderIdentities = new Set([decodeJid(ctx.sender), decodeJid(ctx.senderAlt), ctx.userPhoneJid ? decodeJid(ctx.userPhoneJid) : null, ctx.senderNumber ? `${ctx.senderNumber}@s.whatsapp.net` : null].filter(Boolean));
+    const admins = [];
+    let isBotAdmin = false;
+    let isAdmin = false;
     for (const p of adminParticipants) {
-      const realP = await resolveLidToJid(p.id || p.lid || p.jid, sock, null, participants);
-      if (realP) adminJidSet.add(realP);
+      const pJid = decodeJid(p.id || p.jid);
+      const pLid = p.lid ? decodeJid(p.lid) : null;
+      const pPhone = p.phoneNumber ? `${p.phoneNumber.replace(/\D/g, "")}@s.whatsapp.net` : null;
+      const pAllIdentities = [pJid, pLid, pPhone].filter(Boolean);
+      let realJid = pJid;
+      if (realJid.endsWith("@lid") && typeof resolveLidToJid === "function") {
+        realJid = await resolveLidToJid(realJid, sock, null, participants);
+      }
+      admins.push(realJid);
+      if (!isBotAdmin) {
+        isBotAdmin = pAllIdentities.some(id => botIdentities.has(id) || areJidsSameUser(id, botId) || rawBotLid && areJidsSameUser(id, rawBotLid));
+      }
+      if (!isAdmin) {
+        isAdmin = pAllIdentities.some(id => senderIdentities.has(id) || areJidsSameUser(id, ctx.sender));
+      }
     }
-    const admins = Array.from(adminJidSet);
-    const senderIdentities = [ctx.sender, ctx.senderAlt, ctx.userPhoneJid].filter(Boolean);
-    const botIdentities = [botId, botLid].filter(Boolean);
-    const isAdmin = adminParticipants.some(p => {
-      const pIds = [p.id, p.lid, p.jid].filter(Boolean);
-      return pIds.some(pId => senderIdentities.some(sId => areJidsSameUser(pId, sId)));
-    });
-    const isBotAdmin = adminParticipants.some(p => {
-      const pIds = [p.id, p.lid, p.jid].filter(Boolean);
-      return pIds.some(pId => botIdentities.some(bId => areJidsSameUser(pId, bId)));
-    });
     ctx.isAdmin = isAdmin;
     ctx.isBotAdmin = isBotAdmin;
     ctx.participants = participants;
@@ -1852,6 +2002,11 @@ export async function SerializeMessage(sock, msg) {
   ctx.isBotAdmin = false;
   ctx.participants = [];
   ctx.groupAdmins = [];
+  if (ctx.isGroup) {
+    try {
+      await ctx.getAdminStatus();
+    } catch {}
+  }
   ctx.sendMessage = (targetJidOrContent, contentOrOptions = {}, maybeOptions = {}) => {
     if (typeof targetJidOrContent === "string") {
       return safeSendMessage(sock, targetJidOrContent, contentOrOptions, maybeOptions);
@@ -1904,32 +2059,35 @@ export async function SerializeMessage(sock, msg) {
     ...options
   });
   ctx.sendPoll = async (name = "", values = [], options = {}) => {
+    const targetJid = decodeJid(options.jid || ctx.chat);
+    const hasImage = Array.isArray(values) && values.some(v => v && typeof v === "object" && (v.image || v.imageMessage));
+    if (hasImage && typeof sock.sendImagePoll === "function") {
+      return await sock.sendImagePoll(targetJid, {
+        name: name,
+        selectableCount: options.selectableCount || 1,
+        values: values
+      }, {
+        quoted: options.quoted || (msg?.key ? msg : undefined),
+        ...options
+      });
+    }
     try {
       const pollBuilder = new Poll(sock);
       pollBuilder.setName(name);
-      const pollValues = Array.isArray(values) ? values.map(v => typeof v === "string" ? v : String(v)).filter(Boolean) : [String(values)];
+      const pollValues = Array.isArray(values) ? values.map(v => typeof v === "string" ? v : String(v.optionName || v.name || v)).filter(Boolean) : [String(values)];
       pollBuilder.addOptions(pollValues);
       if (options.selectableCount !== undefined) {
         pollBuilder.setSelectable(Number(options.selectableCount));
-      } else if (options.multiSelect !== undefined) {
-        pollBuilder.setMultiSelect(Boolean(options.multiSelect));
       }
-      if (options.hideVoter !== undefined) pollBuilder.setHideVoter(Boolean(options.hideVoter));
-      if (options.canAddOption !== undefined) pollBuilder.setCanAddOption(Boolean(options.canAddOption));
-      if (options.toAnnouncementGroup !== undefined) pollBuilder.setAnnouncementGroup(Boolean(options.toAnnouncementGroup));
-      if (options.endDate) pollBuilder.setEndDate(options.endDate);
-      if (options.correctAnswer || options.quiz) pollBuilder.setQuiz(options.correctAnswer || options.quiz);
-      const targetJid = decodeJid(options.jid || ctx.chat);
-      const quotedMsg = options.quoted !== undefined ? options.quoted : msg?.key ? msg : undefined;
       return await pollBuilder.send(targetJid, {
-        quoted: quotedMsg,
+        quoted: options.quoted || (msg?.key ? msg : undefined),
         ...options
       });
     } catch {
-      return await safeSendMessage(sock, options.jid || ctx.chat, {
+      return await safeSendMessage(sock, targetJid, {
         poll: {
           name: name,
-          values: Array.isArray(values) ? values : [String(values)],
+          values: Array.isArray(values) ? values.map(v => typeof v === "string" ? v : String(v.optionName || v.name || v)) : [String(values)],
           selectableCount: options.selectableCount || 1,
           toAnnouncementGroup: options.toAnnouncementGroup || false
         }
@@ -2428,12 +2586,19 @@ export async function SerializeMessage(sock, msg) {
   ctx.download = async (customMedia = null) => {
     try {
       if (customMedia) return await downloadMediaNode(customMedia);
-      if (ctx.quoted?.isMedia || ctx.quoted?.msg) {
-        const qBuf = await downloadMediaNode(ctx.quoted.msg || ctx.quoted.message || ctx.quoted.rawMessage);
+      if (ctx.isAlbum && ctx.albumParentId && global.albumStore.has(ctx.albumParentId)) {
+        const albumData = global.albumStore.get(ctx.albumParentId);
+        if (albumData?.items?.length > 0) {
+          const buffers = await Promise.all(albumData.items.map(item => downloadMediaNode(item)));
+          return buffers.filter(Boolean);
+        }
+      }
+      if (ctx.quoted?.isMedia || ctx.quoted?.msg || ctx.quoted?.message) {
+        const qBuf = await downloadMediaNode(ctx.quoted.message || ctx.quoted.msg || ctx.quoted.rawMessage);
         if (qBuf) return qBuf;
       }
-      if (ctx.isMedia || ctx.msg) {
-        const mBuf = await downloadMediaNode(ctx.msg || ctx.message || ctx.rawMessage);
+      if (ctx.isMedia || ctx.msg || ctx.message) {
+        const mBuf = await downloadMediaNode(ctx.rawMessage || ctx.message || ctx.msg);
         if (mBuf) return mBuf;
       }
       return null;

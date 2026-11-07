@@ -3,6 +3,18 @@ import db from "../../data/db.js";
 import {
   simpleQuoted
 } from "../../lib/quoted.js";
+const processedMsgIds = new Set();
+
+function isDuplicateMessage(msgId) {
+  if (!msgId) return false;
+  if (processedMsgIds.has(msgId)) return true;
+  processedMsgIds.add(msgId);
+  if (processedMsgIds.size > 200) {
+    const firstItem = processedMsgIds.values().next().value;
+    processedMsgIds.delete(firstItem);
+  }
+  return false;
+}
 const SNAKES_AND_LADDERS = [{
   start: 29,
   end: 7
@@ -87,7 +99,7 @@ function clearSession(chatId) {
 }
 
 function rewardWinner(jid, name = "", prizeMoney = 15e3, prizeExp = 500) {
-  if (!jid || jid === "BOT") return;
+  if (!jid || jid.includes("BOT")) return;
   initDB(jid, name);
   global.db.user[jid].money = (Number(global.db.user[jid].money) || 0) + prizeMoney;
   global.db.user[jid].exp = (Number(global.db.user[jid].exp) || 0) + prizeExp;
@@ -117,7 +129,7 @@ function checkAndCleanExpiredSessions(currentChatId = null) {
 }
 
 function purgePlayerFromOtherSessions(playerJid) {
-  if (!global.db?.snakes || !playerJid) return;
+  if (!global.db?.snakes || !playerJid || playerJid.includes("BOT")) return;
   let changed = false;
   for (const [cId, session] of Object.entries(global.db.snakes)) {
     if (session.state === "LOBBY") {
@@ -186,7 +198,54 @@ async function sendCTA(sock, ctx, targetId, {
     },
     quoted: quoted || undefined
   };
-  return await ctx.sendCta(text, finalFooter, formattedButtons, options);
+  if (typeof ctx?.sendCta === "function" && (!targetId || targetId === ctx?.id)) {
+    try {
+      return await ctx.sendCta(text, finalFooter, formattedButtons, options);
+    } catch (e) {}
+  }
+  try {
+    return await sock.sendMessage(destJid, {
+      ...image ? {
+        image: image
+      } : {},
+      caption: text,
+      footer: finalFooter,
+      viewOnceMessage: {
+        message: {
+          interactiveMessage: {
+            body: {
+              text: text
+            },
+            footer: {
+              text: finalFooter
+            },
+            nativeFlowMessage: {
+              buttons: formattedButtons
+            },
+            contextInfo: options.contextInfo
+          }
+        }
+      }
+    }, {
+      quoted: quoted || undefined
+    });
+  } catch (e) {
+    if (image) {
+      return await sock.sendMessage(destJid, {
+        image: image,
+        caption: `${text}\n\n_${finalFooter}_`,
+        mentions: mentions
+      }, {
+        quoted: quoted || undefined
+      });
+    }
+    return await sock.sendMessage(destJid, {
+      text: `${text}\n\n_${finalFooter}_`,
+      mentions: mentions
+    }, {
+      quoted: quoted || undefined
+    });
+  }
 }
 
 function generateBoardHTML(players, lastDice = null, lastActionNote = "") {
@@ -229,8 +288,8 @@ function generateBoardHTML(players, lastDice = null, lastActionNote = "") {
   }
   let playersPodHTML = "";
   players.forEach(p => {
-    const isBot = p.id === "BOT";
-    const rawName = isBot ? "Bot Among Us" : global.db?.user?.[p.id]?.name || p.id.split("@")[0];
+    const isBot = p.id.includes("BOT");
+    const rawName = isBot ? `🤖 ${p.name}` : global.db?.user?.[p.id]?.name || p.id.split("@")[0];
     const cleanName = rawName.length > 13 ? rawName.slice(0, 11) + ".." : rawName;
     playersPodHTML += `
       <div class="player-pod ${p.isTurn ? "pod-active" : ""}">
@@ -335,7 +394,6 @@ function generateBoardHTML(players, lastDice = null, lastActionNote = "") {
       border-radius: 6px;
     }
 
-    /* MINI AMONG US (HEADER AVATAR) */
     .mini-among {
       width: 26px;
       height: 34px;
@@ -369,7 +427,6 @@ function generateBoardHTML(players, lastDice = null, lastActionNote = "") {
       border-radius: 0 3px 3px 0;
     }
 
-    /* PAPAN & GRID COORD */
     .board-container {
       width: 860px;
       height: 860px;
@@ -402,7 +459,6 @@ function generateBoardHTML(players, lastDice = null, lastActionNote = "") {
       gap: 3px;
     }
 
-    /* BASE AMONG US PAWN */
     .among-pawn {
       position: relative;
       background: var(--pawn-color);
@@ -440,7 +496,6 @@ function generateBoardHTML(players, lastDice = null, lastActionNote = "") {
       z-index: 15;
     }
 
-    /* UKURAN OTOMATIS: 1 PEMAIN (STANDAR) */
     .pawn-size-1 {
       width: 32px;
       height: 40px;
@@ -463,7 +518,6 @@ function generateBoardHTML(players, lastDice = null, lastActionNote = "") {
       top: -12px; font-size: 9px; padding: 0 5px; border-radius: 6px;
     }
 
-    /* UKURAN OTOMATIS: 2 PEMAIN BERDAMPINGAN */
     .pawn-size-2 {
       width: 25px;
       height: 32px;
@@ -486,7 +540,6 @@ function generateBoardHTML(players, lastDice = null, lastActionNote = "") {
       top: -10px; font-size: 8px; padding: 0 4px; border-radius: 5px;
     }
 
-    /* UKURAN OTOMATIS: 3 - 4 PEMAIN DALAM 1 KOTAK */
     .pawn-size-3, .pawn-size-4 {
       width: 20px;
       height: 26px;
@@ -530,22 +583,15 @@ function generateBoardHTML(players, lastDice = null, lastActionNote = "") {
       <div class="title">🎲 ULAR TANGGA ARENA 100 🎲</div>
       <div class="dice-badge">Dadu: 🎲 <b>${lastDice || "-"}</b></div>
     </div>
-
-    <div class="players-list">
-      ${playersPodHTML}
-    </div>
-
-    <div class="board-container">
-      ${pawnsHTML}
-    </div>
-
+    <div class="players-list">${playersPodHTML}</div>
+    <div class="board-container">${pawnsHTML}</div>
     ${lastActionNote ? `<div class="note-box">📢 ${lastActionNote}</div>` : ""}
   </div>
 </body>
 </html>`;
 }
 async function renderHtmlToImage(htmlContent) {
-  const rawApi = global.bot?.api?.wudysoft || "";
+  const rawApi = global.bot?.api?.wudysoft || "https://api.wudysoft.com";
   const cleanApi = rawApi.replace(/^https?:\/\//i, "").replace(/\/+$/, "");
   const baseUrl = `https://${cleanApi}/api/tools/html2img/`;
   const headers = {
@@ -554,7 +600,7 @@ async function renderHtmlToImage(htmlContent) {
   };
   const payload = {
     html: htmlContent,
-    fullPage: true,
+    fullPage: false,
     quality: 100
   };
   const versions = ["v5", "v1", "v2", "v3", "v4", "v6", "v7", "v8", "v9", "v10"];
@@ -604,9 +650,10 @@ async function renderAndSendBoard(sock, ctx, chatId, session, extraNote = "") {
   const {
     buffer: imgBuffer
   } = await renderHtmlToImage(html);
-  const isCurrentBot = session.turn === "BOT";
-  const mentions = session.players.filter(p => p.id !== "BOT").map(p => p.id);
-  let currentName = "🤖 Bot AI";
+  const currentTurnPlayer = session.players.find(p => p.id === session.turn);
+  const isCurrentBot = session.turn.includes("BOT");
+  const mentions = session.players.filter(p => !p.id.includes("BOT")).map(p => p.id);
+  let currentName = `🤖 ${currentTurnPlayer?.name || "Bot AI"}`;
   if (!isCurrentBot) {
     currentName = `@${session.turn.split("@")[0]}`;
   }
@@ -615,19 +662,23 @@ async function renderAndSendBoard(sock, ctx, chatId, session, extraNote = "") {
   text += `👉 *Giliran Melangkah:* ${currentName}\n`;
   text += `🎯 *Target:* Tepat mendarat di Kotak 100!\n`;
   text += `_Klik tombol di bawah untuk mengocok dadu._`;
-  const buttons = [{
-    name: "quick_reply",
-    buttonParamsJson: JSON.stringify({
-      display_text: "🎲 Kocok Dadu (Roll)",
-      id: `${prefix}ulartangga roll`
-    })
-  }, {
+  const buttons = [];
+  if (!isCurrentBot) {
+    buttons.push({
+      name: "quick_reply",
+      buttonParamsJson: JSON.stringify({
+        display_text: "🎲 Kocok Dadu (Roll)",
+        id: `${prefix}ulartangga roll`
+      })
+    });
+  }
+  buttons.push({
     name: "quick_reply",
     buttonParamsJson: JSON.stringify({
       display_text: "🚪 Nyerah / Stop",
       id: `${prefix}ulartangga stop`
     })
-  }];
+  });
   await sendCTA(sock, ctx, chatId, {
     text: text,
     buttons: buttons,
@@ -638,11 +689,13 @@ async function renderAndSendBoard(sock, ctx, chatId, session, extraNote = "") {
 async function handleRollDice(sock, ctx, chatId, sender) {
   const session = global.db.snakes?.[chatId];
   if (!session || session.state !== "PLAYING") {
-    return ctx.reply("❌ Tidak ada sesi permainan aktif di grup ini.");
+    return ctx.reply("❌ Tidak ada sesi permainan aktif di room ini.");
   }
   if (session.turn !== sender) {
-    return ctx.reply(`⏳ Bukan giliran Anda! Giliran saat ini: @${session.turn.split("@")[0]}`, {
-      mentions: [session.turn]
+    const turnPlayer = session.players.find(p => p.id === session.turn);
+    const turnName = turnPlayer?.id.includes("BOT") ? `🤖 ${turnPlayer.name}` : `@${session.turn.split("@")[0]}`;
+    return ctx.reply(`⏳ Bukan giliran Anda! Giliran saat ini: ${turnName}`, {
+      mentions: [session.turn].filter(id => !id.includes("BOT"))
     });
   }
   session.expireTime = Date.now() + 6e5;
@@ -684,7 +737,7 @@ async function handleRollDice(sock, ctx, chatId, sender) {
   session.turn = getNextTurn(session.players, sender);
   saveDB();
   await renderAndSendBoard(sock, ctx, chatId, session, actionNote);
-  if (session.turn === "BOT") {
+  if (session.turn.includes("BOT")) {
     await handleBotTurn(sock, ctx, chatId, session);
   }
 }
@@ -694,8 +747,8 @@ async function handleBotTurn(sock, ctx, chatId, session) {
     try {
       const active = global.db.snakes?.[chatId];
       if (!active || active.sessionId !== currentSessionId || active.state !== "PLAYING") return;
-      const bot = active.players.find(p => p.id === "BOT");
-      if (!bot || active.turn !== "BOT") return;
+      const bot = active.players.find(p => p.id === active.turn);
+      if (!bot || !active.turn.includes("BOT")) return;
       const roll = Math.floor(Math.random() * 6) + 1;
       active.lastDice = roll;
       let targetPos = bot.position + roll;
@@ -705,7 +758,7 @@ async function handleBotTurn(sock, ctx, chatId, session) {
         targetPos = 100 - excess;
         bounceNote = ` (Memantul ${excess} kotak mundur!)`;
       }
-      let actionNote = `🤖 *Bot AI* melempar dadu *${roll}* ➔ ke kotak *${targetPos}*${bounceNote}.`;
+      let actionNote = `🤖 *${bot.name}* melempar dadu *${roll}* ➔ ke kotak *${targetPos}*${bounceNote}.`;
       const portal = checkSnakeOrLadder(targetPos);
       if (portal) {
         actionNote += `\n${portal.note}`;
@@ -722,26 +775,36 @@ async function handleBotTurn(sock, ctx, chatId, session) {
           })
         }];
         return await sendCTA(sock, ctx, chatId, {
-          text: `🤖 *BOT MENANG!* Bot berhasil mencapai kotak 100 lebih dulu. Coba lagi!`,
+          text: `🤖 *BOT MENANG!* ${bot.name} berhasil mencapai kotak 100 lebih dulu. Coba lagi!`,
           buttons: retryButtons
         });
       }
-      active.turn = getNextTurn(active.players, "BOT");
+      active.turn = getNextTurn(active.players, bot.id);
       saveDB();
       await renderAndSendBoard(sock, ctx, chatId, active, actionNote);
+      if (active.turn.includes("BOT")) {
+        await handleBotTurn(sock, ctx, chatId, active);
+      }
     } catch (err) {
       console.error("[BOT ROLL ERROR]:", err);
     }
-  }, 2200);
+  }, 2e3);
 }
-async function startGame(sock, ctx, chatId, playerIds, isBot = false) {
+async function startGame(sock, ctx, chatId, playerList, isBot = false) {
   clearSession(chatId);
+  const botName = global.bot?.name || "WudysoftBot";
   const players = [];
-  playerIds.forEach((pId, idx) => {
-    initDB(pId);
-    purgePlayerFromOtherSessions(pId);
+  playerList.forEach((item, idx) => {
+    const pId = typeof item === "string" ? item : item.id;
+    const isThisBot = pId.includes("BOT");
+    const pName = isThisBot ? item.name || `${botName} AI ${idx > 0 ? idx : ""}`.trim() : item.name || global.db?.user?.[pId]?.name || pId.split("@")[0];
+    if (!isThisBot) {
+      initDB(pId);
+      purgePlayerFromOtherSessions(pId);
+    }
     players.push({
       id: pId,
+      name: pName,
       position: 1,
       role: PLAYER_ROLES[idx]
     });
@@ -759,14 +822,17 @@ async function startGame(sock, ctx, chatId, playerIds, isBot = false) {
   };
   saveDB();
   await renderAndSendBoard(sock, ctx, chatId, global.db.snakes[chatId], "🏁 Permainan dimulai! Semua pemain siap di Kotak 1.");
+  if (players[0].id.includes("BOT")) {
+    await handleBotTurn(sock, ctx, chatId, global.db.snakes[chatId]);
+  }
 }
 export default {
   name: "ulartangga",
   aliases: ["snakes", "snakeladder", "ut"],
-  description: "Bermain Ular Tangga Royale 100 Kotak dengan Grafis Full CSS Among Us",
+  description: "Bermain Ular Tangga Royale 100 Kotak: Solo Lawan Bot atau Multiplayer",
   category: "Game",
   limit: true,
-  example: ".ulartangga",
+  example: ".ulartangga atau .ulartangga bot",
   before: async (msg, {
     sock,
     ctx
@@ -780,6 +846,8 @@ export default {
       const chatId = ctx?.id || msg?.key?.remoteJid;
       if (!chatId || !global.db?.snakes?.[chatId]) return;
       if (/^[.#/!]?(ulartangga|snakes|ut)\s+(roll|kocok|dadu)/i.test(text)) {
+        const msgId = msg?.key?.id;
+        if (isDuplicateMessage(msgId)) return;
         return await handleRollDice(sock, ctx, chatId, sender);
       }
     } catch (e) {
@@ -789,9 +857,6 @@ export default {
   execute: async (sock, ctx, msg) => {
     try {
       const isGroup = Boolean(ctx?.isGroup || ctx?.id?.endsWith("@g.us"));
-      if (!isGroup) {
-        return ctx.reply("❌ Game Ular Tangga hanya dapat dimainkan di dalam Grup!");
-      }
       const chatId = ctx.id;
       const sender = ctx.sender;
       const senderName = ctx.pushName || "Player";
@@ -799,9 +864,14 @@ export default {
       const prefix = ctx.prefix || ".";
       const quotedMsg = typeof simpleQuoted === "function" ? simpleQuoted(ctx) : msg;
       const bannerImage = BG_IMAGE_URL;
+      const botName = global.bot?.name || "WudysoftBot";
+      const rawBotJid = sock?.user?.id || sock?.user?.jid || "";
+      const botJid = rawBotJid.includes(":") ? `${rawBotJid.split(":")[0]}@s.whatsapp.net` : rawBotJid;
       initDB(sender, senderName);
       checkAndCleanExpiredSessions(chatId);
+      const msgId = msg?.key?.id;
       if (rawText === "roll" || rawText === "kocok" || rawText === "dadu") {
+        if (isDuplicateMessage(msgId)) return;
         return await handleRollDice(sock, ctx, chatId, sender);
       }
       if (rawText === "stop" || rawText === "batal" || rawText === "reset") {
@@ -813,6 +883,12 @@ export default {
               display_text: "🎮 Buat Room Baru",
               id: `${prefix}ulartangga`
             })
+          }, {
+            name: "quick_reply",
+            buttonParamsJson: JSON.stringify({
+              display_text: "🤖 Lawan Bot",
+              id: `${prefix}ulartangga bot`
+            })
           }];
           return await sendCTA(sock, ctx, chatId, {
             text: `🚪 Sesi Ular Tangga telah dihentikan dan dibersihkan oleh @${sender.split("@")[0]}.`,
@@ -822,14 +898,82 @@ export default {
         }
         return ctx.reply("❌ Tidak ada sesi yang sedang berlangsung.");
       }
-      if (rawText === "bot" || rawText === "solo") {
+      if (rawText === "bot" || rawText === "solo" || rawText === "ai") {
         const existing = global.db.snakes[chatId];
         if (existing && existing.state === "PLAYING") {
           return ctx.reply("⚠️ Permainan masih berjalan! Ketik `.ulartangga stop` terlebih dahulu.");
         }
-        return await startGame(sock, ctx, chatId, [sender, "BOT"], true);
+        const playerList = [{
+          id: sender,
+          name: senderName
+        }, {
+          id: "BOT_1",
+          name: `${botName} AI`
+        }];
+        return await startGame(sock, ctx, chatId, playerList, true);
       }
-      const mentioned = (ctx.mentionedJid || []).filter(id => id !== sender && !id.includes("bot"));
+      if (rawText === "addbot") {
+        const activeSession = global.db.snakes[chatId];
+        if (!activeSession || activeSession.state !== "LOBBY") {
+          return ctx.reply("❌ Tidak ada lobi yang sedang terbuka.");
+        }
+        if (activeSession.players.length >= 4) {
+          return ctx.reply("❌ Lobi sudah penuh (Maksimal 4 pemain)!");
+        }
+        const botIdx = activeSession.players.filter(p => p.includes("BOT")).length + 1;
+        const botId = `BOT_${botIdx}`;
+        activeSession.players.push(botId);
+        activeSession.isBot = true;
+        saveDB();
+        let addBotText = `🤖 *${botName} AI ${botIdx}* berhasil ditambahkan ke lobi!\n\n*Pemain Terdaftar (${activeSession.players.length}/4):*\n`;
+        activeSession.players.forEach((p, idx) => {
+          const isBot = p.includes("BOT");
+          addBotText += `${idx + 1}. [${PLAYER_ROLES[idx].label}] ${isBot ? `🤖 ${botName} AI` : `@${p.split("@")[0]}`}\n`;
+        });
+        const lobbyButtons = [{
+          name: "quick_reply",
+          buttonParamsJson: JSON.stringify({
+            display_text: "🤝 Ikut Gabung",
+            id: `${prefix}ulartangga join`
+          })
+        }, {
+          name: "quick_reply",
+          buttonParamsJson: JSON.stringify({
+            display_text: "▶️ Mulai Game",
+            id: `${prefix}ulartangga start`
+          })
+        }, {
+          name: "quick_reply",
+          buttonParamsJson: JSON.stringify({
+            display_text: "🚪 Batal",
+            id: `${prefix}ulartangga stop`
+          })
+        }];
+        return await sendCTA(sock, ctx, chatId, {
+          text: addBotText,
+          buttons: lobbyButtons,
+          mentions: activeSession.players.filter(p => !p.includes("BOT"))
+        });
+      }
+      const mentioned = (ctx.mentionedJid || []).filter(id => id !== sender);
+      if (mentioned.length > 0 && mentioned.includes(botJid)) {
+        return await startGame(sock, ctx, chatId, [{
+          id: sender,
+          name: senderName
+        }, {
+          id: "BOT_1",
+          name: `${botName} AI`
+        }], true);
+      }
+      if (!isGroup) {
+        return await startGame(sock, ctx, chatId, [{
+          id: sender,
+          name: senderName
+        }, {
+          id: "BOT_1",
+          name: `${botName} AI`
+        }], true);
+      }
       if (mentioned.length > 0) {
         const existing = global.db.snakes[chatId];
         if (existing && existing.state === "PLAYING") {
@@ -854,7 +998,8 @@ export default {
         saveDB();
         let joinText = `🤝 @${sender.split("@")[0]} bergabung ke lobby!\n\n*Pemain Terdaftar (${activeSession.players.length}/4):*\n`;
         activeSession.players.forEach((p, idx) => {
-          joinText += `${idx + 1}. [${PLAYER_ROLES[idx].label}] @${p.split("@")[0]}\n`;
+          const isBot = p.includes("BOT");
+          joinText += `${idx + 1}. [${PLAYER_ROLES[idx].label}] ${isBot ? `🤖 ${botName} AI` : `@${p.split("@")[0]}`}\n`;
         });
         const lobbyButtons = [{
           name: "quick_reply",
@@ -871,6 +1016,12 @@ export default {
         }, {
           name: "quick_reply",
           buttonParamsJson: JSON.stringify({
+            display_text: "🤖 Tambah Bot",
+            id: `${prefix}ulartangga addbot`
+          })
+        }, {
+          name: "quick_reply",
+          buttonParamsJson: JSON.stringify({
             display_text: "🚪 Batal",
             id: `${prefix}ulartangga stop`
           })
@@ -878,7 +1029,7 @@ export default {
         return await sendCTA(sock, ctx, chatId, {
           text: joinText,
           buttons: lobbyButtons,
-          mentions: activeSession.players
+          mentions: activeSession.players.filter(p => !p.includes("BOT"))
         });
       }
       if (rawText === "start" || rawText === "mulai") {
@@ -891,9 +1042,9 @@ export default {
           });
         }
         if (activeSession.players.length < 2) {
-          return ctx.reply("❌ Minimal butuh 2 pemain untuk memulai! Atau ketik `.ulartangga bot` untuk main solo.");
+          return ctx.reply(`❌ Minimal butuh 2 pemain untuk memulai! (Bisa ketik \`${prefix}ulartangga addbot\` untuk tambah bot).`);
         }
-        return await startGame(sock, ctx, chatId, activeSession.players, false);
+        return await startGame(sock, ctx, chatId, activeSession.players, activeSession.isBot || false);
       }
       if (activeSession) {
         if (activeSession.state === "PLAYING") {
@@ -901,9 +1052,10 @@ export default {
         }
         let lobbyText = `📢 *LOBBY ULAR TANGGA MASIH DIBUKA!*\n👑 Host: @${activeSession.host.split("@")[0]}\n\n*Pemain (${activeSession.players.length}/4):*\n`;
         activeSession.players.forEach((p, idx) => {
-          lobbyText += `${idx + 1}. [${PLAYER_ROLES[idx].label}] @${p.split("@")[0]}\n`;
+          const isBot = p.includes("BOT");
+          lobbyText += `${idx + 1}. [${PLAYER_ROLES[idx].label}] ${isBot ? `🤖 ${botName} AI` : `@${p.split("@")[0]}`}\n`;
         });
-        const lobbyButtons = [{
+        const existingButtons = [{
           name: "quick_reply",
           buttonParamsJson: JSON.stringify({
             display_text: "🤝 Gabung",
@@ -918,14 +1070,20 @@ export default {
         }, {
           name: "quick_reply",
           buttonParamsJson: JSON.stringify({
+            display_text: "🤖 Tambah Bot",
+            id: `${prefix}ulartangga addbot`
+          })
+        }, {
+          name: "quick_reply",
+          buttonParamsJson: JSON.stringify({
             display_text: "🚪 Batal",
             id: `${prefix}ulartangga stop`
           })
         }];
         return await sendCTA(sock, ctx, chatId, {
           text: lobbyText,
-          buttons: lobbyButtons,
-          mentions: activeSession.players
+          buttons: existingButtons,
+          mentions: activeSession.players.filter(p => !p.includes("BOT"))
         });
       }
       clearSession(chatId);
@@ -935,6 +1093,7 @@ export default {
         state: "LOBBY",
         host: sender,
         players: [sender],
+        isBot: false,
         createdAt: Date.now(),
         expireTime: Date.now() + 12e4
       };

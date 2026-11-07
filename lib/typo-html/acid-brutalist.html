@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Acid Brutalist Poster</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800;900&family=Space+Grotesk:wght@500;700&family=Syne:wght@800;900&family=Noto+Serif+JP:wght@900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    body {
+      background: #040507;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: 'Space Grotesk', sans-serif;
+      overflow: hidden
+    }
+
+    .poster-canvas {
+      position: relative;
+      width: 440px;
+      height: 720px;
+      background: #0a0b10;
+      border: 1px solid #1a1c26;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 40px 90px rgba(0, 0, 0, .95)
+    }
+
+    .top-meta-row {
+      position: absolute;
+      top: 18px;
+      left: 24px;
+      right: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 8.5px;
+      letter-spacing: 2px;
+      color: rgba(255, 255, 255, .4);
+      text-transform: uppercase;
+      z-index: 10;
+      border-bottom: 1px solid rgba(255, 255, 255, .08);
+      padding-bottom: 8px
+    }
+
+    .tag-acid {
+      color: #d4ff00;
+      font-weight: 700;
+      border: 1px solid #d4ff00;
+      padding: 1px 6px;
+      border-radius: 2px
+    }
+
+    .huge-watermark {
+      position: absolute;
+      top: 6%;
+      left: -10px;
+      font-family: Syne, sans-serif;
+      font-size: 110px;
+      font-weight: 900;
+      line-height: .8;
+      color: transparent;
+      -webkit-text-stroke: 1px rgba(255, 255, 255, 0.06);
+      text-transform: uppercase;
+      letter-spacing: -4px;
+      z-index: 1;
+      white-space: nowrap
+    }
+
+    .visual-frame {
+      position: absolute;
+      top: 16%;
+      left: 8%;
+      width: 84%;
+      height: 60%;
+      border: 1px solid rgba(255, 255, 255, .15);
+      background: #000;
+      overflow: hidden;
+      display: flex;
+      z-index: 2
+    }
+
+    .visual-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: contrast(1.15) brightness(.92);
+      flex: 1
+    }
+
+    .visual-frame::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, transparent 50%, rgba(10, 11, 16, .9) 100%)
+    }
+
+    .kanji-sticker {
+      position: absolute;
+      top: 19%;
+      right: 12%;
+      font-family: 'Noto Serif JP', serif;
+      font-size: 42px;
+      font-weight: 900;
+      color: #d4ff00;
+      line-height: 1;
+      z-index: 6;
+      text-shadow: 0 4px 20px rgba(0, 0, 0, .8)
+    }
+
+    .vertical-heavy {
+      position: absolute;
+      top: 24%;
+      right: 10%;
+      display: flex;
+      flex-direction: column;
+      font-family: Syne, sans-serif;
+      font-size: 82px;
+      font-weight: 900;
+      line-height: .8;
+      letter-spacing: -4px;
+      color: #fff;
+      mix-blend-mode: difference;
+      z-index: 6
+    }
+
+    .accent-pill {
+      position: absolute;
+      top: 66%;
+      left: 8%;
+      background: #d4ff00;
+      color: #000;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 2px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      z-index: 6
+    }
+
+    .bottom-block {
+      position: absolute;
+      bottom: 22px;
+      left: 24px;
+      right: 24px;
+      z-index: 8
+    }
+
+    .main-title-brutal {
+      font-family: Syne, sans-serif;
+      font-size: 48px;
+      font-weight: 900;
+      color: #fff;
+      line-height: .9;
+      letter-spacing: -2px;
+      text-transform: uppercase;
+      margin-bottom: 12px
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1.8fr 1fr;
+      gap: 16px;
+      border-top: 1px solid rgba(255, 255, 255, .12);
+      padding-top: 10px
+    }
+
+    .info-grid p {
+      font-size: 8.5px;
+      line-height: 1.5;
+      color: rgba(255, 255, 255, .6)
+    }
+
+    .meta-box {
+      font-size: 8px;
+      color: rgba(255, 255, 255, .35);
+      line-height: 1.4;
+      text-align: right;
+      letter-spacing: 1px
+    }
+  </style>
+</head>
+
+<body>
+  <div class="poster-canvas">
+    <div class="top-meta-row"><span class="tag-acid">SYS // 01</span> <span>EDITION: {{TOP}}</span> <span>TYPO-BRUTAL</span></div>
+    <div class="huge-watermark">{{TOP}}</div>
+    <div class="visual-frame">{{IMAGE}}</div>
+    <div class="kanji-sticker">{{KANJI_TOP}}</div>
+    <div class="vertical-heavy">{{VERTICAL}}</div>
+    <div class="accent-pill">{{ACCENT}}</div>
+    <div class="bottom-block">
+      <div class="main-title-brutal">{{BOTTOM}}</div>
+      <div class="info-grid">
+        <p>{{FOOTER}}</p>
+        <div class="meta-box">POSTER ID: #8824<br>ALL RIGHTS RES.</div>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Dice - Ruby</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    body,
+    html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: 0 0 !important
+    }
+
+    #canvas-container {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/geometries/RoundedBoxGeometry.js"></script>
+</head>
+
+<body>
+  <div id="canvas-container"></div>
+  <script>
+    ! function() {
+      "use strict";
+      const t = parseInt("{{number}}", 10) || 1,
+        e = { base: ["#ff1744", "#b70028", "#590011"], pipAce: ["#fff4b8", "#ffd700", "#997300"], pipNormal: ["#ffffff", "#f1f1f1", "#d1d1d1"], roughness: .08, metalness: .15, clearcoat: 1, clearcoatRoughness: .05 },
+        a = new THREE.Scene,
+        o = new THREE.PerspectiveCamera(36, window.innerWidth / window.innerHeight, .1, 100);
+      o.position.set(0, 3.8, 7.8), o.lookAt(0, .3, 0);
+      const n = new THREE.WebGLRenderer({ antialias: !0, alpha: !0 });
+      n.setClearColor(0, 0), n.setSize(window.innerWidth, window.innerHeight), n.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)), n.shadowMap.enabled = !0, n.shadowMap.type = THREE.PCFSoftShadowMap, n.toneMapping = THREE.ACESFilmicToneMapping, n.toneMappingExposure = 1.25, document.getElementById("canvas-container").appendChild(n.domElement), a.add(new THREE.AmbientLight(16773362, .8));
+      const i = new THREE.SpotLight(16777215, 4.2);
+      i.position.set(4, 9, 5), i.angle = Math.PI / 4.5, i.penumbra = .5, i.castShadow = !0, a.add(i);
+      const r = new THREE.DirectionalLight(16728176, 2.8);
+      r.position.set(-6, 5, -5), a.add(r);
+      const s = new THREE.DirectionalLight(16757702, 1.4);
+      s.position.set(6, 2, -3), a.add(s);
+      const l = new THREE.Mesh(new THREE.RoundedBoxGeometry(1.9, 1.9, 1.9, 14, .32), function() {
+        const t = {
+            1: [
+              [0, 0]
+            ],
+            2: [
+              [-.5, -.5],
+              [.5, .5]
+            ],
+            3: [
+              [-.55, -.55],
+              [0, 0],
+              [.55, .55]
+            ],
+            4: [
+              [-.52, -.52],
+              [.52, -.52],
+              [-.52, .52],
+              [.52, .52]
+            ],
+            5: [
+              [-.55, -.55],
+              [.55, -.55],
+              [0, 0],
+              [-.55, .55],
+              [.55, .55]
+            ],
+            6: [
+              [-.52, -.62],
+              [.52, -.62],
+              [-.52, 0],
+              [.52, 0],
+              [-.52, .62],
+              [.52, .62]
+            ]
+          },
+          a = [3, 4, 2, 5, 1, 6],
+          o = [],
+          n = 1024;
+        for (let i = 0; i < 6; i++) {
+          const r = a[i],
+            s = document.createElement("canvas");
+          s.width = n, s.height = n;
+          const l = s.getContext("2d"),
+            d = document.createElement("canvas");
+          d.width = n, d.height = n;
+          const c = d.getContext("2d"),
+            h = l.createRadialGradient(512, 512, 50, 512, 512, 716.8);
+          h.addColorStop(0, e.base[0]), h.addColorStop(.7, e.base[1]), h.addColorStop(1, e.base[2]), l.fillStyle = h, l.fillRect(0, 0, n, n), c.fillStyle = "#808080", c.fillRect(0, 0, n, n);
+          const p = t[r],
+            E = 1 === r,
+            M = E ? 135 : 70,
+            f = E ? e.pipAce : e.pipNormal;
+          for (const [t, e] of p) {
+            const a = 512 + 280 * t,
+              o = 512 + 280 * e;
+            l.save(), l.beginPath(), l.arc(a, o, M + 3, 0, 2 * Math.PI), l.fillStyle = "rgba(0,0,0,0.4)", l.fill(), l.beginPath(), l.arc(a, o, M, 0, 2 * Math.PI);
+            const n = l.createRadialGradient(a - .25 * M, o - .25 * M, .1 * M, a, o, M);
+            n.addColorStop(0, f[0]), n.addColorStop(.7, f[1]), n.addColorStop(1, f[2]), l.fillStyle = n, l.fill(), l.beginPath(), l.arc(a, o, M - 3, 0, 2 * Math.PI), l.lineWidth = 4, l.strokeStyle = "rgba(255,255,255,0.45)", l.stroke(), l.restore();
+            const i = c.createRadialGradient(a, o, .1 * M, a, o, 1.05 * M);
+            i.addColorStop(0, "#0a0a0a"), i.addColorStop(.85, "#202020"), i.addColorStop(1, "#808080"), c.fillStyle = i, c.beginPath(), c.arc(a, o, 1.05 * M, 0, 2 * Math.PI), c.fill()
+          }
+          o.push(new THREE.MeshPhysicalMaterial({ map: new THREE.CanvasTexture(s), bumpMap: new THREE.CanvasTexture(d), bumpScale: -.04, roughness: e.roughness, metalness: e.metalness, clearcoat: e.clearcoat, clearcoatRoughness: e.clearcoatRoughness }))
+        }
+        return o
+      }());
+      l.castShadow = !0, a.add(l);
+      const d = document.createElement("canvas");
+      d.width = 256, d.height = 256;
+      const c = d.getContext("2d"),
+        h = c.createRadialGradient(128, 128, 10, 128, 128, 120);
+      h.addColorStop(0, "rgba(0,0,0,0.75)"), h.addColorStop(.35, "rgba(0,0,0,0.35)"), h.addColorStop(1, "rgba(0,0,0,0)"), c.fillStyle = h, c.fillRect(0, 0, 256, 256);
+      const p = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 3.6), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(d), transparent: !0, opacity: .85, depthWrite: !1 }));
+      p.rotation.x = -Math.PI / 2, p.position.y = -.99, a.add(p);
+      const E = { 1: { x: 0, y: 0, z: 0 }, 2: { x: -Math.PI / 2, y: 0, z: 0 }, 3: { x: 0, y: Math.PI / 2, z: 0 }, 4: { x: 0, y: -Math.PI / 2, z: 0 }, 5: { x: Math.PI / 2, y: 0, z: 0 }, 6: { x: 0, y: Math.PI, z: 0 } },
+        M = E[t] || E[1],
+        f = performance.now(),
+        w = M.x + 6 * Math.PI,
+        m = M.y + 8 * Math.PI,
+        g = M.z + 4 * Math.PI,
+        R = M;
+      requestAnimationFrame(function t(e) {
+        requestAnimationFrame(t);
+        const i = Math.min(1, (e - f) / 2200),
+          r = 1 - Math.pow(1 - i, 3.8);
+        l.rotation.x = w + (R.x - w) * r, l.rotation.y = m + (R.y - m) * r, l.rotation.z = g + (R.z - g) * r;
+        let s = 0;
+        i < .52 ? s = 2.3 * Math.sin(i / .52 * Math.PI) : i < .76 ? s = .65 * Math.sin((i - .52) / .24 * Math.PI) : i < .91 && (s = .18 * Math.sin((i - .76) / .15 * Math.PI)), l.position.y = s, p.scale.setScalar(1 - Math.min(.6, .22 * s)), n.render(a, o)
+      })
+    }()
+  </script>
+</body>
+
+</html>

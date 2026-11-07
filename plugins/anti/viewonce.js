@@ -3,7 +3,6 @@ import {
 } from "@whiskeysockets/baileys";
 import {
   decodeJid,
-  resolveLidToJid,
   copyNForward
 } from "../../core/serialize.js";
 import chalk from "chalk";

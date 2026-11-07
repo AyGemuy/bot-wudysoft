@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    body {
+      width: 1200px;
+      height: 630px;
+      background: #08090c;
+      font-family: Inter, sans-serif;
+      color: #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden
+    }
+
+    .canvas {
+      width: 100%;
+      height: 100%;
+      padding: 60px 80px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: radial-gradient(circle at 50% 0, rgba(120, 119, 198, .15) 0, transparent 60%), radial-gradient(circle at 100% 100%, rgba(56, 189, 248, .08) 0, transparent 50%), #08090c
+    }
+
+    .grid {
+      position: absolute;
+      inset: 0;
+      background-image: linear-gradient(rgba(255, 255, 255, .03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, .03) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: radial-gradient(ellipse at center, rgba(0, 0, 0, 1) 40%, rgba(0, 0, 0, 0) 80%);
+      pointer-events: none
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 2
+    }
+
+    .tag-group {
+      display: flex;
+      align-items: center;
+      gap: 12px
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: rgba(255, 255, 255, .04);
+      border: 1px solid rgba(255, 255, 255, .1);
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #cbd5e1;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08)
+    }
+
+    .kpi-chip {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: #64748b;
+      background: rgba(0, 0, 0, .4);
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, .06)
+    }
+
+    .main-quote {
+      z-index: 2;
+      margin: auto 0;
+      max-width: 1040px;
+      position: relative
+    }
+
+    .glow-orb {
+      position: absolute;
+      top: 50%;
+      left: 30%;
+      transform: translate(-50%, -50%);
+      width: 350px;
+      height: 180px;
+      background: radial-gradient(circle, rgba(99, 102, 241, .25) 0, transparent 70%);
+      filter: blur(40px);
+      z-index: -1
+    }
+
+    .quote-text {
+      font-size: 46px;
+      font-weight: 700;
+      line-height: 1.32;
+      letter-spacing: -1.2px;
+      background: linear-gradient(180deg, #fff 30%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent
+    }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 2;
+      padding-top: 24px;
+      border-top: 1px solid rgba(255, 255, 255, .08)
+    }
+
+    .author {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      color: #94a3b8
+    }
+
+    .status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 12px #10b981
+    }
+
+    .cmd-pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      padding: 6px 14px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, .05);
+      border: 1px solid rgba(255, 255, 255, .12);
+      color: #cbd5e1
+    }
+  </style>
+</head>
+
+<body>
+  <div class="canvas">
+    <div class="grid"></div>
+    <div class="header">
+      <div class="tag-group">
+        <div class="badge">{{EMOJI}} {{CATEGORY}}</div>
+        <div class="kpi-chip">ENV://PRODUCTION</div>
+      </div>
+      <div class="cmd-pill">⌘K REFRESH</div>
+    </div>
+    <div class="main-quote">
+      <div class="glow-orb"></div>
+      <div class="quote-text">“{{QUOTE}}”</div>
+    </div>
+    <div class="footer">
+      <div class="author">
+        <div class="status-indicator"></div>{{BOT_NAME}} INSIGHTS
+      </div>
+      <div class="cmd-pill">RELEASE v2.8</div>
+    </div>
+  </div>
+</body>
+
+</html>

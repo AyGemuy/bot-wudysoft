@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Glass Astral Poster</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800;900&family=Plus+Jakarta+Sans:wght@400;600;700&family=Noto+Serif+JP:wght@600;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    body {
+      background: #020305;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      overflow: hidden
+    }
+
+    .poster-canvas {
+      position: relative;
+      width: 440px;
+      height: 720px;
+      background: #08090e;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 40px 90px rgba(0, 0, 0, .95);
+      border: 1px solid rgba(255, 255, 255, .08)
+    }
+
+    .ambient-glow {
+      position: absolute;
+      top: 20%;
+      left: 10%;
+      width: 80%;
+      height: 40%;
+      background: radial-gradient(circle, rgba(120, 119, 198, .12) 0, transparent 70%);
+      pointer-events: none;
+      z-index: 0
+    }
+
+    .main-background-art {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 72%;
+      overflow: hidden;
+      display: flex;
+      z-index: 1
+    }
+
+    .main-background-art img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: brightness(.85) contrast(1.1);
+      flex: 1
+    }
+
+    .main-background-art::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(8, 9, 14, .1) 0, rgba(8, 9, 14, .95) 100%)
+    }
+
+    .top-serif-brand {
+      position: absolute;
+      top: 26px;
+      left: 28px;
+      font-family: Cinzel, serif;
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: 4px;
+      color: #fff;
+      text-transform: uppercase;
+      z-index: 10;
+      text-shadow: 0 4px 15px rgba(0, 0, 0, .8)
+    }
+
+    .kanji-ghost {
+      position: absolute;
+      top: 14%;
+      left: 28px;
+      font-family: 'Noto Serif JP', serif;
+      font-size: 64px;
+      font-weight: 900;
+      color: rgba(255, 255, 255, .65);
+      z-index: 5;
+      line-height: 1;
+      text-shadow: 0 4px 20px rgba(0, 0, 0, .8)
+    }
+
+    .right-vertical-outline {
+      position: absolute;
+      top: 15%;
+      right: 24px;
+      display: flex;
+      flex-direction: column;
+      font-family: Cinzel, serif;
+      font-size: 68px;
+      font-weight: 800;
+      line-height: .85;
+      color: transparent;
+      -webkit-text-stroke: 1.2px rgba(255, 255, 255, 0.75);
+      z-index: 5
+    }
+
+    .glass-card {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      right: 20px;
+      background: rgba(14, 16, 24, .65);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 12px;
+      padding: 22px;
+      z-index: 8;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, .6)
+    }
+
+    .tag-category {
+      font-size: 8.5px;
+      font-weight: 700;
+      letter-spacing: 2.5px;
+      color: rgba(255, 255, 255, .5);
+      text-transform: uppercase;
+      margin-bottom: 6px
+    }
+
+    .card-title {
+      font-family: Cinzel, serif;
+      font-size: 34px;
+      font-weight: 800;
+      line-height: 1;
+      color: #fff;
+      letter-spacing: -.5px;
+      text-transform: uppercase;
+      margin-bottom: 12px
+    }
+
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      border-top: 1px solid rgba(255, 255, 255, .08);
+      padding-top: 10px
+    }
+
+    .card-desc {
+      font-size: 9px;
+      line-height: 1.5;
+      color: rgba(255, 255, 255, .65);
+      flex: 1
+    }
+
+    .card-accent-pill {
+      align-self: flex-start;
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, .25);
+      padding: 3px 8px;
+      border-radius: 30px;
+      text-transform: uppercase;
+      white-space: nowrap
+    }
+  </style>
+</head>
+
+<body>
+  <div class="poster-canvas">
+    <div class="ambient-glow"></div>
+    <div class="top-serif-brand">{{TOP}}</div>
+    <div class="main-background-art">{{IMAGE}}</div>
+    <div class="kanji-ghost">{{KANJI_TOP}}</div>
+    <div class="right-vertical-outline">{{VERTICAL}}</div>
+    <div class="glass-card">
+      <div class="tag-category">EDITORIAL // EDITION 2025</div>
+      <div class="card-title">{{BOTTOM}}</div>
+      <div class="card-footer">
+        <p class="card-desc">{{FOOTER}}</p><span class="card-accent-pill">{{ACCENT}}</span>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>

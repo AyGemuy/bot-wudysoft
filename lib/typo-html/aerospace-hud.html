@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Aerospace HUD</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800;900&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@800;900&family=Noto+Serif+JP:wght@900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    body {
+      background: #020305;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: 'Space Mono', monospace;
+      overflow: hidden
+    }
+
+    .poster-canvas {
+      position: relative;
+      width: 440px;
+      height: 720px;
+      background: #08090d;
+      border: 1px solid #1a1c24;
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 35px 80px rgba(0, 0, 0, .95)
+    }
+
+    .corner-reticle {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-color: rgba(255, 255, 255, .4);
+      z-index: 10
+    }
+
+    .tl {
+      top: 12px;
+      left: 12px;
+      border-top: 2px solid;
+      border-left: 2px solid
+    }
+
+    .tr {
+      top: 12px;
+      right: 12px;
+      border-top: 2px solid;
+      border-right: 2px solid
+    }
+
+    .bl {
+      bottom: 12px;
+      left: 12px;
+      border-bottom: 2px solid;
+      border-left: 2px solid
+    }
+
+    .br {
+      bottom: 12px;
+      right: 12px;
+      border-bottom: 2px solid;
+      border-right: 2px solid
+    }
+
+    .hud-meta-bar {
+      position: absolute;
+      top: 20px;
+      left: 28px;
+      right: 28px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 8px;
+      color: rgba(255, 255, 255, .4);
+      letter-spacing: 1.5px;
+      z-index: 10
+    }
+
+    .hud-frame {
+      position: absolute;
+      top: 48%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 84%;
+      height: 68%;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, .1);
+      display: flex;
+      background: #000;
+      z-index: 1
+    }
+
+    .hud-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: grayscale(20%) contrast(1.15) brightness(.9);
+      flex: 1
+    }
+
+    .hud-frame::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle, transparent 40%, rgba(8, 9, 13, .9) 100%);
+      z-index: 2
+    }
+
+    .hud-crosshair {
+      position: absolute;
+      top: 48%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 40px;
+      height: 40px;
+      border: 1px dashed rgba(255, 255, 255, .2);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 3
+    }
+
+    .hero-script-tag {
+      position: absolute;
+      top: 10%;
+      left: 28px;
+      font-family: Syne, sans-serif;
+      font-size: 32px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -.5px;
+      text-transform: uppercase;
+      z-index: 6
+    }
+
+    .hero-script-tag span {
+      display: block;
+      font-size: 10px;
+      font-family: 'Space Mono', monospace;
+      color: rgba(255, 255, 255, .4);
+      letter-spacing: 2px;
+      margin-top: 2px
+    }
+
+    .kanji-hud {
+      position: absolute;
+      top: 22%;
+      left: 28px;
+      font-family: 'Noto Serif JP', serif;
+      font-size: 46px;
+      font-weight: 900;
+      color: rgba(255, 255, 255, .2);
+      line-height: 1;
+      z-index: 4
+    }
+
+    .vertical-hud-stack {
+      position: absolute;
+      top: 14%;
+      right: 28px;
+      display: flex;
+      flex-direction: column;
+      font-family: Syne, sans-serif;
+      font-size: 78px;
+      font-weight: 900;
+      line-height: .8;
+      letter-spacing: -2px;
+      color: transparent;
+      -webkit-text-stroke: 1.2px rgba(255, 255, 255, 0.85);
+      z-index: 6
+    }
+
+    .terminal-accent {
+      position: absolute;
+      top: 48%;
+      right: 28px;
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: #fff;
+      background: #000;
+      border: 1px solid rgba(255, 255, 255, .25);
+      padding: 3px 8px;
+      z-index: 6
+    }
+
+    .bottom-hud-panel {
+      position: absolute;
+      bottom: 24px;
+      left: 28px;
+      right: 28px;
+      z-index: 7
+    }
+
+    .status-id {
+      font-size: 9px;
+      color: rgba(255, 255, 255, .5);
+      letter-spacing: 2px;
+      margin-bottom: 6px
+    }
+
+    .main-terminal-title {
+      font-family: Syne, sans-serif;
+      font-size: 48px;
+      font-weight: 900;
+      color: #fff;
+      line-height: .9;
+      letter-spacing: -1px;
+      text-transform: uppercase;
+      margin-bottom: 12px
+    }
+
+    .hud-sub-desc {
+      font-size: 8.5px;
+      line-height: 1.5;
+      color: rgba(255, 255, 255, .5);
+      border-left: 1px solid rgba(255, 255, 255, .3);
+      padding-left: 10px
+    }
+  </style>
+</head>
+
+<body>
+  <div class="poster-canvas">
+    <div class="corner-reticle tl"></div>
+    <div class="corner-reticle tr"></div>
+    <div class="corner-reticle bl"></div>
+    <div class="corner-reticle br"></div>
+    <div class="hud-meta-bar"><span>[SYS.STABLE]</span> <span>HUD // AUTONOMOUS</span> <span>LOC: 09-JP</span></div>
+    <div class="hero-script-tag">{{TOP}} <span>PROTOTYPE UNIT</span></div>
+    <div class="hud-frame">{{IMAGE}}</div>
+    <div class="hud-crosshair"></div>
+    <div class="kanji-hud">{{KANJI_TOP}}</div>
+    <div class="vertical-hud-stack">{{VERTICAL}}</div>
+    <div class="terminal-accent">ID: {{ACCENT}}</div>
+    <div class="bottom-hud-panel">
+      <div class="status-id">// SEQUENCE COMPLETE</div>
+      <div class="main-terminal-title">{{BOTTOM}}</div>
+      <div class="hud-sub-desc">{{FOOTER}}</div>
+    </div>
+  </div>
+</body>
+
+</html>

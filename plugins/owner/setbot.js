@@ -89,6 +89,20 @@ const SETTINGS = {
     key: "antiaudio",
     scope: "group",
     aliases: ["antivn", "noaudio", "audio", "vn"]
+  },
+  antiimage: {
+    name: "Anti Image",
+    desc: "Hapus otomatis foto/gambar yang dikirim di grup",
+    key: "antiimage",
+    scope: "group",
+    aliases: ["antigambar", "antifoto", "noimage", "image", "foto", "gambar"]
+  },
+  antinsfw: {
+    name: "Anti NSFW",
+    desc: "Hapus otomatis stiker/foto/video 18+ (NSFW)",
+    key: "antinsfw",
+    scope: "group",
+    aliases: ["antinsfwgc", "autonsfw", "nsfwprotect", "nsfw"]
   }
 };
 
@@ -149,10 +163,10 @@ function parseFlags(input = "") {
 }
 export default {
   name: "setbot",
-  aliases: ["enable", "disable", "on", "off", "botsetting", "botsettings", "antibot", "antibotgc", "blockbot", "antilink", "antilinkgc", "linkprotect", "antitoxic", "antibadword", "antikasik", "toxic", "mute", "mutegroup", "botmute", "silent", "antiviewonce", "antivo", "viewonce", "antisekalilihat", "vo"],
+  aliases: ["enable", "disable", "on", "off", "botsetting", "botsettings", "antibot", "antibotgc", "blockbot", "antilink", "antilinkgc", "linkprotect", "antitoxic", "antibadword", "antikasik", "toxic", "mute", "mutegroup", "botmute", "silent", "antiviewonce", "antivo", "viewonce", "antisekalilihat", "vo", "antisticker", "antistik", "nosticker", "sticker", "antivideo", "antivid", "novideo", "video", "antiaudio", "antivn", "noaudio", "audio", "vn", "antiimage", "antigambar", "antifoto", "noimage", "image", "foto", "gambar", "antinsfw", "antinsfwgc", "autonsfw", "nsfwprotect", "nsfw"],
   description: "Mengaktifkan atau menonaktifkan setelan bot & grup via CLI & CTA Sheet",
   category: "Owner & Group",
-  example: "setbot atau on antibot atau off self atau setbot -k mute -s on",
+  example: "setbot atau on antiimage atau off antiimage atau on antinsfw",
   execute: async (sock, ctx, msg) => {
     try {
       const prefix = ctx.prefix || ".";
@@ -183,7 +197,7 @@ Silakan tentukan pengaturan fitur bot atau grup yang ingin diubah.
 ┌  ◦  *Control Panel* : ${prefix}setbot
 │  ◦  *Aktifkan* : ${prefix}on <fitur>
 │  ◦  *Matikan* : ${prefix}off <fitur>
-└  ◦  *Toggle Cepat* : ${prefix}mute / ${prefix}antilink
+└  ◦  *Toggle Cepat* : ${prefix}antiimage / ${prefix}antinsfw / ${prefix}mute / ${prefix}antilink
 
 –  *F I T U R  G L O B A L*
 
@@ -372,7 +386,7 @@ Silakan klik tombol di bawah untuk mengubah status fitur secara instan.`;
 Opsi fitur pengaturan tidak ditemukan.
 
 ┌  ◦  *Pilihan* : ${listKeys}
-└  ◦  *Example* : ${prefix}on antibot atau ${prefix}off self`);
+└  ◦  *Example* : ${prefix}on antiimage atau ${prefix}off antiimage atau ${prefix}on antinsfw`);
       }
       const item = SETTINGS[targetKey];
       if (item.scope === "global" && !ctx.isOwner) {

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    body {
+      width: 1200px;
+      height: 630px;
+      background: #0c0d11;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden
+    }
+
+    .frame {
+      width: 100%;
+      height: 100%;
+      padding: 70px 100px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: radial-gradient(circle at 10% 20%, rgba(217, 119, 6, .12) 0, transparent 45%), radial-gradient(circle at 90% 80%, rgba(245, 158, 11, .08) 0, transparent 45%), #0c0d11;
+      border: 1px solid rgba(255, 255, 255, .06)
+    }
+
+    .top-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, .1);
+      padding-bottom: 22px
+    }
+
+    .folio {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: #d97706
+    }
+
+    .edition {
+      font-size: 13px;
+      color: rgba(255, 255, 255, .4);
+      letter-spacing: 2px
+    }
+
+    .quote-wrapper {
+      margin: auto 0
+    }
+
+    .quote-text {
+      font-family: 'Instrument Serif', serif;
+      font-style: italic;
+      font-size: 58px;
+      line-height: 1.25;
+      color: #fef3c7;
+      text-shadow: 0 4px 24px rgba(0, 0, 0, .6)
+    }
+
+    .bottom-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end
+    }
+
+    .category-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 4px
+    }
+
+    .category-meta .lbl {
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, .4)
+    }
+
+    .category-meta .val {
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff
+    }
+
+    .signature {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: #d97706
+    }
+  </style>
+</head>
+
+<body>
+  <div class="frame">
+    <div class="top-label">
+      <div class="folio">WORDS OF WISDOM</div>
+      <div class="edition">{{BOT_NAME}} • ISSUE N° 26</div>
+    </div>
+    <div class="quote-wrapper">
+      <div class="quote-text">“{{QUOTE}}”</div>
+    </div>
+    <div class="bottom-info">
+      <div class="category-meta">
+        <div class="lbl">Category</div>
+        <div class="val">{{EMOJI}} {{CATEGORY}}</div>
+      </div>
+      <div class="signature">ARCHIVE SELECTION</div>
+    </div>
+  </div>
+</body>
+
+</html>

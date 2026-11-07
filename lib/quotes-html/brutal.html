@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    body {
+      width: 1200px;
+      height: 630px;
+      background: #fffbe6;
+      font-family: 'Bricolage Grotesque', sans-serif;
+      color: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden
+    }
+
+    .wrapper {
+      width: 100%;
+      height: 100%;
+      padding: 60px 80px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: #ffd600;
+      border: 12px solid #000;
+      position: relative
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center
+    }
+
+    .tag {
+      background: #ff5252;
+      color: #fff;
+      border: 4px solid #000;
+      box-shadow: 5px 5px 0 #000;
+      padding: 10px 24px;
+      font-size: 18px;
+      font-weight: 800;
+      text-transform: uppercase;
+      transform: rotate(-2deg)
+    }
+
+    .serial {
+      font-family: 'Space Mono', monospace;
+      font-size: 18px;
+      font-weight: 700;
+      background: #fff;
+      padding: 6px 16px;
+      border: 3.5px solid #000;
+      box-shadow: 4px 4px 0 #000
+    }
+
+    .quote-container {
+      background: #fff;
+      border: 5px solid #000;
+      box-shadow: 10px 10px 0 #000;
+      padding: 38px 48px;
+      margin: auto 0
+    }
+
+    .quote-text {
+      font-size: 44px;
+      font-weight: 800;
+      line-height: 1.25;
+      letter-spacing: -1px;
+      color: #000
+    }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center
+    }
+
+    .brand-pill {
+      background: #00e5ff;
+      border: 4px solid #000;
+      box-shadow: 4px 4px 0 #000;
+      padding: 8px 22px;
+      font-size: 17px;
+      font-weight: 800;
+      transform: rotate(1deg)
+    }
+
+    .emoji-mark {
+      font-size: 38px
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrapper">
+    <div class="header">
+      <div class="tag">{{EMOJI}} {{CATEGORY}}</div>
+      <div class="serial">VOL_2026 #04</div>
+    </div>
+    <div class="quote-container">
+      <div class="quote-text">“{{QUOTE}}”</div>
+    </div>
+    <div class="footer">
+      <div class="brand-pill">⚡ {{BOT_NAME}} OFFICIAL</div>
+      <div class="emoji-mark">👀 🔥 💥</div>
+    </div>
+  </div>
+</body>
+
+</html>
